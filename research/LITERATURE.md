@@ -5,6 +5,11 @@ Search date: 2026-11-14. Search queries included `"JEV" "RLCD"`, `"kernel"
 counterfactual`, and `"covert channel" "counterfactual" detection`. Sources below
 were opened directly. This is a targeted survey, not a systematic review.
 
+The [15 November contribution update](manuscript/PRIOR_ART_UPDATE.md) extends this
+review with primary full texts for guardscope, context-pipeline attrition,
+ClawSentry and DelegateGuard. The manuscript bibliography records the checked
+versions. These additions narrow the contribution rather than establish novelty.
+
 | Primary source | What is already established | GuardianAI's narrower research question | Verdict |
 |---|---|---|---|
 | [Mathew et al., Hidden in Plain Text](https://aclanthology.org/2025.ijcnlp-long.34/) | Optimization can elicit linguistic steganography; monitoring and paraphrasing are imperfect. | Does a kernel-backed delivery boundary preserve legitimate utility while breaking an engineered storage channel? | Application/measurement extension, not new emergence. |

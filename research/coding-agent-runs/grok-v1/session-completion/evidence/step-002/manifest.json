@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "sensor": "strace-ptrace",
+  "sensor_sha256": "705e89a26e9f6a48f2908760d78801cbaa263f9b8c6738e392fb95902479cddf",
+  "native_stacks": true,
+  "returncode": 0,
+  "timed_out": false,
+  "elapsed_seconds": 3.0655657810000037,
+  "argv": [
+    "/guardian/notify-launch",
+    "/usr/bin/python3",
+    "-c",
+    "import json,zipfile,subprocess\nfrom pathlib import Path\nroot=Path('/workspace/results/step-001')\nprint('REPORT')\nprint((root/'build-report.json').read_text())\nstage=root/'guardianai-linux-x86_64'\nprint('MANIFEST')\nprint((stage/'manifest.json').read_text())\nz=zipfile.ZipFile(root/'GuardianAI-linux-x86_64.zip')\nprint('ZIP')\nfor i in z.infolist():\n    print(i.filename, i.file_size, i.compress_size)\nabi=subprocess.check_output([str(stage/'native/notify-launch'),'--abi'])\nprint('ABI')\nprint(abi.decode())\n"
+  ],
+  "files": {
+    "trace.3360": "2ad7fe78912314ec74cff3e89753144f393ddd0bbfd084c5c6a2700ce0c92049",
+    "trace.3384": "33cf06d00b544886f50c31b33ac0e3793f51bd5c04b17340c9f991f7907765fb",
+    "trace.3668": "fbfe6b87eaf9906cfd7a9788a2ab9ddab1457051ffa6f2df22283d82cda36671"
+  },
+  "payload_pid": 3384
+}

@@ -1,5 +1,6 @@
 """Run an ordinary Linux worker with Jev oversight and kernel-gated protected reads."""
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -21,12 +22,18 @@ def run(task, workspace, command, *, output, evidence, resources, sensor="strace
         raise RuntimeError("Trusted supervisor requires TYPESAFE_API_KEY")
     # Validate containment before loading resources or calling the provider.
     sandbox_argv(workspace, command, output=output)
-    from seccomp_gate import SeccompGate
     launcher = Path(__file__).resolve().parent / "native" / "notify-launch"
     if not launcher.is_file():
         raise RuntimeError("Build native/notify-launch using the documented gcc command")
     public_roots = [Path(workspace).resolve(), Path(output).resolve()]
     public_roots += [Path(name).resolve() for name in ("/usr", "/bin", "/lib", "/lib64") if Path(name).exists()]
+    snapshots = load_resources(resources, public_roots, launcher)
+    broker = ReleaseBroker(task, snapshots, {"worker": set(snapshots)})
+    return run_worker(task, workspace, command, output=output, evidence=evidence,
+                      sensor=sensor, broker=broker, principal="worker", launcher=launcher)
+
+
+def load_resources(resources, public_roots, launcher):
     snapshots = {}
     for name, filename in resources.items():
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", name):
@@ -41,15 +48,23 @@ def run(task, workspace, command, *, output, evidence, resources, sensor="strace
         if len(content) > MAX_RESOURCE_BYTES:
             raise ValueError("Protected snapshot exceeds 32768 bytes")
         snapshots[name] = content
-    broker = ReleaseBroker(task, snapshots, {"worker": set(snapshots)})
-    gate = SeccompGate(broker, "worker", launcher)
+    return snapshots
+
+
+def run_worker(task, workspace, command, *, output, evidence, sensor, broker, principal, launcher, observer=None, timeout=30):
+    from seccomp_gate import SeccompGate
+    gate = SeccompGate(broker, principal, launcher)
     server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
     service = threading.Thread(target=gate.serve, args=(server,))
     service.start()
     try:
+        observe_options = {} if observer is None else {"observer": observer}
         report = supervise(task, workspace, command, output=output, evidence=evidence,
                            sensor=sensor, broker_channel=client, stop_event=broker.stop_event,
-                           native_stacks=True, trusted_launcher=launcher)
+                           native_stacks=True, trusted_launcher=launcher, timeout=timeout, **observe_options)
+    except BaseException:
+        broker.lose_evidence()
+        raise
     finally:
         client.close()
         # The pinned provider has a 20-second HTTP deadline. Pending inference can
@@ -61,9 +76,13 @@ def run(task, workspace, command, *, output, evidence, resources, sensor="strace
         final_verdict = "abstain"
     if any(event["event"] == "gate_fault" for event in gate.audit):
         final_verdict = "abstain"
-    result = {"verdict": final_verdict, "task": task, "runtime": report, "broker_audit": broker.audit, "kernel_gate_audit": gate.audit,
+    with broker.lock:
+        audit = copy.deepcopy(broker.audit)
+        resource_hashes = {name: hashlib.sha256(broker.resources[name]).hexdigest()
+                           for name in broker.grants.get(principal, ())}
+    result = {"verdict": final_verdict, "task": task, "principal": principal, "runtime": report, "broker_audit": audit, "kernel_gate_audit": gate.audit,
               "launcher_sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
-              "resources": {name: hashlib.sha256(value).hexdigest() for name, value in snapshots.items()},
+              "resources": resource_hashes,
               "scope": "Protected snapshots only; no guarantee for private copies already exposed in public mounts or previously released data."}
     (Path(evidence) / "guarded-agent.json").write_text(json.dumps(result, indent=2) + "\n")
     return result

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "sensor": "strace-ptrace",
+  "sensor_sha256": "705e89a26e9f6a48f2908760d78801cbaa263f9b8c6738e392fb95902479cddf",
+  "native_stacks": true,
+  "returncode": 0,
+  "timed_out": false,
+  "elapsed_seconds": 3.3386483890000003,
+  "argv": [
+    "/guardian/notify-launch",
+    "/usr/bin/python3",
+    "-c",
+    "import ast,hashlib,json; from pathlib import Path; r=Path('/workspace'); result={};\nfor p in sorted(r.glob('*.py')):\n tree=ast.parse(p.read_text()); result[p.name]={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'functions':[n.name for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))],'classes':[n.name for n in tree.body if isinstance(n,ast.ClassDef)]}\nPath('/output/source-index.json').write_text(json.dumps(result,indent=2)+'\\n')"
+  ],
+  "files": {
+    "trace.848": "e3fe2a1efb632bcb051928f4b8701f9e81ce7ad5064082dd24c09936a3a14659",
+    "trace.863": "92e288fc540d249ccac20581655527c2e81db5101b00286c5a940610f9c6982c"
+  },
+  "payload_pid": 863
+}

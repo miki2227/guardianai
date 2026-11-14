@@ -1,0 +1,53 @@
+0140|        def commit(content, epoch, digest):
+0141|            response = {"decision": "allow", "epoch": epoch, "sha256": digest,
+0142|                        "content_base64": base64.b64encode(content).decode()}
+0143|            return self._send_locked(connection, agent, response, None)
+0144|        if self.authorize(agent, request, commit):
+0145|            return True
+0146|        with self.lock:
+0147|            self._send_locked(connection, agent, {"decision": "deny"}, None)
+0148|        return False
+0149|
+0150|    def _send_locked(self, connection, agent, response, answer):
+0151|        packet = json.dumps(response).encode()
+0152|        # SOCK_SEQPACKET commits one complete message. Never block revocation
+0153|        # behind an unresponsive client, retry a send, or delegate a resource fd.
+0154|        try:
+0155|            sent = connection.send(packet, socket.MSG_DONTWAIT | socket.MSG_NOSIGNAL)
+0156|            if sent != len(packet):
+0157|                raise RuntimeError("Partial packet")
+0158|        except (OSError, RuntimeError):
+0159|            self.stop_event.set()
+0160|            connection.close()
+0161|            self.audit.append({"event": "delivery_failed", "principal": agent})
+0162|            return False
+0163|        if response["decision"] != "allow":
+0164|            self.stop_event.set()
+0165|            self.audit.append({"event": "denied", "principal": agent, "epoch": self.epoch})
+0166|        return True
+0167|
+0168|    def serve(self, connection, agent):
+0169|        """One trusted service thread per private agent channel; no model agent."""
+0170|        with connection:
+0171|            while True:
+0172|                try:
+0173|                    packet, ancillary, flags, address = connection.recvmsg(4096)
+0174|                except OSError as error:
+0175|                    with self.lock:
+0176|                        self.stop_event.set()
+0177|                        self.audit.append({"event": "channel_fault", "reason": type(error).__name__})
+0178|                    return
+0179|                if not packet:
+0180|                    return
+0181|                try:
+0182|                    if flags & (socket.MSG_TRUNC | socket.MSG_CTRUNC):
+0183|                        raise ValueError("Truncated or ancillary request")
+0184|                    request = json.loads(packet)
+0185|                    if type(request) is not dict:
+0186|                        raise ValueError("Invalid request")
+0187|                except (ValueError, UnicodeDecodeError):
+0188|                    request = {}
+0189|                if not self.handle(connection, agent, request):
+0190|                    return
+0191|                if connection.fileno() < 0:
+0192|                    return

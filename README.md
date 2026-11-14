@@ -6,6 +6,39 @@ Research testbed for pretrained sender/receiver agents communicating under Jev
 oversight, supported by Linux kernel namespace isolation and execution evidence.
 See [research scope and limitations](RESEARCH.md) before running untrusted code.
 
+A [built Linux core runtime](dist/GuardianAI-linux-x86_64.zip) is available.
+An [existing coding agent can use GuardianAI through MCP](CODING_AGENT.md).
+The installed Grok CLI completed a real review and release-build task through
+that boundary; [the run report](research/CODING_AGENT_RUN.md) retains successful
+work, benign stops, timeout failures and provider-reported usage.
+The current [supervisor lifetime guard](research/OWNER_LIFETIME_RUN.md) was also
+exercised by cancelling a real GCC build. A separate
+[frontend teammate brief](TEAMMATE_FRONTEND.md) defines a read-only evidence viewer
+that can be built without changing the runtime.
+It compiled and packaged the application under live Jev oversight, then the
+standalone packaged application rebuilt itself successfully outside the development
+checkout. See the [actual system run](research/REAL_SYSTEM_RUN.md) for the artifact,
+runtime evidence and streaming-observer limits.
+
+The latest package also requires a fully drained trace scan after tracer exit
+before reporting clean completion. A [real GCC release build](research/FINAL_DRAIN_REPORT.md)
+completed under that corrected packaged supervisor; earlier releases remain archived.
+
+The current archive includes a [shared session launcher](SESSION.md) for multiple
+local workers with per-worker grants and shared-scope stopping. The packaged
+launcher completed a real concurrent build and source-change indexing workflow
+under live Jev oversight.
+Jev runtime and release decisions now also receive
+[bounded shared session context](research/SHARED_OBSERVER_RUN.md), with hashed
+state receipts and explicit errno/namespace facts. The first integration's false
+alarm remains in the evidence alongside the subsequent completed real workflow.
+
+An [evidence-grounded manuscript draft](research/manuscript/manuscript.md)
+consolidates the system, conditional authorization arguments, retained failures
+and actual workloads. Its [submission status](research/manuscript/SUBMISSION_STATUS.md)
+and [original-objective audit](research/manuscript/OBJECTIVE_AUDIT.md) keep the
+unmeasured context-pressure and novelty requirements explicit.
+
 The working [`guarded_agent.py`](guarded_agent.py) launcher runs ordinary Linux
 commands with live Jev observation, bounded native execution stacks and
 kernel-mediated protected-resource reads. See the
@@ -16,8 +49,9 @@ descriptor is injected; other syscall observation reacts after the action.
 
 The [current-system comparison](research/BASELINE_REPORT.md) retains 30 actual
 nono/GuardianAI worker trials and a startup-observation defect found and fixed
-through that comparison. The full Linux suite now passes 92 tests, including
-context recording and release-order checks.
+through that comparison. Policy-3 validation passed 92 Linux tests, including
+context recording and release-order checks. The later streaming change was
+verified through the actual application builds described above.
 
 The [release-order study](research/RELEASE_ORDER_REPORT.md) found and corrected
 protected descriptor release after a prohibited `ptrace`/`connect` attempt.

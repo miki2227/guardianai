@@ -1,0 +1,20 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "/bin/sh",
+    "-c",
+    "find /workspace/source -type f -name '*.py' -o -name '*.md' -o -name '*.json' -o -name '*.toml' | head -200; echo '---'; ls -la /workspace/source /workspace/results 2>/dev/null | head -100"
+  ],
+  "verdict": "violation",
+  "returncode": 137,
+  "evidence_status": "incomplete",
+  "stdout": {
+    "text": "/workspace/source/monitor.py\n/workspace/source/guarded_session.py\n/workspace/source/runtime_supervisor.py\n/workspace/source/seccomp_gate.py\n/workspace/source/session_observer.py\n/workspace/source/release_broker.py\n/workspace/source/guardian.py\n/workspace/source/build_release.py\n/workspace/source/guarded_agent.py\n/workspace/source/guardian_mcp.py\n/workspace/source/README.md\n---\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001"
+}

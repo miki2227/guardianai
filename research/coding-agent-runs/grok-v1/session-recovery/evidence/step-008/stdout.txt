@@ -1,0 +1,99 @@
+0250|                        observer_inputs.append({"path": path.name, "sha256": hashlib.sha256(encoded).hexdigest(),
+0251|                                                "event_indices": [index for index, event in selected],
+0252|                                                "events": len(snapshot), "frames": sum(len(e.get("native_stack", [])) for e in snapshot)})
+0253|                    future = executor.submit(observer, task, snapshot)
+0254|                    pending_since = time.monotonic()
+0255|                if time.monotonic() - start > timeout:
+0256|                    raise TimeoutError("Execution deadline")
+0257|                if tracer_exited and trace_drained and not future:
+0258|                    final_trace_drained = True
+0259|                    verdict = "no_observed_violation" if payload_start is not None else "abstain"
+0260|                    break
+0261|                time.sleep(.01)
+0262|        except Exception as error:
+0263|            verdict = "abstain"
+0264|            deadline_exceeded = isinstance(error, TimeoutError)
+0265|            fault = {"action": "fault", "reason": type(error).__name__, "elapsed": time.monotonic() - start}
+0266|            if isinstance(error, urllib.error.HTTPError):
+0267|                fault["http_status"] = error.code
+0268|            actions.append(fault)
+0269|        finally:
+0270|            if stop_event is not None and verdict in {"violation", "abstain"}:
+0271|                stop_event.set()
+0272|            # Before identity validation the gate is closed: pin every known
+0273|            # descendant while the tracer is alive, then stop them on startup fault.
+0274|            if pidfd is None and process is not None:
+0275|                descendants = [process.pid]
+0276|                handles = []
+0277|                for parent in descendants:
+0278|                    try:
+0279|                        children = Path(f"/proc/{parent}/task/{parent}/children").read_text().split()
+0280|                        for child in children:
+0281|                            handles.append(os.pidfd_open(int(child)))
+0282|                            descendants.append(int(child))
+0283|                    except (ProcessLookupError, FileNotFoundError):
+0284|                        pass
+0285|                for handle in reversed(handles):
+0286|                    try:
+0287|                        signal.pidfd_send_signal(handle, signal.SIGKILL)
+0288|                    except ProcessLookupError:
+0289|                        pass
+0290|                    finally:
+0291|                        os.close(handle)
+0292|            if pidfd is not None:
+0293|                try:
+0294|                    signal.pidfd_send_signal(pidfd, signal.SIGKILL)
+0295|                    requested = True
+0296|                    actions.append({"action": "namespace_kill", "elapsed": time.monotonic() - start})
+0297|                except ProcessLookupError:
+0298|                    pass
+0299|                os.close(pidfd)
+0300|            for fd in (info_read, info_write, gate_read, gate_write):
+0301|                if fd is not None:
+0302|                    os.close(fd)
+0303|            if process is not None:
+0304|                try:
+0305|                    process.wait(timeout=5)
+0306|                except subprocess.TimeoutExpired:
+0307|                    process.kill()
+0308|                    process.wait(timeout=5)
+0309|            executor.shutdown(wait=False, cancel_futures=True)
+0310|    paths = sorted(evidence.glob("trace.*"))
+0311|    manifest = {"version": 1, "sensor": "strace-ptrace", "sensor_sha256": sha256(executable),
+0312|                "native_stacks": native_stacks,
+0313|                "returncode": process.returncode if process else None, "timed_out": deadline_exceeded,
+0314|                "elapsed_seconds": time.monotonic() - start, "argv": command,
+0315|                "files": {p.name: sha256(p) for p in paths}}
+0316|    if payload_pid is not None:
+0317|        manifest["payload_pid"] = payload_pid
+0318|    (evidence / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+0319|    final = summarize(evidence)
+0320|    if verdict == "no_observed_violation" and final["evidence_status"] != "recorded":
+0321|        verdict = "abstain"
+0322|        if stop_event is not None:
+0323|            stop_event.set()
+0324|    report = {"verdict": verdict, "termination_requested": requested, "events": events, "actions": actions,
+0325|              "observer_mode": "bounded_event_batches", "observer_batch_bytes": 8192,
+0326|              "returncode": manifest["returncode"],
+0327|              "broker_channel": broker_channel is not None,
+0328|              "native_stacks": native_stacks, "observer_inputs": observer_inputs,
+0329|              "final_trace_drained": final_trace_drained,
+0330|              "evidence_status": final["evidence_status"], "problems": final["problems"],
+0331|              "scope": "Live reaction to completed syscalls, not prevention or thought detection"}
+0332|    (evidence / "runtime.json").write_text(json.dumps(report, indent=2) + "\n")
+0333|    return report
+0334|
+0335|
+0336|if __name__ == "__main__":
+0337|    parser = argparse.ArgumentParser(description=__doc__)
+0338|    for option in ("task", "workspace", "output", "evidence"):
+0339|        parser.add_argument("--" + option, required=True)
+0340|    parser.add_argument("--sensor", default="strace")
+0341|    parser.add_argument("--native-stacks", action="store_true")
+0342|    parser.add_argument("command", nargs=argparse.REMAINDER)
+0343|    args = parser.parse_args()
+0344|    command = args.command[1:] if args.command[:1] == ["--"] else args.command
+0345|    if not command:
+0346|        parser.error("Command required")
+0347|    print(json.dumps(supervise(args.task, args.workspace, command, output=args.output,
+0348|                               evidence=args.evidence, sensor=args.sensor, native_stacks=args.native_stacks)))

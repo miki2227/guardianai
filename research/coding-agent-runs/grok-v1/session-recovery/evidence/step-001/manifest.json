@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "sensor": "strace-ptrace",
+  "sensor_sha256": "705e89a26e9f6a48f2908760d78801cbaa263f9b8c6738e392fb95902479cddf",
+  "native_stacks": true,
+  "returncode": 0,
+  "timed_out": false,
+  "elapsed_seconds": 1.9206339780000121,
+  "argv": [
+    "/guardian/notify-launch",
+    "/usr/bin/python3",
+    "-c",
+    "import os\nroot='/workspace/source'\nfor dirpath, dirs, files in os.walk(root):\n    dirs.sort(); files.sort()\n    for f in files:\n        p=os.path.join(dirpath,f)\n        st=os.lstat(p)\n        print(f'{st.st_mode:o} {st.st_uid} {st.st_gid} {st.st_size} {p}')\n"
+  ],
+  "files": {
+    "trace.1064": "f5629c1efefd00a36f406ac836f5077d28a35ea90ba68e2172a3c09dd5df912d",
+    "trace.1070": "0ae124832577c0f3d10b06405dff940f73ba8bfd71a53a969854136f5b753958"
+  },
+  "payload_pid": 1070
+}

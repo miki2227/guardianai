@@ -15,6 +15,7 @@ import signal
 import socket
 import subprocess
 import time
+import urllib.error
 
 from guardian import POLICY, query_jev, sandbox_argv
 from monitor import LINE, MUTATIONS, PATH_CALLS, QUOTED, sha256, summarize
@@ -48,8 +49,11 @@ def event_from_line(line, source):
         return None
     write = call in MUTATIONS or (call in {"open", "openat", "openat2"} and
                                   any(flag in arguments for flag in ("O_WRONLY", "O_RDWR", "O_CREAT", "O_TRUNC")))
+    failure = re.match(r"-1 ([A-Z][A-Z0-9_]*)", result)
+    error = failure[1] if failure else None
     return {"source": source, "timestamp": float(timestamp), "syscall": call,
             "paths": paths, "write": write, "denied": result.startswith("-1 "),
+            "errno": error, "permission_denied": error in {"EPERM", "EACCES", "EROFS"},
             "rule_violation": call in {"connect", "ptrace"} or (write and any(p.startswith("/workspace/") for p in paths))}
 
 
@@ -90,10 +94,12 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
     gate_read, gate_write = os.pipe()
     # The payload is PID 1. Kernel namespace teardown kills even setsid children.
     argv[1:1] = ["--as-pid-1", "--info-fd", str(info_write), "--block-fd", str(gate_read)]
-    trace = [executable, "-ff", "-ttt", "-yy", "-s", "1024", "-o", str(evidence / "trace"),
+    trace = [executable, "--kill-on-exit", "-ff", "-ttt", "-yy", "-s", "1024", "-o", str(evidence / "trace"),
              "-e", "trace=%file,%network,%process,write,ptrace", "--", *argv]
     if native_stacks:
         trace[1:1] = ["-k", "--stack-trace-frame-limit=32"]
+    if trusted_launcher is not None:
+        trace = [str(trusted_launcher), "--watch-parent", str(os.getpid()), *trace]
     start = time.monotonic()
     actions, events, positions = [], [], {}
     verdict, pidfd, process, future = "abstain", None, None, None
@@ -102,8 +108,9 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
     deadline_exceeded = False
     payload_start = None
     payload_pid = None
+    final_trace_drained = False
     consumed = 0
-    revision, consumed_revision = 0, 0
+    submitted_frames = {}
     last_event, observer_inputs = {}, []
     input_bytes = 0
     with (evidence / "stdout.txt").open("wb") as stdout, (evidence / "stderr.txt").open("wb") as stderr:
@@ -149,10 +156,14 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                     verdict = "violation"
                     actions.append({"action": "broker_stop", "elapsed": time.monotonic() - start})
                     break
+                # Observe exit before scanning: files created during the previous
+                # pass must get a final read after the tracer has stopped writing.
+                tracer_exited = process.poll() is not None
                 trace_paths = sorted(evidence.glob("trace.*"))
                 if len(trace_paths) > 1024 or sum(p.stat().st_size for p in trace_paths) > 16 * 1024 * 1024:
                     raise RuntimeError("Trace budget exceeded")
                 batch = []
+                trace_drained = True
                 for path in trace_paths:
                     with path.open() as stream:
                         stream.seek(positions.get(path.name, 0))
@@ -161,9 +172,17 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                             line = stream.readline()
                             if not line.endswith("\n"):
                                 positions[path.name] = offset
+                                if line:
+                                    if tracer_exited:
+                                        raise ValueError("Incomplete final trace line")
+                                    trace_drained = False
                                 break
                             positions[path.name] = stream.tell()
                             batch.append((path.name, line))
+                        else:
+                            # A bounded read is not EOF; continue draining even
+                            # when this chunk contains no scoped observer events.
+                            trace_drained = False
                 # Find payload launch before interpreting any file in this batch.
                 for source, line in batch:
                     match = LINE.match(line)
@@ -175,7 +194,6 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                         previous = last_event.get(source)
                         if previous is not None and len(previous["native_stack"]) < 32:
                             previous["native_stack"].append(line.strip()[:500])
-                            revision += 1
                         continue
                     match = LINE.match(line)
                     if payload_start is None:
@@ -188,10 +206,10 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                     if native_stacks:
                         last_event[source] = event
                     if event:
+                        event["event_index"] = len(events)
                         if native_stacks:
                             event["native_stack"] = []
                         events.append(event)
-                        revision += 1
                 if any(event["rule_violation"] for event in events):
                     verdict = "violation"
                     break
@@ -208,10 +226,22 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                     raise RuntimeError("Observer backlog exceeded")
                 if future and time.monotonic() - pending_since > 2:
                     raise TimeoutError("Observer deadline")
-                if not future and revision > consumed_revision:
-                    consumed = len(events)
-                    consumed_revision = revision
-                    snapshot = copy.deepcopy(events)
+                pending = [(i, event) for i, event in enumerate(events)
+                           if i not in submitted_frames or len(event.get("native_stack", [])) != submitted_frames[i]]
+                if not future and pending:
+                    selected, batch_bytes = [], 2
+                    for index, event in pending:
+                        event_bytes = len(json.dumps(event).encode()) + 2
+                        if batch_bytes + event_bytes > 8192:
+                            if not selected:
+                                raise RuntimeError("One observer event exceeds the batch budget")
+                            break
+                        selected.append((index, event))
+                        batch_bytes += event_bytes
+                    snapshot = copy.deepcopy([event for index, event in selected])
+                    for index, event in selected:
+                        submitted_frames[index] = len(event.get("native_stack", []))
+                    consumed = len(submitted_frames)
                     if native_stacks:
                         encoded = json.dumps(snapshot).encode()
                         input_bytes += len(encoded)
@@ -220,19 +250,24 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                         path = evidence / ("observer-input-" + str(len(observer_inputs)) + ".json")
                         path.write_bytes(encoded)
                         observer_inputs.append({"path": path.name, "sha256": hashlib.sha256(encoded).hexdigest(),
+                                                "event_indices": [index for index, event in selected],
                                                 "events": len(snapshot), "frames": sum(len(e.get("native_stack", [])) for e in snapshot)})
                     future = executor.submit(observer, task, snapshot)
                     pending_since = time.monotonic()
                 if time.monotonic() - start > timeout:
                     raise TimeoutError("Execution deadline")
-                if process.poll() is not None and not future:
+                if tracer_exited and trace_drained and not future:
+                    final_trace_drained = True
                     verdict = "no_observed_violation" if payload_start is not None else "abstain"
                     break
                 time.sleep(.01)
         except Exception as error:
             verdict = "abstain"
             deadline_exceeded = isinstance(error, TimeoutError)
-            actions.append({"action": "fault", "reason": type(error).__name__, "elapsed": time.monotonic() - start})
+            fault = {"action": "fault", "reason": type(error).__name__, "elapsed": time.monotonic() - start}
+            if isinstance(error, urllib.error.HTTPError):
+                fault["http_status"] = error.code
+            actions.append(fault)
         finally:
             if stop_event is not None and verdict in {"violation", "abstain"}:
                 stop_event.set()
@@ -276,6 +311,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
             executor.shutdown(wait=False, cancel_futures=True)
     paths = sorted(evidence.glob("trace.*"))
     manifest = {"version": 1, "sensor": "strace-ptrace", "sensor_sha256": sha256(executable),
+                "tracer_argv": trace, "supervisor_death_guard": trusted_launcher is not None,
                 "native_stacks": native_stacks,
                 "returncode": process.returncode if process else None, "timed_out": deadline_exceeded,
                 "elapsed_seconds": time.monotonic() - start, "argv": command,
@@ -289,9 +325,12 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
         if stop_event is not None:
             stop_event.set()
     report = {"verdict": verdict, "termination_requested": requested, "events": events, "actions": actions,
+              "observer_mode": "bounded_event_batches", "observer_batch_bytes": 8192,
               "returncode": manifest["returncode"],
               "broker_channel": broker_channel is not None,
               "native_stacks": native_stacks, "observer_inputs": observer_inputs,
+              "supervisor_death_guard": trusted_launcher is not None,
+              "final_trace_drained": final_trace_drained,
               "evidence_status": final["evidence_status"], "problems": final["problems"],
               "scope": "Live reaction to completed syscalls, not prevention or thought detection"}
     (evidence / "runtime.json").write_text(json.dumps(report, indent=2) + "\n")

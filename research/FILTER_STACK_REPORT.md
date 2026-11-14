@@ -80,6 +80,12 @@ The full native Linux suite passed **92 tests**;
 remain pinned to their actual historical code and native policies. The old
 suppression examples are retained rather than rewritten using the corrected gate.
 
+The updated [live Jev CLI smoke](filter-stack-runs/live-cli-policy3/summary.json)
+also passed its approved-read, unregistered-read and ordinary-worker-failure
+controls with native exit statuses 0, 77 and 1. Its source snapshots, captures and
+approval joins were audited separately; the unregistered request is denied before
+inference. This provider-backed smoke is not part of the 21 fixture-only probes.
+
 ## Remaining research boundary
 
 The correction blocks the tested worker-controlled installation routes after the

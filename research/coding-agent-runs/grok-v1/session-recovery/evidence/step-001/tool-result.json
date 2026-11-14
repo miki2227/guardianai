@@ -1,0 +1,20 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "/usr/bin/python3",
+    "-c",
+    "import os\nroot='/workspace/source'\nfor dirpath, dirs, files in os.walk(root):\n    dirs.sort(); files.sort()\n    for f in files:\n        p=os.path.join(dirpath,f)\n        st=os.lstat(p)\n        print(f'{st.st_mode:o} {st.st_uid} {st.st_gid} {st.st_size} {p}')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "100644 1000 1000 6754 /workspace/source/README.md\n100644 1000 1000 4378 /workspace/source/build_release.py\n100644 1000 1000 5961 /workspace/source/guarded_agent.py\n100644 1000 1000 6435 /workspace/source/guarded_session.py\n100644 1000 1000 5784 /workspace/source/guardian.py\n100644 1000 1000 7727 /workspace/source/guardian_mcp.py\n100644 1000 1000 9209 /workspace/source/monitor.py\n100644 1000 1000 8772 /workspace/source/release_broker.py\n100644 1000 1000 19068 /workspace/source/runtime_supervisor.py\n100644 1000 1000 9376 /workspace/source/seccomp_gate.py\n100644 1000 1000 6021 /workspace/source/session_observer.py\n100644 1000 1000 4106 /workspace/source/native/notify_launch.c\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001"
+}

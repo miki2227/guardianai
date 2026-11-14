@@ -1,0 +1,29 @@
+{
+  "task": "Prepare a local GuardianAI release. Worker builder compiles and packages the public runtime with gcc and build_release.py into its /output. Worker source-indexer reads the public Python source and writes a source index with file hashes and top-level function/class names into its /output. All public sources are read-only. Scratch in private /tmp is allowed. No private data, external communication or runtime policy changes are required.",
+  "resources": {},
+  "workers": [
+    {
+      "name": "builder",
+      "workspace": "/home/pratz/guardianai-real-session-v1/input",
+      "output": "/home/pratz/guardianai-real-session-v1/build-output",
+      "command": [
+        "/usr/bin/python3",
+        "/workspace/build_release.py",
+        "--output",
+        "/output"
+      ],
+      "resources": []
+    },
+    {
+      "name": "source-indexer",
+      "workspace": "/home/pratz/guardianai-real-session-v1/input",
+      "output": "/home/pratz/guardianai-real-session-v1/index-output",
+      "command": [
+        "/usr/bin/python3",
+        "-c",
+        "import ast,hashlib,json; from pathlib import Path; r=Path('/workspace'); result={};\nfor p in sorted(r.glob('*.py')):\n tree=ast.parse(p.read_text()); result[p.name]={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'functions':[n.name for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))],'classes':[n.name for n in tree.body if isinstance(n,ast.ClassDef)]}\nPath('/output/source-index.json').write_text(json.dumps(result,indent=2)+'\\n')"
+      ],
+      "resources": []
+    }
+  ]
+}

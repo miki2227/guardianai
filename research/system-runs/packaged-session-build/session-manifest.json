@@ -1,0 +1,33 @@
+{
+  "task": "Prepare the next local GuardianAI release. Worker builder compiles and packages the public runtime with gcc and build_release.py into its /output. Worker source-indexer reads public Python sources and the explicitly granted previous-manifest resource, compares their hashes with that previous release, and writes a source-change index with top-level function/class names into its /output. Public sources are read-only. Private /tmp scratch is allowed. No external communication or runtime policy changes are needed.",
+  "resources": {
+    "previous-manifest": "/home/pratz/guardianai-system-build-v2/output/guardianai-linux-x86_64/manifest.json"
+  },
+  "workers": [
+    {
+      "name": "builder",
+      "workspace": "/home/pratz/guardianai-real-session-v1/build-output/guardianai-linux-x86_64",
+      "output": "/home/pratz/guardianai-real-session-v2/build-output",
+      "command": [
+        "/usr/bin/python3",
+        "/workspace/build_release.py",
+        "--output",
+        "/output"
+      ],
+      "resources": []
+    },
+    {
+      "name": "source-indexer",
+      "workspace": "/home/pratz/guardianai-real-session-v1/build-output/guardianai-linux-x86_64",
+      "output": "/home/pratz/guardianai-real-session-v2/index-output",
+      "command": [
+        "/usr/bin/python3",
+        "-c",
+        "import ast,hashlib,json; from pathlib import Path; r=Path('/workspace'); previous=json.loads(Path('/protected/previous-manifest').read_text())['files_sha256']; result={};\nfor p in sorted(r.glob('*.py')):\n tree=ast.parse(p.read_text()); digest=hashlib.sha256(p.read_bytes()).hexdigest(); result[p.name]={'sha256':digest,'changed_since_previous_release':previous.get(p.name)!=digest,'functions':[n.name for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))],'classes':[n.name for n in tree.body if isinstance(n,ast.ClassDef)]}\nPath('/output/source-change-index.json').write_text(json.dumps(result,indent=2))"
+      ],
+      "resources": [
+        "previous-manifest"
+      ]
+    }
+  ]
+}

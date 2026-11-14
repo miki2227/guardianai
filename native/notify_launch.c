@@ -4,6 +4,7 @@
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
+#include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,10 +16,21 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
+    if (argc >= 4 && strcmp(argv[1], "--watch-parent") == 0) {
+        char *end = NULL;
+        errno = 0;
+        long parent = strtol(argv[2], &end, 10);
+        if (errno || !end || *end || parent <= 1 || parent > INT_MAX
+                || getppid() != (pid_t)parent) return 126;
+        if (prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) < 0
+                || getppid() != (pid_t)parent) return 126;
+        execvp(argv[3], argv + 3);
+        return 127;
+    }
     if (argc == 2 && strcmp(argv[1], "--abi") == 0) {
         struct seccomp_notif_sizes sizes;
         if (syscall(SYS_seccomp, SECCOMP_GET_NOTIF_SIZES, 0, &sizes) < 0) return 126;
-        printf("{\"policy_version\":3,\"notif_size\":%u,\"response_size\":%u,\"recv\":%lu,\"send\":%lu,\"valid\":%lu,\"addfd\":%lu}\n",
+        printf("{\"policy_version\":3,\"launch_guard_version\":1,\"notif_size\":%u,\"response_size\":%u,\"recv\":%lu,\"send\":%lu,\"valid\":%lu,\"addfd\":%lu}\n",
                sizes.seccomp_notif, sizes.seccomp_notif_resp,
                (unsigned long)SECCOMP_IOCTL_NOTIF_RECV, (unsigned long)SECCOMP_IOCTL_NOTIF_SEND,
                (unsigned long)SECCOMP_IOCTL_NOTIF_ID_VALID, (unsigned long)SECCOMP_IOCTL_NOTIF_ADDFD);

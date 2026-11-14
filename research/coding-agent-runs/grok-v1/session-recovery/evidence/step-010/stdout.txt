@@ -1,0 +1,16 @@
+LINES 123
+0018|def run(task, workspace, command, *, output, evidence, resources, sensor="strace"):
+0025|    launcher = Path(__file__).resolve().parent / "native" / "notify-launch"
+0026|    if not launcher.is_file():
+0030|    snapshots = load_resources(resources, public_roots, launcher)
+0032|    return run_worker(task, workspace, command, output=output, evidence=evidence,
+0033|                      sensor=sensor, broker=broker, principal="worker", launcher=launcher)
+0036|def load_resources(resources, public_roots, launcher):
+0042|        if path == launcher.resolve() or any(path.is_relative_to(root) for root in public_roots):
+0054|def run_worker(task, workspace, command, *, output, evidence, sensor, broker, principal, launcher, observer=None):
+0056|    gate = SeccompGate(broker, principal, launcher)
+0063|                           sensor=sensor, broker_channel=client, stop_event=broker.stop_event,
+0064|                           native_stacks=True, trusted_launcher=launcher, **observe_options)
+0084|              "launcher_sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
+0091|def main():
+0095|    parser.add_argument("--sensor", default="strace")

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "sensor": "strace-ptrace",
+  "sensor_sha256": "705e89a26e9f6a48f2908760d78801cbaa263f9b8c6738e392fb95902479cddf",
+  "native_stacks": true,
+  "returncode": 0,
+  "timed_out": false,
+  "elapsed_seconds": 2.43791073700001,
+  "argv": [
+    "/guardian/notify-launch",
+    "/usr/bin/python3",
+    "-c",
+    "from pathlib import Path\ntext=Path('/workspace/source/guarded_agent.py').read_text().splitlines()\nprint('LINES', len(text))\nfor i,l in enumerate(text,1):\n    if l.startswith('def ') or l.startswith('class ') or 'run_worker' in l or 'launcher' in l or 'sensor' in l[:40]:\n        print(f'{i:04d}|{l}')\n"
+  ],
+  "files": {
+    "trace.2578": "6a84994b79b4999835dd850bb9f4bd3ed42954a1353e50dcb111ad5679277d6e",
+    "trace.2579": "fa08f4252e2b7d9384678e63fa2540a1148948d8b87569bc9f2d9a946da1e826"
+  },
+  "payload_pid": 2579
+}

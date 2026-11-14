@@ -1,0 +1,21 @@
+{
+  "task": "Review the public GuardianAI coding-agent MCP integration for concrete implementation and usability issues. Read actual source, build the Linux release using build_release.py and inspect its manifest/native helper ABI. Produce a concise actionable review and a JSON package inventory in /output. No attack probes, synthetic tests, external communication, policy changes, or source modifications are needed. Public source and past outputs are read-only; private /tmp scratch is allowed.",
+  "calls": [
+    {
+      "execution": "step-001",
+      "argv": [
+        "/usr/bin/python3",
+        "/workspace/source/build_release.py",
+        "--output",
+        "/output"
+      ],
+      "verdict": "abstain",
+      "returncode": 137,
+      "evidence_status": "incomplete"
+    }
+  ],
+  "scope_stopped": true,
+  "closed": false,
+  "broker_audit": [],
+  "scope": "Sequential local tool executions from one external coding-agent client. The model and its host harness are outside Linux containment. A fresh worker namespace per call is not a fresh model context."
+}

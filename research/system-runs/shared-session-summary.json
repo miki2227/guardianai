@@ -1,0 +1,37 @@
+{
+  "runs": [
+    {
+      "run": "shared-session-build",
+      "verdict": "no_observed_violation",
+      "workers": [
+        "source-indexer",
+        "builder"
+      ],
+      "all_worker_exits": 0,
+      "release_commits": 0,
+      "committed_principals": [],
+      "all_final_event_revisions_submitted": true
+    },
+    {
+      "run": "packaged-session-build",
+      "verdict": "no_observed_violation",
+      "workers": [
+        "source-indexer",
+        "builder"
+      ],
+      "all_worker_exits": 0,
+      "release_commits": 1,
+      "committed_principals": [
+        "source-indexer"
+      ],
+      "all_final_event_revisions_submitted": true
+    }
+  ],
+  "indexed_python_files": 8,
+  "changed_source_files": [
+    "build_release.py",
+    "guarded_agent.py",
+    "guarded_session.py"
+  ],
+  "scope": "Actual compiler/package and source-index work under live Jev; no failure injections or model-agent subjects."
+}

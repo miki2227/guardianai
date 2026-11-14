@@ -1,0 +1,20 @@
+{
+  "execution": "step-010",
+  "argv": [
+    "/usr/bin/python3",
+    "-c",
+    "from pathlib import Path\ntext=Path('/workspace/source/guarded_agent.py').read_text().splitlines()\nprint('LINES', len(text))\nfor i,l in enumerate(text,1):\n    if l.startswith('def ') or l.startswith('class ') or 'run_worker' in l or 'launcher' in l or 'sensor' in l[:40]:\n        print(f'{i:04d}|{l}')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "LINES 123\n0018|def run(task, workspace, command, *, output, evidence, resources, sensor=\"strace\"):\n0025|    launcher = Path(__file__).resolve().parent / \"native\" / \"notify-launch\"\n0026|    if not launcher.is_file():\n0030|    snapshots = load_resources(resources, public_roots, launcher)\n0032|    return run_worker(task, workspace, command, output=output, evidence=evidence,\n0033|                      sensor=sensor, broker=broker, principal=\"worker\", launcher=launcher)\n0036|def load_resources(resources, public_roots, launcher):\n0042|        if path == launcher.resolve() or any(path.is_relative_to(root) for root in public_roots):\n0054|def run_worker(task, workspace, command, *, output, evidence, sensor, broker, principal, launcher, observer=None):\n0056|    gate = SeccompGate(broker, principal, launcher)\n0063|                           sensor=sensor, broker_channel=client, stop_event=broker.stop_event,\n0064|                           native_stacks=True, trusted_launcher=launcher, **observe_options)\n0084|              \"launcher_sha256\": hashlib.sha256(launcher.read_bytes()).hexdigest(),\n0091|def main():\n0095|    parser.add_argument(\"--sensor\", default=\"strace\")\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-010"
+}

@@ -1,0 +1,9 @@
+[plugins]
+disabled = ["pentest-ai-agents-ca8c1ba6"]
+
+[mcp_servers.guardianai]
+command = "C:\\Windows\\System32\\wsl.exe"
+args = ["-d","kali-linux","--","python3","/home/pratz/guardianai-coding-agent-v1/bootstrap-v3/guardianai-linux-x86_64/guardian_mcp.py","--task","Review the public GuardianAI coding-agent MCP integration for concrete implementation and usability issues. Read actual source, build the Linux release using build_release.py and inspect its manifest/native helper ABI. Produce a concise actionable review and a JSON package inventory in /output. No attack probes, synthetic tests, external communication, policy changes, or source modifications are needed. Public source and past outputs are read-only; private /tmp scratch is allowed.","--workspace","/home/pratz/guardianai-coding-agent-v1/source","--session","/home/pratz/guardianai-coding-agent-v1/session-completion","--command-timeout","90","--sensor","/home/pratz/guardianai-tools/unpacked/usr/bin/strace"]
+startup_timeout_sec = 30
+tool_timeout_sec = 90
+env = { TYPESAFE_API_KEY = "${TYPESAFE_API_KEY}", WSLENV = "TYPESAFE_API_KEY/u" }

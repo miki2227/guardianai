@@ -56,3 +56,14 @@ Kernel evidence cannot reveal latent thoughts. The testable journal claim must
 concern observed policy violations, stale authority and enforceable release
 contracts, with explicit gaps for already-released information, unmediated sinks,
 unknown lost events and compromised trusted components.
+
+## Existing-agent interface now available
+
+The [Grok CLI integration](CODING_AGENT_RUN.md) supplies a concrete continuation
+path and per-message usage that the earlier T3 subject records lacked. Its one
+conversation across four tool scopes is an operational pilot, not a saturation
+study. The largest reported full input is 44,148 tokens; interrupted invocations
+and incomplete closure snapshots remain retained. Future context-pressure claims
+must still distinguish reported prompt usage, harness capacity, compaction and
+exact delivered evidence. Do not pad a task with arbitrary output to manufacture
+a natural long-context result.

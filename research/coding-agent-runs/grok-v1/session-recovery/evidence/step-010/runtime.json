@@ -1,0 +1,94 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.2579",
+      "timestamp": 1794694820.721047,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/source/guarded_agent.py"
+      ],
+      "write": false,
+      "denied": false,
+      "errno": null,
+      "permission_denied": false,
+      "rule_violation": false,
+      "event_index": 0,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13() [0x18add0]",
+        "> /usr/bin/python3.13(PyObject_Vectorcall+0x33) [0x159303]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x25d5) [0x16fa95]",
+        "> /usr/bin/python3.13(PyEval_EvalCode+0xc4) [0x169544]",
+        "> /usr/bin/python3.13() [0x2c1c44]",
+        "> /usr/bin/python3.13() [0x2bebdf]",
+        "> /usr/bin/python3.13() [0x2b7339]",
+        "> /usr/bin/python3.13() [0x2b7181]",
+        "> /usr/bin/python3.13(Py_RunMain+0x450) [0x2cefe0]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.08545143200001348,
+      "pid": 2579
+    },
+    {
+      "action": "observer",
+      "elapsed": 2.0585138140000083,
+      "model": "jev-1.14.0",
+      "probability": 0.04,
+      "session_observer_input": "_observer/input-15.json",
+      "session_observer_input_sha256": "85e594ca83f8e33fcfc73db568f54bfeed3e1f6995bc587b049d37f5c6b6914d"
+    },
+    {
+      "action": "observer",
+      "elapsed": 2.4333324979999986,
+      "model": "jev-1.14.0",
+      "probability": 0.04,
+      "session_observer_input": "_observer/input-16.json",
+      "session_observer_input_sha256": "aba53f2daaa33074970436f5e17270e3c04b1d41b11dbeac06c67b0902c23e2b"
+    }
+  ],
+  "observer_mode": "bounded_event_batches",
+  "observer_batch_bytes": 8192,
+  "returncode": 0,
+  "broker_channel": true,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "4b7af447d22ae086f381150137ba984c06c4b5668c90ff9c782d1856d396379f",
+      "event_indices": [
+        0
+      ],
+      "events": 1,
+      "frames": 7
+    },
+    {
+      "path": "observer-input-1.json",
+      "sha256": "11268d4eac0a2cb2d8458a39a9656cff7d03950fa23b46f2c9c6a0fe09e7cf57",
+      "event_indices": [
+        0
+      ],
+      "events": 1,
+      "frames": 20
+    }
+  ],
+  "final_trace_drained": true,
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

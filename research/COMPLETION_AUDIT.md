@@ -91,3 +91,62 @@ controls validate the correction; the full Linux suite passed 92 tests. This add
 a concrete compatibility restriction for applications requiring their own seccomp
 sandbox. Wider observation completeness, persistent-context effects and publication
 novelty remain unestablished.
+
+User steering on 2026-11-15 stopped expansion of probe suites in favor of actual
+system use and building. The [real system run](REAL_SYSTEM_RUN.md) produced a Linux
+core-runtime distribution under live Jev oversight and successfully ran that
+packaged application outside the development checkout. The first build exposed
+an observer context-limit failure; bounded event batching enabled both real builds
+to complete while retaining all final scoped event revisions in submitted inputs.
+The streaming observer no longer sends the entire cumulative history in each
+request, so cross-batch semantic patterns remain a material limitation. This is
+working product evidence, not completion of the research's persistent-context or
+novelty requirements. No further probe suite was added for this work.
+
+The [shared session launcher](../SESSION.md) now exposes multi-worker supervision
+through a trusted host manifest, per-worker protected-resource grants, separate
+outputs and shared terminal revocation. Actual concurrent build and source-index
+jobs completed under live Jev. The packaged launcher then ran outside the checkout,
+brokered the indexer's permitted previous-release manifest, and produced a release
+and source-change index. No new attack probes or model-agent subjects were used.
+This completes a product integration step; it does not measure long-context model
+behavior, all session failure paths or publication novelty.
+
+The [shared-observer integration](SHARED_OBSERVER_RUN.md) now supplies bounded
+cross-worker facts to both runtime and protected-release judgments, with stable
+event identities and hashed state/decision receipts. Real build work exposed a
+false alarm from an ambiguous failed-call/authority representation; that run is
+retained. Explicit errno, grant and namespace facts accompanied a subsequent
+completed workflow. This demonstrates integration and available state provenance,
+not general detector improvement, complete history, natural context pressure or
+journal-level novelty. No new attack probes or model subjects were introduced.
+
+The [manuscript draft](manuscript/manuscript.md) now consolidates those findings,
+conditional implementation arguments and primary related work. Its claim ledger
+maps numerical statements to the retained JSON artifacts, and its objective audit
+preserves the original methodology's unmet requirements. No further model calls
+or execution trials were introduced for writing. Submission readiness and Q1
+novelty remain unestablished; the research goal is not marked complete.
+
+The [final-drain correction](FINAL_DRAIN_REPORT.md) fixes a source-derived
+completion race between bounded trace reads and tracer exit. The updated standalone
+package completed a real GCC release build with its final trace-drain condition
+recorded; all final scoped event revisions matched submitted observer inputs.
+That operation does not reproduce the high-volume race or resolve persistent-agent,
+detector-accuracy or publication-novelty requirements.
+
+The [existing-agent integration](CODING_AGENT_RUN.md) now runs installed Grok
+through the Linux MCP command adapter. One continued conversation completed a
+real release build and review after retained compatibility, round-budget and
+execution-deadline failures. Per-message usage is now available for that interface;
+44,148 is the largest reported full input, not context saturation. Closure-record
+gaps remain explicit. This removes the missing-workflow blocker for integration,
+while leaving the original novelty, long-context and universal-detection claims
+unestablished.
+
+The [supervisor lifetime update](OWNER_LIFETIME_RUN.md) ties the trusted tracer to
+its creating Linux thread and enables ptrace exit-kill. A packaged normal build
+completed, and killing a second build's supervisor terminated all four captured
+live descendants, including namespace PID 1 and GCC. This is a concrete local
+lifecycle correction, not a new Linux primitive, universal cleanup proof or a
+replacement for the still-missing abrupt-death closure record.

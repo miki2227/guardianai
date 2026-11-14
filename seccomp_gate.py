@@ -40,10 +40,10 @@ class SeccompGate:
         self.broker, self.principal = broker, principal
         self.epoch = broker.epoch
         self.abi = json.loads(subprocess.check_output([str(launcher), "--abi"]))
-        if (self.abi.get("policy_version") != 3
+        if (self.abi.get("policy_version") != 3 or self.abi.get("launch_guard_version") != 1
                 or self.abi["notif_size"] != ctypes.sizeof(Notification)
                 or self.abi["response_size"] != ctypes.sizeof(Response)):
-            raise RuntimeError("Unsupported seccomp notification ABI or policy version")
+            raise RuntimeError("Unsupported seccomp notification ABI, policy or launch guard version")
         self.libc = ctypes.CDLL(None, use_errno=True)
         self.libc.ioctl.restype = ctypes.c_int
         self.audit = []

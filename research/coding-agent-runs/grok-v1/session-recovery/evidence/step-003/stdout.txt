@@ -1,0 +1,67 @@
+LINES 66
+0001|"""Build a local Linux x86-64 core-runtime distribution from this checkout."""
+0002|import argparse
+0003|import hashlib
+0004|import json
+0005|from pathlib import Path
+0006|import shutil
+0007|import subprocess
+0008|import zipfile
+0009|
+0010|
+0011|def main():
+0012|    parser = argparse.ArgumentParser(description=__doc__)
+0013|    parser.add_argument('--output', type=Path, required=True)
+0014|    args = parser.parse_args()
+0015|    project = Path(__file__).resolve().parent
+0016|    output = args.output.resolve()
+0017|    output.mkdir(parents=True, exist_ok=True)
+0018|    stage = output / 'guardianai-linux-x86_64'
+0019|    stage.mkdir(exist_ok=False)
+0020|    (stage / 'native').mkdir()
+0021|    names = ['guardian.py', 'monitor.py', 'runtime_supervisor.py', 'release_broker.py',
+0022|             'seccomp_gate.py', 'guarded_agent.py', 'guarded_session.py', 'session_observer.py', 'guardian_mcp.py', 'build_release.py', 'native/notify_launch.c']
+0023|    for name in names:
+0024|        shutil.copyfile(project / name, stage / name)
+0025|    command = ['gcc', '-Wall', '-Wextra', '-Werror', '-O2', str(stage / 'native/notify_launch.c'),
+0026|               '-o', str(stage / 'native/notify-launch')]
+0027|    subprocess.run(command, check=True)
+0028|    abi = json.loads(subprocess.check_output([str(stage / 'native/notify-launch'), '--abi']))
+0029|    if abi.get('policy_version') != 3:
+0030|        raise RuntimeError('Built launcher policy does not match this release')
+0031|    (stage / 'RUNNING.txt').write_text(
+0032|        'GuardianAI core runtime for Linux x86-64\n\n'
+0033|        'Requires Python 3.10+, Bubblewrap with user namespaces, and strace with native stack support.\n'
+0034|        'Provide TYPESAFE_API_KEY only to the trusted supervisor environment.\n'
+0035|        'Use a dedicated public input directory, an empty output directory and a new evidence directory.\n'
+0036|        'Keep protected resources outside every public/runtime mount; snapshots are limited to 32 KiB.\n\n'
+0037|        'python3 guarded_agent.py --task "Read the approved summary" --workspace /path/to/public '
+0038|        '--output /path/to/empty-output --evidence /path/to/new-evidence --sensor /path/to/strace '
+0039|        '--resource summary=/path/to/private/summary.txt -- /usr/bin/cat /protected/summary\n\n'
+0040|        'Workers cannot install their own seccomp filters in this profile.\n'
+0041|        'For multiple workers: python3 guarded_session.py --manifest /path/to/session.json --evidence /path/to/new-evidence --sensor /path/to/strace\n'
+0042|        'Session manifests are trusted host configuration with task, resources, and workers. Each worker supplies name, workspace, output, command, and resource-name array resources.\n'
+0043|        'For coding-agent MCP tools: python3 guardian_mcp.py --task "Declared task" --workspace /path/to/public-source --session /path/to/new-session --sensor /path/to/strace\n'
+0044|        'MCP clients must disable other execution tools. Only MCP-dispatched Linux commands are contained; the model transport and host harness remain trusted and external.\n'
+0045|        'Exit 77: detected violation. Exit 78: abstention. Otherwise the worker exit status is preserved.\n'
+0046|        'This archive contains the core runtime; historical research evidence is retained in the source project.\n'
+0047|        'OS evidence observes execution and cannot reveal latent model thoughts.\n')
+0048|    files = sorted(p for p in stage.rglob('*') if p.is_file())
+0049|    manifest = {'architecture': 'Linux x86-64', 'native_policy': abi['policy_version'],
+0050|                'files_sha256': {str(p.relative_to(stage)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+0051|                'compiler_argv': command,
+0052|                'scope': 'Core runtime distribution, excluding historical research datasets and credentials.'}
+0053|    (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+0054|    archive = output / 'GuardianAI-linux-x86_64.zip'
+0055|    with zipfile.ZipFile(archive, 'x', compression=zipfile.ZIP_DEFLATED) as bundle:
+0056|        for path in sorted(p for p in stage.rglob('*') if p.is_file()):
+0057|            bundle.write(path, path.relative_to(stage))
+0058|    report = {'archive': archive.name, 'sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
+0059|              'bytes': archive.stat().st_size, 'native_policy': abi['policy_version'],
+0060|              'file_count': len(manifest['files_sha256']) + 1}
+0061|    (output / 'build-report.json').write_text(json.dumps(report, indent=2) + '\n')
+0062|    print(json.dumps(report))
+0063|
+0064|
+0065|if __name__ == '__main__':
+0066|    main()

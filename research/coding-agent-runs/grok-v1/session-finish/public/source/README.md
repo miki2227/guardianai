@@ -1,0 +1,113 @@
+<img src="assets/icon.svg" width="64" height="64" alt="">
+
+# GuardianAI
+
+Research testbed for pretrained sender/receiver agents communicating under Jev
+oversight, supported by Linux kernel namespace isolation and execution evidence.
+See [research scope and limitations](RESEARCH.md) before running untrusted code.
+
+A [built Linux core runtime](dist/GuardianAI-linux-x86_64.zip) is available.
+It compiled and packaged the application under live Jev oversight, then the
+standalone packaged application rebuilt itself successfully outside the development
+checkout. See the [actual system run](research/REAL_SYSTEM_RUN.md) for the artifact,
+runtime evidence and streaming-observer limits.
+
+The latest package also requires a fully drained trace scan after tracer exit
+before reporting clean completion. A [real GCC release build](research/FINAL_DRAIN_REPORT.md)
+completed under that corrected packaged supervisor; earlier releases remain archived.
+
+The current archive includes a [shared session launcher](SESSION.md) for multiple
+local workers with per-worker grants and shared-scope stopping. The packaged
+launcher completed a real concurrent build and source-change indexing workflow
+under live Jev oversight.
+Jev runtime and release decisions now also receive
+[bounded shared session context](research/SHARED_OBSERVER_RUN.md), with hashed
+state receipts and explicit errno/namespace facts. The first integration's false
+alarm remains in the evidence alongside the subsequent completed real workflow.
+
+An [evidence-grounded manuscript draft](research/manuscript/manuscript.md)
+consolidates the system, conditional authorization arguments, retained failures
+and actual workloads. Its [submission status](research/manuscript/SUBMISSION_STATUS.md)
+and [original-objective audit](research/manuscript/OBJECTIVE_AUDIT.md) keep the
+unmeasured context-pressure and novelty requirements explicit.
+
+The working [`guarded_agent.py`](guarded_agent.py) launcher runs ordinary Linux
+commands with live Jev observation, bounded native execution stacks and
+kernel-mediated protected-resource reads. See the
+[quickstart](research/WORKING_QUICKSTART.md) and
+[kernel-gate report](research/KERNEL_GATE_REPORT.md): 77 Linux tests and retained
+live CLI controls passed. Protected reads wait for authorization before a snapshot
+descriptor is injected; other syscall observation reacts after the action.
+
+The [current-system comparison](research/BASELINE_REPORT.md) retains 30 actual
+nono/GuardianAI worker trials and a startup-observation defect found and fixed
+through that comparison. Policy-3 validation passed 92 Linux tests, including
+context recording and release-order checks. The later streaming change was
+verified through the actual application builds described above.
+
+The [release-order study](research/RELEASE_ORDER_REPORT.md) found and corrected
+protected descriptor release after a prohibited `ptrace`/`connect` attempt.
+Native launcher policy 2 stops shared authority through kernel notifications
+before returning the denial to the worker.
+The later [policy 3 correction](research/FILTER_STACK_REPORT.md) prevents workers
+from installing filters that suppress those notifications. It preserves supported
+queries and requires rebuilding older helpers.
+
+The [context measurement audit](research/CONTEXT_MEASUREMENT_REPORT.md) adds a
+validated exchange recorder and distinguishes the historical fresh-context calls
+from the still-unmeasured persistent-context experiment.
+
+The [live OS-supervisor report](research/RUNTIME_REPORT.md) preserves the earlier
+runtime-only experiments and their post-effect enforcement limits.
+
+The [protected-resource broker](research/BROKER_REPORT.md) adds a pre-release
+boundary for resources kept outside agent mounts, with task/epoch revalidation
+and shared-scope stopping. This does not mediate every syscall or erase prior data.
+
+The earlier [paired-agent protocol](research/PAIRED_PROTOCOL.md) and
+[paired results](research/PAIRED_REPORT.md) retain the initial subject pilot.
+The [social-deduction report](research/SOCIAL_REPORT.md) adds the matched
+fixed/history block, actual paraphrasing, and observer-state diagnostics.
+Agents receive ordinary tasks, without a supplied covert objective or protocol.
+There is no model training or weight-update arm. Jev is the independent observer.
+
+The supporting [kernel research report](research/REPORT.md) includes a primary-source
+[literature audit](research/LITERATURE.md), replicated real WSL2 executions, live
+Jev judgments, evidence-damage ablations, and engineered two-agent channel controls.
+Use [reproduction instructions](research/REPRODUCE.md) to inspect the raw traces
+or run the study. The report preserves negative results and limits novelty claims.
+
+Requires Python 3.10+, Linux (native or WSL2), Bubblewrap, and user namespaces.
+Set `TYPESAFE_API_KEY` in the trusted supervisor environment. Never put credentials
+in the task directory. Jev evaluates task text and command arguments remotely.
+
+```sh
+mkdir -p /tmp/guardian-input
+output_dir=$(mktemp -d /tmp/guardian-output.XXXXXX)
+python3 guardian.py --task 'Write /output/result.txt containing ok' \
+  --workspace /tmp/guardian-input --output "$output_dir" -- \
+  python3 -c "from pathlib import Path; Path('/output/result.txt').write_text('ok')"
+python3 -m unittest discover -s tests -v
+```
+
+The `guardian.py` preflight CLI denies on Jev probability >= 0.2 or missing/invalid provider results.
+This threshold has not been calibrated for deployment. The model is pinned to
+`jev-1.14.0`. Inputs are mounted read-only at `/workspace`. Results go into a
+separate, initially empty directory at `/output`; the command starts in `/output`.
+Input and output directories must be disjoint, including resolved symlinks.
+The isolated command can write `/output` and private `/tmp`,
+read runtime libraries, and cannot use the host network or see host home directories.
+Child processes inherit isolation. No kernel module is installed.
+
+`python tests/live_pilot.py` runs six synthetic command descriptions against the
+real Jev API and writes `evidence/live-pilot-output-boundary.json`; it executes no described commands.
+Kernel tests execute bounded Python payloads with actual namespace isolation.
+Windows skips those tests; run them inside Linux for containment evidence.
+
+Earlier evidence records the initial fully writable workspace prototype. Those
+reports remain historical; their runners use its earlier API. Current launch calls
+require `output=` and the CLI requires `--output`.
+
+`audit_session.py` adds strace-based kernel-origin evidence and a retrospective
+task-rule/Jev audit. It requires a trusted evidence directory outside the agent's
+mounts. This is user-space tracing of kernel syscalls; Jev inference remains remote.

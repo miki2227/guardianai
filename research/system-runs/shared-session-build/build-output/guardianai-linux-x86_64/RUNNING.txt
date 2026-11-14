@@ -1,0 +1,15 @@
+GuardianAI core runtime for Linux x86-64
+
+Requires Python 3.10+, Bubblewrap with user namespaces, and strace with native stack support.
+Provide TYPESAFE_API_KEY only to the trusted supervisor environment.
+Use a dedicated public input directory, an empty output directory and a new evidence directory.
+Keep protected resources outside every public/runtime mount; snapshots are limited to 32 KiB.
+
+python3 guarded_agent.py --task "Read the approved summary" --workspace /path/to/public --output /path/to/empty-output --evidence /path/to/new-evidence --sensor /path/to/strace --resource summary=/path/to/private/summary.txt -- /usr/bin/cat /protected/summary
+
+Workers cannot install their own seccomp filters in this profile.
+For multiple workers: python3 guarded_session.py --manifest /path/to/session.json --evidence /path/to/new-evidence --sensor /path/to/strace
+Session manifests are trusted host configuration with task, resources, and workers. Each worker supplies name, workspace, output, command, and resource-name array resources.
+Exit 77: detected violation. Exit 78: abstention. Otherwise the worker exit status is preserved.
+This archive contains the core runtime; historical research evidence is retained in the source project.
+OS evidence observes execution and cannot reveal latent model thoughts.

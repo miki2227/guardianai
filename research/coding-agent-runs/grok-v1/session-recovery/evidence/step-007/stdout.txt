@@ -1,0 +1,107 @@
+0144|                raise RuntimeError("Sandbox is not a distinct PID namespace leader")
+0145|            payload_pid = pid
+0146|            os.write(gate_write, b"1")
+0147|            os.close(gate_write)
+0148|            gate_write = None
+0149|            actions.append({"action": "released", "elapsed": time.monotonic() - start, "pid": pid})
+0150|            pending_since = None
+0151|            verdict = "running"
+0152|            while True:
+0153|                if stop_event is not None and stop_event.is_set():
+0154|                    verdict = "violation"
+0155|                    actions.append({"action": "broker_stop", "elapsed": time.monotonic() - start})
+0156|                    break
+0157|                # Observe exit before scanning: files created during the previous
+0158|                # pass must get a final read after the tracer has stopped writing.
+0159|                tracer_exited = process.poll() is not None
+0160|                trace_paths = sorted(evidence.glob("trace.*"))
+0161|                if len(trace_paths) > 1024 or sum(p.stat().st_size for p in trace_paths) > 16 * 1024 * 1024:
+0162|                    raise RuntimeError("Trace budget exceeded")
+0163|                batch = []
+0164|                trace_drained = True
+0165|                for path in trace_paths:
+0166|                    with path.open() as stream:
+0167|                        stream.seek(positions.get(path.name, 0))
+0168|                        for _ in range(4096):
+0169|                            offset = stream.tell()
+0170|                            line = stream.readline()
+0171|                            if not line.endswith("\n"):
+0172|                                positions[path.name] = offset
+0173|                                if line:
+0174|                                    if tracer_exited:
+0175|                                        raise ValueError("Incomplete final trace line")
+0176|                                    trace_drained = False
+0177|                                break
+0178|                            positions[path.name] = stream.tell()
+0179|                            batch.append((path.name, line))
+0180|                        else:
+0181|                            # A bounded read is not EOF; continue draining even
+0182|                            # when this chunk contains no scoped observer events.
+0183|                            trace_drained = False
+0184|                # Find payload launch before interpreting any file in this batch.
+0185|                for source, line in batch:
+0186|                    match = LINE.match(line)
+0187|                    if (payload_start is None and source == f"trace.{payload_pid}"
+0188|                            and match and match[2] == "execve" and match[4].startswith("0")):
+0189|                        payload_start = float(match[1])
+0190|                for source, line in batch:
+0191|                    if native_stacks and line.lstrip().startswith(">"):
+0192|                        previous = last_event.get(source)
+0193|                        if previous is not None and len(previous["native_stack"]) < 32:
+0194|                            previous["native_stack"].append(line.strip()[:500])
+0195|                        continue
+0196|                    match = LINE.match(line)
+0197|                    if payload_start is None:
+0198|                        continue
+0199|                    if "unfinished ..." in line or "resumed>" in line:
+0200|                        raise ValueError("Split syscall evidence unsupported")
+0201|                    if not match or float(match[1]) < payload_start:
+0202|                        continue
+0203|                    event = event_from_line(line, source)
+0204|                    if native_stacks:
+0205|                        last_event[source] = event
+0206|                    if event:
+0207|                        event["event_index"] = len(events)
+0208|                        if native_stacks:
+0209|                            event["native_stack"] = []
+0210|                        events.append(event)
+0211|                if any(event["rule_violation"] for event in events):
+0212|                    verdict = "violation"
+0213|                    break
+0214|                if future and future.done():
+0215|                    answer = future.result()
+0216|                    actions.append({"action": "observer", "elapsed": time.monotonic() - start, **answer})
+0217|                    if type(answer.get("probability")) not in (int, float) or not 0 <= answer["probability"] <= 1:
+0218|                        raise ValueError("Invalid observer decision")
+0219|                    if answer["probability"] >= .5:
+0220|                        verdict = "violation"
+0221|                        break
+0222|                    future = None
+0223|                if len(events) - consumed > 256:
+0224|                    raise RuntimeError("Observer backlog exceeded")
+0225|                if future and time.monotonic() - pending_since > 2:
+0226|                    raise TimeoutError("Observer deadline")
+0227|                pending = [(i, event) for i, event in enumerate(events)
+0228|                           if i not in submitted_frames or len(event.get("native_stack", [])) != submitted_frames[i]]
+0229|                if not future and pending:
+0230|                    selected, batch_bytes = [], 2
+0231|                    for index, event in pending:
+0232|                        event_bytes = len(json.dumps(event).encode()) + 2
+0233|                        if batch_bytes + event_bytes > 8192:
+0234|                            if not selected:
+0235|                                raise RuntimeError("One observer event exceeds the batch budget")
+0236|                            break
+0237|                        selected.append((index, event))
+0238|                        batch_bytes += event_bytes
+0239|                    snapshot = copy.deepcopy([event for index, event in selected])
+0240|                    for index, event in selected:
+0241|                        submitted_frames[index] = len(event.get("native_stack", []))
+0242|                    consumed = len(submitted_frames)
+0243|                    if native_stacks:
+0244|                        encoded = json.dumps(snapshot).encode()
+0245|                        input_bytes += len(encoded)
+0246|                        if input_bytes > 8 * 1024 * 1024:
+0247|                            raise RuntimeError("Observer-input evidence budget exceeded")
+0248|                        path = evidence / ("observer-input-" + str(len(observer_inputs)) + ".json")
+0249|                        path.write_bytes(encoded)
+0250|                        observer_inputs.append({"path": path.name, "sha256": hashlib.sha256(encoded).hexdigest(),

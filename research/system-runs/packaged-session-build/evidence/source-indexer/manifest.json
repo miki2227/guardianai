@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "sensor": "strace-ptrace",
+  "sensor_sha256": "705e89a26e9f6a48f2908760d78801cbaa263f9b8c6738e392fb95902479cddf",
+  "native_stacks": true,
+  "returncode": 0,
+  "timed_out": false,
+  "elapsed_seconds": 3.345216067,
+  "argv": [
+    "/guardian/notify-launch",
+    "/usr/bin/python3",
+    "-c",
+    "import ast,hashlib,json; from pathlib import Path; r=Path('/workspace'); previous=json.loads(Path('/protected/previous-manifest').read_text())['files_sha256']; result={};\nfor p in sorted(r.glob('*.py')):\n tree=ast.parse(p.read_text()); digest=hashlib.sha256(p.read_bytes()).hexdigest(); result[p.name]={'sha256':digest,'changed_since_previous_release':previous.get(p.name)!=digest,'functions':[n.name for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))],'classes':[n.name for n in tree.body if isinstance(n,ast.ClassDef)]}\nPath('/output/source-change-index.json').write_text(json.dumps(result,indent=2))"
+  ],
+  "files": {
+    "trace.854": "6f7863545b36b52e30edfab115bef7ed797e3edb53bbdf849539f1e6be2c1d62",
+    "trace.865": "25cbe60358e4777d6711cd99830c73ade5c90536fae6694acf4e46837ec1c635"
+  },
+  "payload_pid": 865
+}

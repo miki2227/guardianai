@@ -9,6 +9,8 @@ import select
 import socket
 import subprocess
 
+from guardian import NSS_PATHS
+
 
 class Data(ctypes.Structure):
     _fields_ = [("nr", ctypes.c_int), ("arch", ctypes.c_uint32),
@@ -81,6 +83,16 @@ class SeccompGate:
     def _reply(self, listener, notification, error=0, flags=0):
         self.ioctl(listener, "send", Response(notification.id, 0, -error, flags))
 
+    def missing_nscd(self, notification):
+        length = notification.data.args[2]
+        if not 3 <= length <= 110:
+            return None
+        raw = self.memory(notification, notification.data.args[1], length)
+        if len(raw) != length or int.from_bytes(raw[:2], 'little') != socket.AF_UNIX:
+            return None
+        path = raw[2:].split(b'\0', 1)[0]
+        return next((name for name in NSS_PATHS if path == name.encode()), None)
+
     def _snapshot_fd(self, content):
         descriptor = os.memfd_create("guardian-approved-snapshot", os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
         try:
@@ -122,6 +134,21 @@ class SeccompGate:
                 try:
                     self.ioctl(listener, "recv", notification)
                     self.ioctl(listener, "valid", ctypes.c_uint64(notification.id))
+                    if notification.data.nr == 42:
+                        local_service = self.missing_nscd(notification)
+                        if local_service is not None:
+                            self.ioctl(listener, "valid", ctypes.c_uint64(notification.id))
+                            event = {'event': 'local_service_lookup_denied', 'pid': notification.pid,
+                                     'syscall': 42, 'notification_id': notification.id,
+                                     'local_service_path': local_service, 'reply_errno': 'ENOENT',
+                                     'epoch': self.epoch}
+                            with self.broker.lock:
+                                self.audit.append(event)
+                                self.broker.audit.append({**event, 'principal': self.principal})
+                            # Return a constant failure. Never CONTINUE a pointer
+                            # inspected in mutable target memory or contact NSS.
+                            self._reply(listener, notification, errno.ENOENT)
+                            continue
                     # connect, ptrace, filter changes via prctl/seccomp. The
                     # native filter passes through the supported query operations.
                     if notification.data.nr in (42, 101, 157, 317):

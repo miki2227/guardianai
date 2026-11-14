@@ -1,0 +1,20 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "/bin/sh",
+    "-c",
+    "find /workspace/source -type f -name '*.py' -o -name '*.md' -o -name '*.json' -o -name '*.toml' | head -200; echo '---'; ls -la /workspace/source /workspace/results 2>/dev/null | head -100"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "/workspace/source/monitor.py\n/workspace/source/guarded_session.py\n/workspace/source/runtime_supervisor.py\n/workspace/source/seccomp_gate.py\n/workspace/source/session_observer.py\n/workspace/source/release_broker.py\n/workspace/source/guardian.py\n/workspace/source/build_release.py\n/workspace/source/guarded_agent.py\n/workspace/source/guardian_mcp.py\n---\n/workspace/results:\ntotal 8\ndrwxr-xr-x 2 1000 1000 4096 Nov 14 23:13 .\ndrwxr-xr-x 4 1000 1000 4096 Nov 14 23:13 ..\n\n/workspace/source:\ntotal 120\ndrwxr-xr-x 3 1000 1000  4096 Nov 14 23:12 .\ndrwxr-xr-x 4 1000 1000  4096 Nov 14 23:13 ..\n-rw-r--r-- 1 1000 1000  4890 Nov 14 23:12 build_release.py\n-rw-r--r-- 1 1000 1000  5990 Nov 14 22:26 guarded_agent.py\n-rw-r--r-- 1 1000 1000  6435 Nov 14 21:10 guarded_session.py\n-rw-r--r-- 1 1000 1000  5841 Nov 14 23:10 guardian.py\n-rw-r--r-- 1 1000 1000  8376 Nov 14 22:26 guardian_mcp.py\n-rw-r--r-- 1 1000 1000 10014 Nov 14 23:10 monitor.py\ndrwxr-xr-x 2 1000 1000  4096 Nov 14 23:12 native\n-rw-r--r-- 1 1000 1000  8772 Nov 14 13:05 release_broker.py\n-rw-r--r-- 1 1000 1000 20005 Nov 14 23:12 runtime_supervisor.py\n-rw-r--r-- 1 1000 1000 11019 Nov 14 23:12 seccomp_gate.py\n-rw-r--r-- 1 1000 1000  6256 Nov 14 23:10 session_observer.py\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001"
+}

@@ -150,3 +150,10 @@ completed, and killing a second build's supervisor terminated all four captured
 live descendants, including namespace PID 1 and GCC. This is a concrete local
 lifecycle correction, not a new Linux primitive, universal cleanup proof or a
 replacement for the still-missing abrupt-death closure record.
+
+The [NSS compatibility correction](NSS_COMPATIBILITY_RUN.md) emulates a missing
+private service for two exact local socket paths, without executing connections.
+The earlier real Grok listing argv and a following release build completed under
+the packaged observer. Four gate records matched four typed ENOENT events; the
+live and retrospective views agreed. This is a narrow compatibility result with
+retained provenance, not a malicious-intent or classifier-accuracy guarantee.

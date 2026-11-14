@@ -38,6 +38,7 @@ def main():
         '--output /path/to/empty-output --evidence /path/to/new-evidence --sensor /path/to/strace '
         '--resource summary=/path/to/private/summary.txt -- /usr/bin/cat /protected/summary\n\n'
         'Workers cannot install their own seccomp filters in this profile.\n'
+        'Private /var/run/nscd/socket and /run/nscd/socket connects receive emulated ENOENT without executing a connection. Other connect requests stop the scope.\n'
         'Requires strace --kill-on-exit and a guard-version-1 helper. The trusted tracer is tied to the supervising Linux thread by SIGKILL parent-death notification.\n'
         'For multiple workers: python3 guarded_session.py --manifest /path/to/session.json --evidence /path/to/new-evidence --sensor /path/to/strace\n'
         'Session manifests are trusted host configuration with task, resources, and workers. Each worker supplies name, workspace, output, command, and resource-name array resources.\n'

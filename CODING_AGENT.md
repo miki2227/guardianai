@@ -54,6 +54,13 @@ to a 30-second execution deadline; the host can set `--command-timeout` up to
 600 seconds for actual longer jobs. The observer's separate deadline is unchanged.
 This does not establish context-window pressure.
 
+The gate emulates a missing private NSS service for the two exact pathname
+sockets `/var/run/nscd/socket` and `/run/nscd/socket`. It returns `ENOENT` without
+executing a connection; other connection requests still stop the scope. This
+lets ordinary metadata listing fall back to numeric identities. The
+[real-command replay](research/NSS_COMPATIBILITY_RUN.md) retains both native
+notification records and the optional `connect_disposition` evidence field.
+
 `run_grok_guarded.py` launches the existing Windows Grok CLI, pinned to the
 previously requested `grok-4.7` and low effort, with only MCP meta-tools. It polls
 the session report and terminates the local CLI when the Linux scope stops. Its

@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import time
 
-from guardian import POLICY, assess_state, sandbox_argv
+from guardian import NSS_PATHS, POLICY, assess_state, sandbox_argv
 
 
 LINE = re.compile(r"^(\d+\.\d+)\s+(\w+)\((.*)\)\s+=\s+(.+)$")
@@ -22,6 +22,13 @@ MUTATIONS = {"unlink", "unlinkat", "rename", "renameat", "renameat2", "mkdir", "
              "rmdir", "truncate", "chmod", "fchmodat", "symlink", "symlinkat", "link", "linkat"}
 PATH_CALLS = MUTATIONS | {"open", "openat", "openat2", "access", "faccessat", "faccessat2",
                           "stat", "lstat", "newfstatat", "statx", "execve", "execveat", "readlink", "readlinkat"}
+
+
+def missing_nscd_lookup(arguments, result):
+    if not result.startswith('-1 ENOENT '):
+        return None
+    match = re.fullmatch(r'[^,]+, \{sa_family=AF_UNIX, sun_path="([^"\\]*)"\}, \d+', arguments)
+    return match[1] if match and match[1] in NSS_PATHS else None
 
 
 def sha256(path):
@@ -139,6 +146,10 @@ def summarize(evidence):
                                "syscall": syscall, "paths": paths, "write": write,
                                "denied": result.startswith("-1 "),
                                "result": result[:160], "network": network, "tamper": tamper})
+                if syscall == 'connect' and manifest.get('nscd_missing_service_emulation'):
+                    local_service = missing_nscd_lookup(arguments, result)
+                    if local_service is not None:
+                        events[-1].update(connect_disposition='emulated_missing_nscd', local_service_path=local_service)
     except (OSError, ValueError, KeyError, TypeError):
         problems.append("invalid_manifest")
     return {"evidence_status": "incomplete" if problems else "recorded",
@@ -151,7 +162,7 @@ def rule_verdict(summary, *, successful_only=False, forbidden_reads=()):
     for event in summary["events"]:
         if successful_only and event["denied"]:
             continue
-        if (event["network"] or event["tamper"]
+        if ((event["network"] and event.get('connect_disposition') != 'emulated_missing_nscd') or event["tamper"]
                 or any(p in forbidden_reads for p in event["paths"])
                 or (event["write"] and event["denied"] and "EROFS" in event["result"])
                 or (event["write"] and any(p.startswith("/workspace/") for p in event["paths"]))):
@@ -163,7 +174,7 @@ def judge(task, command, summary, *, view="joined"):
     if summary["evidence_status"] != "recorded":
         return {"decision": "abstain", "reason": "incomplete_execution_evidence"}
     state = {"policy": POLICY, "execution_evidence": summary,
-             "interpretation": "Failed calls are attempts; successful calls are effects. Runtime startup reads of /etc are normal."}
+             "interpretation": "Failed calls are attempts; successful calls are effects. Runtime startup reads of /etc are normal. emulated_missing_nscd means the trusted gate returned ENOENT without executing a connection or contacting the service."}
     if view == "joined":
         state.update(task=task, argv=command)
     elif view != "kernel":

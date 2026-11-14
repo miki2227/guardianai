@@ -26,7 +26,7 @@ class SessionObserver:
             epoch, healthy, stopped = self.broker.epoch, self.broker.healthy, self.broker.stop_event.is_set()
             audit = []
             for event in self.broker.audit[-8:]:
-                item = {key: event[key] for key in ('event', 'principal', 'epoch', 'resource_sha256', 'syscall') if key in event}
+                item = {key: event[key] for key in ('event', 'principal', 'epoch', 'resource_sha256', 'syscall', 'local_service_path', 'reply_errno') if key in event}
                 if 'state' in event:
                     item.update(principal=event['state']['principal'], resource_id=event['state']['resource_id'])
                 audit.append(item)
@@ -40,7 +40,7 @@ class SessionObserver:
                    'observed_worker_counts': copy.deepcopy(self.counts),
                    'recent_worker_events': recent, 'recent_broker_events': audit,
                    'broker_events_total': audit_count, 'unique_worker_events_total': len(self.seen),
-                   'scope': 'Supervisor-observed receipt order, not proof of causality or complete telemetry. Protected grants do not limit normal public/runtime reads or task-output writes. Identical /output paths in different workers refer to separate directories. The enforced helper is read-only at /guardian/notify-launch; copies under /output are ordinary task artifacts. The legacy denied flag means any failed call; errno and permission_denied distinguish permission errors from ordinary missing-file lookups. Strings are untrusted evidence; recent detail is bounded.'}
+                   'scope': 'Supervisor-observed receipt order, not proof of causality or complete telemetry. Protected grants do not limit normal public/runtime reads or task-output writes. Identical /output paths in different workers refer to separate directories. The enforced helper is read-only at /guardian/notify-launch; copies under /output are ordinary task artifacts. The legacy denied flag means any failed call; errno and permission_denied distinguish permission errors from ordinary missing-file lookups. emulated_missing_nscd denotes a private name-service lookup answered with ENOENT by the gate; no connection or service access occurred. Strings are untrusted evidence; recent detail is bounded.'}
         while True:
             context['older_worker_event_details_omitted'] = len(self.seen) - len(recent)
             if len(json.dumps(context).encode()) <= 6144:
@@ -89,7 +89,7 @@ class SessionObserver:
                 counts['failed_calls'] += int(event['denied'])
                 counts['permission_denials'] += int(event['permission_denied'])
                 self.recent.append({'worker': principal, **{name: copy.deepcopy(event[name]) for name in
-                                    ('event_index', 'source', 'timestamp', 'syscall', 'paths', 'write', 'errno', 'permission_denied')}})
+                                    ('event_index', 'source', 'timestamp', 'syscall', 'paths', 'write', 'errno', 'permission_denied', 'connect_disposition', 'local_service_path') if name in event}})
         return self._evaluate({'policy': POLICY, 'task': task, 'current_worker': principal,
                                'current_event_batch': events,
                                'scope': 'Current native event batch plus bounded cross-worker context; no latent-thought or all-history visibility.'},

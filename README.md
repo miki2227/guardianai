@@ -15,6 +15,9 @@ The current [supervisor lifetime guard](research/OWNER_LIFETIME_RUN.md) was also
 exercised by cancelling a real GCC build. A separate
 [frontend teammate brief](TEAMMATE_FRONTEND.md) defines a read-only evidence viewer
 that can be built without changing the runtime.
+The [private NSS compatibility correction](research/NSS_COMPATIBILITY_RUN.md)
+also lets the earlier Grok metadata-listing command finish while returning
+constant failures instead of executing its name-service connections.
 It compiled and packaged the application under live Jev oversight, then the
 standalone packaged application rebuilt itself successfully outside the development
 checkout. See the [actual system run](research/REAL_SYSTEM_RUN.md) for the artifact,

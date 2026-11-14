@@ -157,3 +157,11 @@ The earlier real Grok listing argv and a following release build completed under
 the packaged observer. Four gate records matched four typed ENOENT events; the
 live and retrospective views agreed. This is a narrow compatibility result with
 retained provenance, not a malicious-intent or classifier-accuracy guarantee.
+
+The [observer timing update](OBSERVER_TIMING_RUN.md) closes a source-derived
+completed-future deadline gap and records submission/completion/consumption with
+input hashes and application status. Actual release compilation completed with
+43 timed responses, all within the existing budget. The run did not exercise a
+late response, and old inter-action gaps are not reclassified as latency evidence.
+The new fields improve temporal provenance without establishing hard-real-time
+stopping, provider performance or publication novelty.

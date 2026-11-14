@@ -82,3 +82,9 @@ an incomplete final closure record.
 Terminating the local client cannot recall released data or cancel inference
 already running at the provider. Session IDs and usage totals alone do not prove
 retained-token occupancy, compaction or long-context failure.
+
+The [observer timing fields](research/OBSERVER_TIMING_RUN.md) distinguish call
+completion from later consumption, expose deadline/application status, and join
+each response to its saved runtime event batch. They use each worker's elapsed
+clock; they are not provider latency or a shared cross-worker clock. Late completed
+responses are rejected under the existing two-second observer-call budget.

@@ -18,6 +18,9 @@ that can be built without changing the runtime.
 The [private NSS compatibility correction](research/NSS_COMPATIBILITY_RUN.md)
 also lets the earlier Grok metadata-listing command finish while returning
 constant failures instead of executing its name-service connections.
+The [observer timing contract](research/OBSERVER_TIMING_RUN.md) also records
+submission, completion and consumption separately and rejects completed answers
+that exceed the existing response budget.
 It compiled and packaged the application under live Jev oversight, then the
 standalone packaged application rebuilt itself successfully outside the development
 checkout. See the [actual system run](research/REAL_SYSTEM_RUN.md) for the artifact,

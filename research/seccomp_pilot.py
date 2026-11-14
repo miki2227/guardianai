@@ -134,6 +134,10 @@ if __name__ == "__main__":
     provenance = {"launcher_sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
                   "source_sha256": {name: hashlib.sha256((project / name).read_bytes()).hexdigest() for name in sources},
                   "scope": "Source hashes recorded before trials; supervisor-provisioned native helper"}
+    for name in sources:
+        target = root / "source-snapshot" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(project / name, target)
     (root / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
     cases = ["allow", "cat", "ungranted", "revoke_pending", "mutable_path"] + (["live_allow"] if args.live else [])
     results = []

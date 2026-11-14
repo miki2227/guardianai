@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "--abi") == 0) {
         struct seccomp_notif_sizes sizes;
         if (syscall(SYS_seccomp, SECCOMP_GET_NOTIF_SIZES, 0, &sizes) < 0) return 126;
-        printf("{\"notif_size\":%u,\"response_size\":%u,\"recv\":%lu,\"send\":%lu,\"valid\":%lu,\"addfd\":%lu}\n",
+        printf("{\"policy_version\":3,\"notif_size\":%u,\"response_size\":%u,\"recv\":%lu,\"send\":%lu,\"valid\":%lu,\"addfd\":%lu}\n",
                sizes.seccomp_notif, sizes.seccomp_notif_resp,
                (unsigned long)SECCOMP_IOCTL_NOTIF_RECV, (unsigned long)SECCOMP_IOCTL_NOTIF_SEND,
                (unsigned long)SECCOMP_IOCTL_NOTIF_ID_VALID, (unsigned long)SECCOMP_IOCTL_NOTIF_ADDFD);
@@ -35,8 +35,21 @@ int main(int argc, char **argv) {
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
         BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, 0x40000000U, 0, 1),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | ENOSYS),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_seccomp, 0, 5),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SECCOMP_GET_ACTION_AVAIL, 2, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SECCOMP_GET_NOTIF_SIZES, 1, 0),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_USER_NOTIF),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_prctl, 0, 4),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, PR_SET_SECCOMP, 0, 1),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_USER_NOTIF),
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_ptrace, 0, 1),
-        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_USER_NOTIF),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_connect, 0, 1),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_USER_NOTIF),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_open, 0, 1),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_USER_NOTIF),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_openat, 0, 1),

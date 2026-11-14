@@ -1,0 +1,89 @@
+{
+  "case": "seccomp_mask",
+  "repeat": 2,
+  "runtime": {
+    "verdict": "violation",
+    "termination_requested": true,
+    "events": [
+      {
+        "source": "trace.972",
+        "timestamp": 1794670548.927528,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/probe"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+          "> /guardian/notify-launch(main+0x409) [0x14e9]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /guardian/notify-launch(_start+0x21) [0x1511]"
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.06891886599998998,
+        "pid": 972
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.3856961500000011,
+        "probability": 0.01
+      },
+      {
+        "action": "broker_stop",
+        "elapsed": 0.39593404400000054
+      },
+      {
+        "action": "namespace_kill",
+        "elapsed": 0.39600073299999394
+      }
+    ],
+    "returncode": 137,
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [
+      {
+        "path": "observer-input-0.json",
+        "sha256": "3a9b1a454bd519136321df6f91ef71ed4818e3de4330de897004a7d96b624a14",
+        "events": 1,
+        "frames": 7
+      }
+    ],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "release_commits": 0,
+  "canary_printed": false,
+  "filter_install_succeeded": false,
+  "queries_succeeded": false,
+  "broker_audit": [
+    {
+      "event": "prohibited_syscall",
+      "pid": 972,
+      "syscall": 317,
+      "notification_id": 12244638275376740131,
+      "ip": 128273140431913,
+      "epoch": 1,
+      "principal": "worker"
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "prohibited_syscall",
+      "pid": 972,
+      "syscall": 317,
+      "notification_id": 12244638275376740131,
+      "ip": 128273140431913,
+      "epoch": 1
+    }
+  ]
+}

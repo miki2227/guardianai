@@ -1,0 +1,68 @@
+{
+  "case": "seccomp_mask",
+  "repeat": 0,
+  "runtime": {
+    "verdict": "violation",
+    "termination_requested": true,
+    "events": [
+      {
+        "source": "trace.896",
+        "timestamp": 1794670610.04663,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/probe"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.1126487779999934,
+        "pid": 896
+      },
+      {
+        "action": "broker_stop",
+        "elapsed": 0.3927820810000071
+      },
+      {
+        "action": "namespace_kill",
+        "elapsed": 0.3928347650000319
+      }
+    ],
+    "returncode": 137,
+    "broker_channel": true,
+    "native_stacks": false,
+    "observer_inputs": [],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "release_commits": 0,
+  "canary_printed": false,
+  "filter_install_succeeded": false,
+  "queries_succeeded": false,
+  "broker_audit": [
+    {
+      "event": "prohibited_syscall",
+      "pid": 896,
+      "syscall": 317,
+      "notification_id": 3157593516033409011,
+      "ip": 137681666661417,
+      "epoch": 1,
+      "principal": "worker"
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "prohibited_syscall",
+      "pid": 896,
+      "syscall": 317,
+      "notification_id": 3157593516033409011,
+      "ip": 137681666661417,
+      "epoch": 1
+    }
+  ]
+}

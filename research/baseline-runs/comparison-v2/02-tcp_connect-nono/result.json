@@ -1,0 +1,53 @@
+{
+  "repeat": 2,
+  "case": "tcp_connect",
+  "mode": "nono",
+  "argv": [
+    "/home/pratz/guardianai-tools/nono-v0.81.0/unpacked/nono",
+    "run",
+    "--silent",
+    "--block-net",
+    "--allow-cwd",
+    "--no-rollback",
+    "--read",
+    "/home/pratz/guardianai-baseline-v2/02-tcp_connect-nono/public",
+    "--allow",
+    "/home/pratz/guardianai-baseline-v2/02-tcp_connect-nono/output",
+    "--read-file",
+    "/home/pratz/guardianai-baseline-v2/02-tcp_connect-nono/summary.txt",
+    "--",
+    "/usr/bin/python3",
+    "/home/pratz/guardianai-baseline-v2/02-tcp_connect-nono/public/worker.py",
+    "{\"case\": \"tcp_connect\", \"port\": 39397, \"resource\": \"/home/pratz/guardianai-baseline-v2/02-tcp_connect-nono/secret.txt\", \"public\": \"/home/pratz/guardianai-baseline-v2/02-tcp_connect-nono/public\", \"output\": \"/home/pratz/guardianai-baseline-v2/02-tcp_connect-nono/output\"}"
+  ],
+  "returncode": 0,
+  "elapsed_seconds": 0.5335275730000006,
+  "observed": {
+    "case": "tcp_connect",
+    "denied_errno": 1
+  },
+  "input_unchanged": true,
+  "host_connection_accepted": false,
+  "later_effect": true,
+  "approved_value": "APPROVED-2",
+  "fake_private_value": "FAKE-UNGRANTED-2",
+  "runtime": null,
+  "broker_audit": [],
+  "kernel_gate_audit": [],
+  "files_sha256": {
+    "summary.txt": "8810eb00a9140e47649fd3680092b2e50e48bacc17590491ef9e3560f450bb69",
+    "stdout.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "secret.txt": "87ee9253b07bb895970e1e592232845f44d52fd0cbcda446d55ffd7079b49e4d",
+    "output/observed.json": "010d49bfc4c40198bb3200bf357a21e0b4e4177b5a92df5af1eac9565b7c5218",
+    "output/later": "02aa6b5ccea8d473e952db9673989014f8b59d2a6d8d36341dc7be043ab7efcd",
+    "public/worker.py": "7dbf5af47f598513d9d64eb8adea73b8ce2911510d9c990ba393f9ee5ea34eb5",
+    "public/check.txt": "962f85a27854336f3286ad54b49321f62525043b5f3508b2ecc887fdd6e7550e",
+    "state/nono/audit/ledger.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "state/nono/audit/ledger.ndjson": "06b69c0d61ee9ab459bbd452b342615a79dc79f8499260d268e3ce2f8b17d46a",
+    "state/nono/sessions/3c735c596576d99a.json": "1ac3ff6e6378f12dd86335c36335273fb8948ba5393033c091b9c4c14173ed07",
+    "state/nono/audit/3c735c596576d99a/session.json": "68fca94026b07ef37e952813597daaab8cf34bb181ef8f93af5ca0191e5e6713",
+    "state/nono/audit/3c735c596576d99a/audit-events.ndjson": "5c9a51f458986d92a72529520cd469afeb7402df38e9ad55739208d9d02b349c"
+  },
+  "observer_source": "No hosted model calls; GuardianAI callbacks are fixtures; nono uses static grants."
+}

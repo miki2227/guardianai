@@ -1,0 +1,72 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.920",
+      "timestamp": 1794661003.471559,
+      "syscall": "execve",
+      "paths": [
+        "/workspace/probe"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /usr/lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+        "> /usr/lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+        "> /usr/lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+        "> /usr/bin/bwrap(+0x0) [0x4bc7]",
+        "> /usr/lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+        "> /usr/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/bwrap(+0x0) [0x5651]"
+      ]
+    },
+    {
+      "source": "trace.920",
+      "timestamp": 1794661003.47783,
+      "syscall": "openat",
+      "paths": [
+        "/output/result"
+      ],
+      "write": true,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /workspace/probe() [0x117f]",
+        "> /workspace/probe(main+0x9) [0x11b7]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /workspace/probe(_start+0x21) [0x1091]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.060556779999998867,
+      "pid": 920
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.2165803749999995,
+      "probability": 0.01
+    }
+  ],
+  "broker_channel": false,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "247b59c0cb7c16170d5c80254e2abf979615cbeac83f14ebdc66c39476b0fb57",
+      "events": 2,
+      "frames": 15
+    }
+  ],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

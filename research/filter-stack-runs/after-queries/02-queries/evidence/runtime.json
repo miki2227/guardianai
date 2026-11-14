@@ -1,0 +1,83 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.1136",
+      "timestamp": 1794670557.195051,
+      "syscall": "execve",
+      "paths": [
+        "/workspace/probe"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+        "> /guardian/notify-launch(main+0x409) [0x14e9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /guardian/notify-launch(_start+0x21) [0x1511]"
+      ]
+    },
+    {
+      "source": "trace.1136",
+      "timestamp": 1794670557.212112,
+      "syscall": "openat",
+      "paths": [
+        "/protected/summary"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /workspace/probe(main+0x14c) [0x125c]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /workspace/probe(_start+0x21) [0x1401]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.08123521300001357,
+      "pid": 1136
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.43160007199998063,
+      "probability": 0.01
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.44221745400000145,
+      "probability": 0.01
+    }
+  ],
+  "returncode": 0,
+  "broker_channel": true,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "baaf58b6e68c3d4d0b650cc98b8f279d55ebc0c16920285346ca6627679a5fb5",
+      "events": 1,
+      "frames": 7
+    },
+    {
+      "path": "observer-input-1.json",
+      "sha256": "52515461fa44cca005c3a35bac3174fe4ef408404ad3749f8e06cbc8382eb2d9",
+      "events": 2,
+      "frames": 14
+    }
+  ],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

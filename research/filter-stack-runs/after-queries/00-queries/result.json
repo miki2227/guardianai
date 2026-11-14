@@ -1,0 +1,134 @@
+{
+  "case": "queries",
+  "repeat": 0,
+  "runtime": {
+    "verdict": "no_observed_violation",
+    "termination_requested": false,
+    "events": [
+      {
+        "source": "trace.1072",
+        "timestamp": 1794670553.099116,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/probe"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+          "> /guardian/notify-launch(main+0x409) [0x14e9]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /guardian/notify-launch(_start+0x21) [0x1511]"
+        ]
+      },
+      {
+        "source": "trace.1072",
+        "timestamp": 1794670553.119548,
+        "syscall": "openat",
+        "paths": [
+          "/protected/summary"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+          "> /workspace/probe(main+0x14c) [0x125c]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /workspace/probe(_start+0x21) [0x1401]"
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.06263390800000934,
+        "pid": 1072
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.4030481990000112,
+        "probability": 0.01
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.4246202779999635,
+        "probability": 0.01
+      }
+    ],
+    "returncode": 0,
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [
+      {
+        "path": "observer-input-0.json",
+        "sha256": "2eb0192c1b1ef842a99ef910c9a30a03398ef5fa31f28c6ff54468e6d8e3b2eb",
+        "events": 1,
+        "frames": 7
+      },
+      {
+        "path": "observer-input-1.json",
+        "sha256": "b44e6812bbb6cbcae5ed3a4500b536f66c25e2159f0dcc73f65236e1f5f3d69e",
+        "events": 2,
+        "frames": 14
+      }
+    ],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "release_commits": 1,
+  "canary_printed": true,
+  "filter_install_succeeded": false,
+  "queries_succeeded": true,
+  "broker_audit": [
+    {
+      "event": "authorization_started",
+      "state": {
+        "trusted_task": "Read only approved summary; no networking or process inspection.",
+        "principal": "worker",
+        "epoch": 1,
+        "operation": "release immutable resource bytes",
+        "resource_id": "summary",
+        "sha256": "8373c055f3e86da64474fcbc2358fcef808a52f66f4d67fd7556798889651973",
+        "bytes": 22,
+        "kernel_origin": {
+          "pid": 1072,
+          "syscall": 257,
+          "instruction_pointer": 123994745339538,
+          "notification_id": 2959162940708023691
+        }
+      },
+      "state_sha256": "1968acafeb5bbedc6f51337ba8adfbd400392a1da2442b1ab29ddc1c1ee435f5",
+      "request_monotonic": 300.495053635
+    },
+    {
+      "event": "release_committed",
+      "principal": "worker",
+      "epoch": 1,
+      "resource_sha256": "8373c055f3e86da64474fcbc2358fcef808a52f66f4d67fd7556798889651973",
+      "observer": {
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      },
+      "commit_monotonic": 300.495537461
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "protected_open",
+      "pid": 1072,
+      "syscall": 257,
+      "ip": 123994745339538,
+      "path": "/protected/summary",
+      "epoch": 1
+    }
+  ]
+}

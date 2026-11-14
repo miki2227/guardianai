@@ -3,8 +3,10 @@
 `runtime_supervisor.py` observes kernel-origin syscall records while a local worker
 executes, submits scoped events to pinned Jev `jev-1.14.0`, and terminates the worker
 through a stable Linux pidfd. It uses strace/ptrace and kernel namespaces. It does
-not run inference inside the kernel, collect native stack unwinds, or detect latent
-thoughts. Hosted inference remains outside WSL.
+not run inference inside the kernel or detect latent thoughts. The initial trials
+below did not collect native stacks. The current optional native-stack path and
+protected-open gate are validated separately in [KERNEL_GATE_REPORT.md](KERNEL_GATE_REPORT.md).
+Hosted inference remains outside WSL.
 
 ## Enforcement contract
 
@@ -72,8 +74,10 @@ suspicious information flows in real time. Generic layered monitoring, provenanc
 graphs and sequential detection are therefore not new contributions.
 
 The stronger open direction is authority that remains valid under context loss,
-with measured revocation and evidence-coverage contracts. Object-bound pre-effect
-mediation, cross-worker revocation, adversarial sensor fault injection, prior-system
+with measured revocation and evidence-coverage contracts. The later
+[broker](BROKER_REPORT.md) implements shared-scope revocation, and the
+[kernel gate](KERNEL_GATE_REPORT.md) implements object-bound pre-release mediation
+for provisioned snapshots. Broader adversarial sensor fault injection, prior-system
 baselines and persistent context-pressure agent experiments remain unfinished.
 The current live prototype does not establish publication novelty or Q1 readiness.
 

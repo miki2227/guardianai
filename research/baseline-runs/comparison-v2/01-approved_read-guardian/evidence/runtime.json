@@ -1,0 +1,341 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664229.687193,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/worker.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6(fstatat+0xa) [0x1035ea]",
+        "> /usr/bin/python3.13() [0x1f969a]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x2446) [0x16f906]",
+        "> /usr/bin/python3.13() [0x1ae9e2]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallOneArg+0x78) [0x1abde8]",
+        "> /usr/bin/python3.13(PyImport_GetImporter+0xd7) [0x2d2e07]",
+        "> /usr/bin/python3.13(Py_RunMain+0x388) [0x2cef18]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664229.689071,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/worker.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13() [0x18add0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x122) [0x14ccd2]",
+        "> /usr/bin/python3.13(PyFile_OpenCodeObject+0x60) [0x204fe0]",
+        "> /usr/bin/python3.13() [0x18add0]",
+        "> /usr/bin/python3.13(PyObject_Vectorcall+0x33) [0x159303]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x25d5) [0x16fa95]",
+        "> /usr/bin/python3.13() [0x1ae9e2]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallOneArg+0x78) [0x1abde8]",
+        "> /usr/bin/python3.13(PyImport_GetImporter+0xd7) [0x2d2e07]",
+        "> /usr/bin/python3.13(Py_RunMain+0x388) [0x2cef18]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664229.700825,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/worker.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6(fstatat+0xa) [0x1035ea]",
+        "> /usr/bin/python3.13() [0x1f969a]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x2446) [0x16f906]",
+        "> /usr/bin/python3.13(PyObject_CallOneArg+0x48) [0x1abdb8]",
+        "> /usr/bin/python3.13(PyImport_GetImporter+0xd7) [0x2d2e07]",
+        "> /usr/bin/python3.13(Py_RunMain+0x388) [0x2cef18]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664229.705059,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/worker.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6(readlink+0x7) [0x1072d7]",
+        "> /usr/bin/python3.13() [0x2b85e5]",
+        "> /usr/bin/python3.13() [0x2cf12b]",
+        "> /usr/bin/python3.13(Py_RunMain+0x8b) [0x2cec1b]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664229.708236,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/worker.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6(readlink+0x7) [0x1072d7]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(realpath+0x382) [0x42202]",
+        "> /usr/bin/python3.13() [0x70da5]",
+        "> /usr/bin/python3.13(Py_RunMain+0x8b) [0x2cec1b]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664229.709412,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/worker.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(_IO_file_open+0x24) [0x8c234]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(_IO_file_fopen+0xff) [0x8c3ef]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x801e9]",
+        "> /usr/bin/python3.13(_Py_fopen_obj+0x66) [0x2d5386]",
+        "> /usr/bin/python3.13(Py_RunMain+0x2a9) [0x2cee39]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664230.7061,
+      "syscall": "openat",
+      "paths": [
+        "/protected/summary"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13() [0x18add0]",
+        "> /usr/bin/python3.13(PyObject_Vectorcall+0x33) [0x159303]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x25d5) [0x16fa95]",
+        "> /usr/bin/python3.13(PyEval_EvalCode+0xc4) [0x169544]",
+        "> /usr/bin/python3.13() [0x2c1c44]",
+        "> /usr/bin/python3.13() [0x2bebdf]",
+        "> /usr/bin/python3.13() [0x2d0454]",
+        "> /usr/bin/python3.13() [0x2cfee9]",
+        "> /usr/bin/python3.13() [0x2cfd1e]",
+        "> /usr/bin/python3.13(Py_RunMain+0x31c) [0x2ceeac]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664230.714718,
+      "syscall": "openat",
+      "paths": [
+        "/output/observed.json"
+      ],
+      "write": true,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x2446) [0x16f906]",
+        "> /usr/bin/python3.13(PyEval_EvalCode+0xc4) [0x169544]",
+        "> /usr/bin/python3.13() [0x2c1c44]",
+        "> /usr/bin/python3.13() [0x2bebdf]",
+        "> /usr/bin/python3.13() [0x2d0454]",
+        "> /usr/bin/python3.13() [0x2cfee9]",
+        "> /usr/bin/python3.13() [0x2cfd1e]",
+        "> /usr/bin/python3.13(Py_RunMain+0x31c) [0x2ceeac]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.1018",
+      "timestamp": 1794664230.977445,
+      "syscall": "openat",
+      "paths": [
+        "/output/later"
+      ],
+      "write": true,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x2446) [0x16f906]",
+        "> /usr/bin/python3.13(PyEval_EvalCode+0xc4) [0x169544]",
+        "> /usr/bin/python3.13() [0x2c1c44]",
+        "> /usr/bin/python3.13() [0x2bebdf]",
+        "> /usr/bin/python3.13() [0x2d0454]",
+        "> /usr/bin/python3.13() [0x2cfee9]",
+        "> /usr/bin/python3.13() [0x2cfd1e]",
+        "> /usr/bin/python3.13(Py_RunMain+0x31c) [0x2ceeac]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.06685109000000011,
+      "pid": 1018
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.7583525149999986,
+      "probability": 0.01,
+      "source": "deterministic fixture; no Jev call"
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.7702436920000011,
+      "probability": 0.01,
+      "source": "deterministic fixture; no Jev call"
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.7815747669999951,
+      "probability": 0.01,
+      "source": "deterministic fixture; no Jev call"
+    },
+    {
+      "action": "observer",
+      "elapsed": 1.7743117759999976,
+      "probability": 0.01,
+      "source": "deterministic fixture; no Jev call"
+    },
+    {
+      "action": "observer",
+      "elapsed": 1.7858850659999987,
+      "probability": 0.01,
+      "source": "deterministic fixture; no Jev call"
+    },
+    {
+      "action": "observer",
+      "elapsed": 2.0418409269999955,
+      "probability": 0.01,
+      "source": "deterministic fixture; no Jev call"
+    }
+  ],
+  "returncode": 0,
+  "broker_channel": true,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "7b06a3868cc6bf062545d10e3cf3ea99b790fdc4ebd8252b0f03ae94b5b4e1ce",
+      "events": 2,
+      "frames": 34
+    },
+    {
+      "path": "observer-input-1.json",
+      "sha256": "c7845ef87f7eff1b53728187ed91456d3d27d9c57b79810b49f9483c69881c32",
+      "events": 6,
+      "frames": 70
+    },
+    {
+      "path": "observer-input-2.json",
+      "sha256": "5b39024a5c1f6bf11aa713ea24b937a7add3990362be2fbbb7fce0b4d173894f",
+      "events": 6,
+      "frames": 72
+    },
+    {
+      "path": "observer-input-3.json",
+      "sha256": "17e8fdefc87de58329143fceee500cb8a42b1f6cdfdc1ffa54cc99e746bc6874",
+      "events": 8,
+      "frames": 93
+    },
+    {
+      "path": "observer-input-4.json",
+      "sha256": "4ea14eecd3e1f1fd1c461865c7d5faddc5185350203a41c2b9c30041e7a2e895",
+      "events": 8,
+      "frames": 112
+    },
+    {
+      "path": "observer-input-5.json",
+      "sha256": "f91a8ce37ef68f674bf26650f7cd9cbdeaa2c41ff22d5d184c104df71099ffd6",
+      "events": 9,
+      "frames": 131
+    }
+  ],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

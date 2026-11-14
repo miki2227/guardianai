@@ -1,0 +1,63 @@
+{
+  "verdict": "violation",
+  "termination_requested": true,
+  "events": [
+    {
+      "source": "trace.964",
+      "timestamp": 1794669773.080983,
+      "syscall": "execve",
+      "paths": [
+        "/workspace/probe"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+        "> /guardian/notify-launch(main+0x349) [0x1429]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /guardian/notify-launch(_start+0x21) [0x1451]"
+      ]
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794669773.095621,
+      "syscall": "connect",
+      "paths": [],
+      "write": false,
+      "denied": true,
+      "rule_violation": true,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.08725963699998829,
+      "pid": 964
+    },
+    {
+      "action": "namespace_kill",
+      "elapsed": 0.43504474999997456
+    }
+  ],
+  "returncode": 137,
+  "broker_channel": true,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "513df1ed44485bce653a7881b69643180638bf6f4b68bde3644438979ac8e37b",
+      "events": 1,
+      "frames": 7
+    }
+  ],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

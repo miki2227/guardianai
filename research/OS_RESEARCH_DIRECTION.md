@@ -35,8 +35,10 @@ strace files afterward and killing a process is retrospective detection, not
 prevention. The current audit_session.py does exactly the latter post-execution
 analysis and is not itself a live enforcement daemon. A separate
 `runtime_supervisor.py` now provides live syscall observation and pidfd-based
-namespace termination; see [measured results](RUNTIME_REPORT.md). Cgroup-wide
-freeze/revocation and object-bound pre-effect authorization remain unimplemented.
+namespace termination; see [measured results](RUNTIME_REPORT.md). The later
+[kernel gate](KERNEL_GATE_REPORT.md) adds object-bound protected-snapshot release
+and bounded native-stack observer inputs. Shared-scope revocation exists in the
+broker; cgroup-wide freezing remains unimplemented.
 
 ## Candidate contributions and falsifiable tests
 

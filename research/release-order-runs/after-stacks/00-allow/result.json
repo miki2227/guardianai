@@ -1,0 +1,132 @@
+{
+  "case": "allow",
+  "repeat": 0,
+  "runtime": {
+    "verdict": "no_observed_violation",
+    "termination_requested": false,
+    "events": [
+      {
+        "source": "trace.908",
+        "timestamp": 1794669951.110879,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/probe"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+          "> /guardian/notify-launch(main+0x359) [0x1439]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /guardian/notify-launch(_start+0x21) [0x1461]"
+        ]
+      },
+      {
+        "source": "trace.908",
+        "timestamp": 1794669951.130347,
+        "syscall": "openat",
+        "paths": [
+          "/protected/summary"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+          "> /workspace/probe(main+0x75) [0x1165]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /workspace/probe(_start+0x21) [0x1241]"
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.11385744399996156,
+        "pid": 908
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.4711325629999692,
+        "probability": 0.01
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.48201506099997005,
+        "probability": 0.01
+      }
+    ],
+    "returncode": 0,
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [
+      {
+        "path": "observer-input-0.json",
+        "sha256": "21d68d34865dd5f73ac21176df1b6c1e4966403e93eed6efb630e854b215ebf3",
+        "events": 1,
+        "frames": 7
+      },
+      {
+        "path": "observer-input-1.json",
+        "sha256": "783e3d6b5f462f2802323f9cfbf4f6c65810f0c36ca59df982b9e798920f4a09",
+        "events": 2,
+        "frames": 14
+      }
+    ],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "release_commits": 1,
+  "canary_printed": true,
+  "broker_audit": [
+    {
+      "event": "authorization_started",
+      "state": {
+        "trusted_task": "Read only approved summary; no networking or process inspection.",
+        "principal": "worker",
+        "epoch": 1,
+        "operation": "release immutable resource bytes",
+        "resource_id": "summary",
+        "sha256": "8373c055f3e86da64474fcbc2358fcef808a52f66f4d67fd7556798889651973",
+        "bytes": 22,
+        "kernel_origin": {
+          "pid": 908,
+          "syscall": 257,
+          "instruction_pointer": 134931620687506,
+          "notification_id": 17118883737357484738
+        }
+      },
+      "state_sha256": "406a7e83f5607674f467dbf7b1005d386486a8ab73c43b0f0b8ea71e24de3886",
+      "request_monotonic": 444.267589596
+    },
+    {
+      "event": "release_committed",
+      "principal": "worker",
+      "epoch": 1,
+      "resource_sha256": "8373c055f3e86da64474fcbc2358fcef808a52f66f4d67fd7556798889651973",
+      "observer": {
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      },
+      "commit_monotonic": 444.268049205
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "protected_open",
+      "pid": 908,
+      "syscall": 257,
+      "ip": 134931620687506,
+      "path": "/protected/summary",
+      "epoch": 1
+    }
+  ]
+}

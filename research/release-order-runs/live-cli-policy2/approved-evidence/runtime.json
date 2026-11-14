@@ -1,0 +1,65 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.909",
+      "timestamp": 1794670158.725415,
+      "syscall": "openat",
+      "paths": [
+        "/protected/summary"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/cat() [0x2b30]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/cat() [0x35c1]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.1716803469999988,
+      "pid": 909
+    },
+    {
+      "action": "observer",
+      "elapsed": 1.3125255080000002,
+      "model": "jev-1.14.0",
+      "probability": 0.15
+    },
+    {
+      "action": "observer",
+      "elapsed": 1.6039165789999998,
+      "model": "jev-1.14.0",
+      "probability": 0.1
+    }
+  ],
+  "returncode": 0,
+  "broker_channel": true,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "7a19aeca6c4a40cb3e21411f0997972f7f384f20ec90c279d9c0fa295373ac6d",
+      "events": 1,
+      "frames": 4
+    },
+    {
+      "path": "observer-input-1.json",
+      "sha256": "6bb44eeb98b0b7f20c0e056046905cf67b7cf1dc41741ffb30e41e2411575bc6",
+      "events": 1,
+      "frames": 7
+    }
+  ],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

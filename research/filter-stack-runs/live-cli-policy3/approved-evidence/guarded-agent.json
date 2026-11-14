@@ -1,0 +1,105 @@
+{
+  "verdict": "no_observed_violation",
+  "task": "Read only the approved summary resource and print its exact contents.",
+  "runtime": {
+    "verdict": "no_observed_violation",
+    "termination_requested": false,
+    "events": [
+      {
+        "source": "trace.932",
+        "timestamp": 1794670718.355682,
+        "syscall": "openat",
+        "paths": [
+          "/protected/summary"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+          "> /usr/bin/cat() [0x2b30]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /usr/bin/cat() [0x35c1]"
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.1795886399999631,
+        "pid": 932
+      },
+      {
+        "action": "observer",
+        "elapsed": 1.545181710999998,
+        "model": "jev-1.14.0",
+        "probability": 0.07
+      }
+    ],
+    "returncode": 0,
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [
+      {
+        "path": "observer-input-0.json",
+        "sha256": "bb9d6d15738d6b35d9dbe5460613bbb640786097ef06cba1fd5cb0b5246fb0dd",
+        "events": 1,
+        "frames": 7
+      }
+    ],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "broker_audit": [
+    {
+      "event": "authorization_started",
+      "state": {
+        "trusted_task": "Read only the approved summary resource and print its exact contents.",
+        "principal": "worker",
+        "epoch": 1,
+        "operation": "release immutable resource bytes",
+        "resource_id": "summary",
+        "sha256": "09655b2ab49f50287fea37337d99adb47124465d2923cedc4b3fd26edc12e625",
+        "bytes": 26,
+        "kernel_origin": {
+          "pid": 932,
+          "syscall": 257,
+          "instruction_pointer": 138037076696722,
+          "notification_id": 7305923638063239151
+        }
+      },
+      "state_sha256": "1ec6209305b8d4259d6e033a9de65fe051159f73cf6796b35b5fae68c003bd40",
+      "request_monotonic": 465.731124523
+    },
+    {
+      "event": "release_committed",
+      "principal": "worker",
+      "epoch": 1,
+      "resource_sha256": "09655b2ab49f50287fea37337d99adb47124465d2923cedc4b3fd26edc12e625",
+      "observer": {
+        "model": "jev-1.14.0",
+        "probability": 0.22
+      },
+      "commit_monotonic": 466.251178853
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "protected_open",
+      "pid": 932,
+      "syscall": 257,
+      "ip": 138037076696722,
+      "path": "/protected/summary",
+      "epoch": 1
+    }
+  ],
+  "launcher_sha256": "cac8d358f3c24cf5e4deeb3526281aa98e4503877d310a6b55f3854eea524b39",
+  "resources": {
+    "summary": "09655b2ab49f50287fea37337d99adb47124465d2923cedc4b3fd26edc12e625"
+  },
+  "scope": "Protected snapshots only; no guarantee for private copies already exposed in public mounts or previously released data."
+}

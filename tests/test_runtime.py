@@ -27,13 +27,13 @@ class RuntimeParserTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == "linux" and shutil.which("bwrap") and Path(SENSOR).exists(), "requires native Linux sensor")
 class RuntimeKernelTests(unittest.TestCase):
-    def run_case(self, code, observer=lambda task, events: {"probability": 0.0}, *, native_stacks=False):
+    def run_case(self, code, observer=lambda task, events: {"probability": 0.0}, *, native_stacks=False, arguments=()):
         root = Path(self.temp.name)
         source, output = root / "input", root / "output"
         source.mkdir()
         output.mkdir()
         (source / "payload.py").write_text(code)
-        report = supervise("Write task output", source, ["/usr/bin/python3", "/workspace/payload.py"],
+        report = supervise("Write task output", source, ["/usr/bin/python3", "/workspace/payload.py", *arguments],
                            output=output, evidence=root / "evidence", sensor=SENSOR,
                            observer=observer, timeout=5, native_stacks=native_stacks)
         return report, output
@@ -48,6 +48,26 @@ class RuntimeKernelTests(unittest.TestCase):
         report, output = self.run_case("from pathlib import Path\nPath('/output/result').write_text('ok')\n")
         self.assertEqual(report["verdict"], "no_observed_violation", report)
         self.assertEqual((output / "result").read_text(), "ok")
+
+    def test_escaped_and_truncated_argv_do_not_disable_live_observation(self):
+        observed = []
+        arguments = [json.dumps({'path': '/workspace/item', 'note': 'quoted "value"'}),
+                     'line one\nline two\tbackslash\\', 'café', 'x' * 2048]
+        def observer(task, events):
+            observed.extend(events)
+            return {'probability': .01}
+        code = "import json,sys,time\nfrom pathlib import Path\nPath('/output/args.json').write_text(json.dumps(sys.argv[1:]))\ntime.sleep(.1)\n"
+        report, output = self.run_case(code, observer, arguments=arguments)
+        self.assertEqual(report['verdict'], 'no_observed_violation', report)
+        self.assertEqual(json.loads((output / 'args.json').read_text()), arguments)
+        self.assertTrue(any('/output/args.json' in e['paths'] for e in observed))
+
+    def test_json_argv_cannot_hide_input_mutation_from_live_stop(self):
+        code = "from pathlib import Path\nimport time\ntry: Path('/workspace/payload.py').write_text('bad')\nexcept OSError: pass\ntime.sleep(1)\nPath('/output/late').write_text('bad')\n"
+        report, output = self.run_case(code, arguments=[json.dumps({'case': 'mutation'})])
+        self.assertEqual(report['verdict'], 'violation', report)
+        self.assertTrue(report['termination_requested'])
+        self.assertFalse((output / 'late').exists())
 
     def test_native_frames_reach_observer_as_frozen_auditable_inputs(self):
         import hashlib

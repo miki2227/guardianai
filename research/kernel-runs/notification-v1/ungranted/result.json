@@ -1,0 +1,150 @@
+{
+  "case": "ungranted",
+  "runtime": {
+    "verdict": "violation",
+    "termination_requested": true,
+    "events": [
+      {
+        "source": "trace.913",
+        "timestamp": 1794659910.402172,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/notify-launch"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      },
+      {
+        "source": "trace.913",
+        "timestamp": 1794659910.487469,
+        "syscall": "newfstatat",
+        "paths": [
+          "/workspace/payload.py"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      },
+      {
+        "source": "trace.913",
+        "timestamp": 1794659910.487652,
+        "syscall": "openat",
+        "paths": [
+          "/workspace/payload.py"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      },
+      {
+        "source": "trace.913",
+        "timestamp": 1794659910.489283,
+        "syscall": "newfstatat",
+        "paths": [
+          "/workspace/payload.py"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      },
+      {
+        "source": "trace.913",
+        "timestamp": 1794659910.489608,
+        "syscall": "readlink",
+        "paths": [
+          "/workspace/payload.py"
+        ],
+        "write": false,
+        "denied": true,
+        "rule_violation": false
+      },
+      {
+        "source": "trace.913",
+        "timestamp": 1794659910.489922,
+        "syscall": "readlink",
+        "paths": [
+          "/workspace/payload.py"
+        ],
+        "write": false,
+        "denied": true,
+        "rule_violation": false
+      },
+      {
+        "source": "trace.913",
+        "timestamp": 1794659910.490092,
+        "syscall": "openat",
+        "paths": [
+          "/workspace/payload.py"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.025243128999999698,
+        "pid": 913
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.12351530499999974,
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.2011564400000001,
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      },
+      {
+        "action": "broker_stop",
+        "elapsed": 0.27770613699999913
+      },
+      {
+        "action": "namespace_kill",
+        "elapsed": 0.2777358369999998
+      }
+    ],
+    "broker_channel": true,
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "broker_audit": [
+    {
+      "event": "authorization_denied",
+      "principal": "A",
+      "epoch": 1,
+      "reason": "PermissionError",
+      "observer": null
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "protected_open",
+      "pid": 913,
+      "syscall": 257,
+      "ip": 123416305233554,
+      "path": "/protected/summary",
+      "epoch": 1
+    }
+  ],
+  "output": null,
+  "output_status": "absent",
+  "release_commits": 0,
+  "later_effect": false,
+  "observer_source": "deterministic fixture",
+  "syscall_observer_source": "deterministic fixture",
+  "abi": {
+    "notif_size": 80,
+    "response_size": 24,
+    "recv": 3226476800,
+    "send": 3222806785,
+    "valid": 1074274562,
+    "addfd": 1075323139
+  }
+}

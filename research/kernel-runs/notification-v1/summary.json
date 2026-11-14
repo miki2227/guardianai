@@ -1,0 +1,874 @@
+{
+  "cases": [
+    {
+      "case": "allow",
+      "runtime": {
+        "verdict": "no_observed_violation",
+        "termination_requested": false,
+        "events": [
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.056921,
+            "syscall": "execve",
+            "paths": [
+              "/workspace/notify-launch"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.140385,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.140638,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.1434,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.143763,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.144178,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.144424,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659909.258532,
+            "syscall": "openat",
+            "paths": [
+              "/output/result.json"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.861",
+            "timestamp": 1794659910.26091,
+            "syscall": "openat",
+            "paths": [
+              "/output/later"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.04254164299999985,
+            "pid": 861
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.15243266500000008,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.22776504299999978,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.23950475000000004,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.34863486799999954,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 1.355460635,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          }
+        ],
+        "broker_channel": true,
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "broker_audit": [
+        {
+          "event": "release_committed",
+          "principal": "A",
+          "epoch": 1,
+          "resource_sha256": "697827f6805180bf53ec9d5e81c8a160c3e2b1915f6870e493106d201cf1a2ee",
+          "observer": {
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          "commit_monotonic": 6.851932849
+        }
+      ],
+      "kernel_gate_audit": [
+        {
+          "event": "protected_open",
+          "pid": 861,
+          "syscall": 257,
+          "ip": 128494177840786,
+          "path": "/protected/summary",
+          "epoch": 1
+        }
+      ],
+      "output": {
+        "value": "APPROVED-SNAPSHOT",
+        "channel_env": null
+      },
+      "output_status": "parsed",
+      "release_commits": 1,
+      "later_effect": true,
+      "observer_source": "deterministic fixture",
+      "syscall_observer_source": "deterministic fixture",
+      "abi": {
+        "notif_size": 80,
+        "response_size": 24,
+        "recv": 3226476800,
+        "send": 3222806785,
+        "valid": 1074274562,
+        "addfd": 1075323139
+      }
+    },
+    {
+      "case": "ungranted",
+      "runtime": {
+        "verdict": "violation",
+        "termination_requested": true,
+        "events": [
+          {
+            "source": "trace.913",
+            "timestamp": 1794659910.402172,
+            "syscall": "execve",
+            "paths": [
+              "/workspace/notify-launch"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.913",
+            "timestamp": 1794659910.487469,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.913",
+            "timestamp": 1794659910.487652,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.913",
+            "timestamp": 1794659910.489283,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.913",
+            "timestamp": 1794659910.489608,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.913",
+            "timestamp": 1794659910.489922,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.913",
+            "timestamp": 1794659910.490092,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.025243128999999698,
+            "pid": 913
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.12351530499999974,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.2011564400000001,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "broker_stop",
+            "elapsed": 0.27770613699999913
+          },
+          {
+            "action": "namespace_kill",
+            "elapsed": 0.2777358369999998
+          }
+        ],
+        "broker_channel": true,
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "broker_audit": [
+        {
+          "event": "authorization_denied",
+          "principal": "A",
+          "epoch": 1,
+          "reason": "PermissionError",
+          "observer": null
+        }
+      ],
+      "kernel_gate_audit": [
+        {
+          "event": "protected_open",
+          "pid": 913,
+          "syscall": 257,
+          "ip": 123416305233554,
+          "path": "/protected/summary",
+          "epoch": 1
+        }
+      ],
+      "output": null,
+      "output_status": "absent",
+      "release_commits": 0,
+      "later_effect": false,
+      "observer_source": "deterministic fixture",
+      "syscall_observer_source": "deterministic fixture",
+      "abi": {
+        "notif_size": 80,
+        "response_size": 24,
+        "recv": 3226476800,
+        "send": 3222806785,
+        "valid": 1074274562,
+        "addfd": 1075323139
+      }
+    },
+    {
+      "case": "revoke_pending",
+      "runtime": {
+        "verdict": "violation",
+        "termination_requested": true,
+        "events": [
+          {
+            "source": "trace.926",
+            "timestamp": 1794659910.686121,
+            "syscall": "execve",
+            "paths": [
+              "/workspace/notify-launch"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.926",
+            "timestamp": 1794659910.74314,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.926",
+            "timestamp": 1794659910.743252,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.926",
+            "timestamp": 1794659910.744652,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.926",
+            "timestamp": 1794659910.7448,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.926",
+            "timestamp": 1794659910.74498,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.926",
+            "timestamp": 1794659910.745115,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.02457731899999871,
+            "pid": 926
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.11182183999999928,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.16599925999999954,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "broker_stop",
+            "elapsed": 0.2306725759999999
+          },
+          {
+            "action": "namespace_kill",
+            "elapsed": 0.2306858199999997
+          }
+        ],
+        "broker_channel": true,
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "broker_audit": [
+        {
+          "event": "revoked",
+          "epoch": 2
+        },
+        {
+          "event": "authorization_denied",
+          "principal": "A",
+          "epoch": 2,
+          "reason": "PermissionError",
+          "observer": {
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          }
+        }
+      ],
+      "kernel_gate_audit": [
+        {
+          "event": "protected_open",
+          "pid": 926,
+          "syscall": 257,
+          "ip": 138661501578898,
+          "path": "/protected/summary",
+          "epoch": 1
+        }
+      ],
+      "output": null,
+      "output_status": "absent",
+      "release_commits": 0,
+      "later_effect": false,
+      "observer_source": "deterministic fixture",
+      "syscall_observer_source": "deterministic fixture",
+      "abi": {
+        "notif_size": 80,
+        "response_size": 24,
+        "recv": 3226476800,
+        "send": 3222806785,
+        "valid": 1074274562,
+        "addfd": 1075323139
+      }
+    },
+    {
+      "case": "mutable_path",
+      "runtime": {
+        "verdict": "no_observed_violation",
+        "termination_requested": false,
+        "events": [
+          {
+            "source": "trace.934",
+            "timestamp": 1794659910.906694,
+            "syscall": "execve",
+            "paths": [
+              "/workspace/notify-launch"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659910.961224,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659910.961485,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659910.963645,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659910.96399,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659910.964362,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659910.96446,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659911.373572,
+            "syscall": "openat",
+            "paths": [
+              "/output/result.json"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.934",
+            "timestamp": 1794659912.375231,
+            "syscall": "openat",
+            "paths": [
+              "/output/later"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.024031803000001517,
+            "pid": 934
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.08975808000000107,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.14522353800000154,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.5578906560000014,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 1.5585720980000008,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          }
+        ],
+        "broker_channel": true,
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "broker_audit": [
+        {
+          "event": "release_committed",
+          "principal": "A",
+          "epoch": 1,
+          "resource_sha256": "697827f6805180bf53ec9d5e81c8a160c3e2b1915f6870e493106d201cf1a2ee",
+          "observer": {
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          "commit_monotonic": 8.967840621
+        }
+      ],
+      "kernel_gate_audit": [
+        {
+          "event": "protected_open",
+          "pid": 934,
+          "syscall": 257,
+          "ip": 125599998086185,
+          "path": "/protected/summary",
+          "epoch": 1
+        }
+      ],
+      "output": {
+        "denied": false,
+        "value": "APPROVED-SNAPSHOT",
+        "final_path": "/protected/secret"
+      },
+      "output_status": "parsed",
+      "release_commits": 1,
+      "later_effect": true,
+      "observer_source": "deterministic fixture",
+      "syscall_observer_source": "deterministic fixture",
+      "abi": {
+        "notif_size": 80,
+        "response_size": 24,
+        "recv": 3226476800,
+        "send": 3222806785,
+        "valid": 1074274562,
+        "addfd": 1075323139
+      }
+    },
+    {
+      "case": "live_allow",
+      "runtime": {
+        "verdict": "no_observed_violation",
+        "termination_requested": false,
+        "events": [
+          {
+            "source": "trace.956",
+            "timestamp": 1794659912.495231,
+            "syscall": "execve",
+            "paths": [
+              "/workspace/notify-launch"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659912.585483,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659912.585825,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659912.589825,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659912.590316,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659912.590733,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659912.590951,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659913.039399,
+            "syscall": "openat",
+            "paths": [
+              "/output/result.json"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.956",
+            "timestamp": 1794659914.041429,
+            "syscall": "openat",
+            "paths": [
+              "/output/later"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.022776584999999017,
+            "pid": 956
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.11072028099999898,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.19835562899999992,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.2092641929999992,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.6561026329999997,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "observer",
+            "elapsed": 1.6586775809999992,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          }
+        ],
+        "broker_channel": true,
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "broker_audit": [
+        {
+          "event": "release_committed",
+          "principal": "A",
+          "epoch": 1,
+          "resource_sha256": "697827f6805180bf53ec9d5e81c8a160c3e2b1915f6870e493106d201cf1a2ee",
+          "observer": {
+            "model": "jev-1.14.0",
+            "probability": 0.34
+          },
+          "commit_monotonic": 10.632702099
+        }
+      ],
+      "kernel_gate_audit": [
+        {
+          "event": "protected_open",
+          "pid": 956,
+          "syscall": 257,
+          "ip": 139892654685842,
+          "path": "/protected/summary",
+          "epoch": 1
+        }
+      ],
+      "output": {
+        "value": "APPROVED-SNAPSHOT",
+        "channel_env": null
+      },
+      "output_status": "parsed",
+      "release_commits": 1,
+      "later_effect": true,
+      "observer_source": "live Jev release gate",
+      "syscall_observer_source": "deterministic fixture",
+      "abi": {
+        "notif_size": 80,
+        "response_size": 24,
+        "recv": 3226476800,
+        "send": 3222806785,
+        "valid": 1074274562,
+        "addfd": 1075323139
+      }
+    }
+  ],
+  "context_pressure": "UNRUN; deterministic native programs, not model subjects"
+}

@@ -54,13 +54,21 @@ def event_from_line(line, source):
 
 
 def supervise(task, workspace, command, *, output, evidence, sensor="strace", observer=observe, timeout=30,
-              broker_channel=None, stop_event=None, native_stacks=False):
+              broker_channel=None, stop_event=None, native_stacks=False, trusted_launcher=None):
     """Contain before launch; react to observed events while the workload runs.
 
     The trusted supervisor owns sensor files. Model latency is an exposure window;
     this function does not freeze all workers while inference is pending.
     """
+    if trusted_launcher is not None:
+        trusted_launcher = Path(trusted_launcher).resolve(strict=True)
+        if not trusted_launcher.is_file() or not os.access(trusted_launcher, os.X_OK) or broker_channel is None:
+            raise ValueError("Trusted launcher requires an executable file and protected channel")
+        command = ["/guardian/notify-launch", *command]
     argv = sandbox_argv(workspace, command, output=output)
+    if trusted_launcher is not None:
+        separator = argv.index("--")
+        argv[separator:separator] = ["--ro-bind", str(trusted_launcher), "/guardian/notify-launch"]
     if (broker_channel is None) != (stop_event is None):
         raise ValueError("Broker channel requires its trusted stop event")
     extra_fds = ()
@@ -93,6 +101,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
     requested = False
     deadline_exceeded = False
     payload_start = None
+    payload_pid = None
     consumed = 0
     revision, consumed_revision = 0, 0
     last_event, observer_inputs = {}, []
@@ -128,6 +137,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
             nspid = next(line for line in status.splitlines() if line.startswith("NSpid:")).split()[1:]
             if nspid[-1] != "1" or os.readlink(f"/proc/{pid}/ns/pid") == os.readlink("/proc/self/ns/pid"):
                 raise RuntimeError("Sandbox is not a distinct PID namespace leader")
+            payload_pid = pid
             os.write(gate_write, b"1")
             os.close(gate_write)
             gate_write = None
@@ -157,9 +167,9 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                 # Find payload launch before interpreting any file in this batch.
                 for source, line in batch:
                     match = LINE.match(line)
-                    if payload_start is None and match and match[2] == "execve" and match[4].startswith("0"):
-                        if QUOTED.findall(match[3])[1:1 + len(command)] == command:
-                            payload_start = float(match[1])
+                    if (payload_start is None and source == f"trace.{payload_pid}"
+                            and match and match[2] == "execve" and match[4].startswith("0")):
+                        payload_start = float(match[1])
                 for source, line in batch:
                     if native_stacks and line.lstrip().startswith(">"):
                         previous = last_event.get(source)
@@ -270,6 +280,8 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                 "returncode": process.returncode if process else None, "timed_out": deadline_exceeded,
                 "elapsed_seconds": time.monotonic() - start, "argv": command,
                 "files": {p.name: sha256(p) for p in paths}}
+    if payload_pid is not None:
+        manifest["payload_pid"] = payload_pid
     (evidence / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     final = summarize(evidence)
     if verdict == "no_observed_violation" and final["evidence_status"] != "recorded":
@@ -277,6 +289,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
         if stop_event is not None:
             stop_event.set()
     report = {"verdict": verdict, "termination_requested": requested, "events": events, "actions": actions,
+              "returncode": manifest["returncode"],
               "broker_channel": broker_channel is not None,
               "native_stacks": native_stacks, "observer_inputs": observer_inputs,
               "evidence_status": final["evidence_status"], "problems": final["problems"],

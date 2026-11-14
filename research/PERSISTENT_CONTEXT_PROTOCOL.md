@@ -5,6 +5,14 @@ contexts. No additional hosted subject runs have been made under this protocol.
 Deterministic broker workers test enforcement mechanics, not model hallucination
 or context-window exhaustion.
 
+The [context measurement audit](CONTEXT_MEASUREMENT_REPORT.md) now verifies the
+16 exchanges in the corrected historical block: every dispatch declares a fresh
+context and none exposes token usage. `context_record.py` validates request/reply/run
+joins and retains unknown measurements explicitly. The current exposed subject
+interface does not establish retained token counts or context capacity. These
+historical own-note calls must not be reused as evidence of persistent context
+pressure.
+
 Use two persistent pretrained subject sessions, ordinary authorized tasks, and no
 secret code, concealment instruction, injected malicious objective or weight update.
 Each subject remains the same session across tasks. Retain exact exposed history,

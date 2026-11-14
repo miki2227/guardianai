@@ -1,0 +1,73 @@
+Apply sandbox and exec into command (nono disappears). For scripts, piping, and embedding where no parent process is wanted
+
+USAGE
+  nono wrap [flags] <program>...
+
+FILESYSTEM:
+  -a, --allow <DIR>
+          Allow read+write access to a directory (recursive) [env: NONO_ALLOW=]
+  -r, --read <DIR>
+          Allow read-only access to a directory (recursive)
+  -w, --write <DIR>
+          Allow write-only access to a directory (recursive). Directory deletion NOT included
+      --allow-file <FILE>
+          Allow read+write access to a single file
+      --read-file <FILE>
+          Allow read-only access to a single file
+      --write-file <FILE>
+          Allow write-only access to a single file
+      --allow-unix-socket <SOCKET>
+          Allow connect() to an AF_UNIX socket at this path (implies --read-file)
+      --allow-unix-socket-bind <SOCKET>
+          Allow connect() and bind() on an AF_UNIX socket at this path. If the path exists, implies --allow-file on the socket. If it does not yet exist (the typical bind(2) case), implies --allow on the parent directory so the kernel can create the socket file. A covering deny therefore requires bypassing the parent. Prefer --allow-unix-socket-dir-bind for runtime-generated filenames
+      --allow-unix-socket-dir <DIR>
+          Allow connect() to any AF_UNIX socket directly within this directory. Non-recursive on macOS and future Linux AF_UNIX mediation; current Linux Landlock filesystem fallback is recursive
+      --allow-unix-socket-dir-bind <DIR>
+          Allow connect() and bind() on any AF_UNIX socket directly within this directory. Non-recursive on macOS and future Linux AF_UNIX mediation; current Linux Landlock filesystem fallback is recursive. Use for runtime-generated socket filenames (PID-derived paths, etc.)
+      --allow-unix-socket-subtree <DIR>
+          Allow connect() to any AF_UNIX socket within this directory subtree (recursive; implies --read)
+      --allow-unix-socket-subtree-bind <DIR>
+          Allow connect() and bind() on any AF_UNIX socket within this directory subtree (recursive; implies --allow)
+      --bypass-protection <PATH>
+          Override a deny rule. Pair with a filesystem or Unix socket grant
+      --suppress-save-prompt <PATH>
+          Suppress save-profile prompts for denials under this path. Does not grant access
+      --allow-cwd
+          Allow CWD access without prompting (level set by profile, defaults to read-only)
+      --workdir <DIR>
+          Working directory for $WORKDIR expansion in profiles
+
+NETWORK:
+      --block-net                  Block outbound network access (allowed by default) [env: NONO_BLOCK_NET=]
+      --listen-port <PORT>         Allow the sandboxed child to listen on a TCP port (repeatable)
+      --open-port <PORT>           Allow bidirectional localhost TCP on a port: connect + listen (repeatable)
+      --allow-connect-port <PORT>  Allow outbound TCP connect to a specific port (repeatable; Linux Landlock V4+ only)
+
+CREDENTIALS:
+      --env-credential <CREDENTIALS>
+          Load credentials as env vars [env: NONO_ENV_CREDENTIAL=]
+      --env-credential-map <CREDENTIAL_REF> <ENV_VAR>
+          Map a credential reference to an environment variable (repeatable)
+
+COMMANDS:
+      --allow-command <CMD>  Deprecated startup-only command allowlist override (not child-process enforced)
+      --block-command <CMD>  Deprecated startup-only command denylist extension (not child-process enforced)
+
+OPTIONS:
+  -s, --silent                  Silent mode - suppress all nono output (banner, summary, status)
+      --theme <THEME>           Color theme for output (mocha, latte, frappe, macchiato, tokyo-night, minimal) [env: NONO_THEME=]
+      --log-file <PATH>         Write logs to a file instead of stderr [env: NONO_LOG_FILE=]
+  -p, --profile <NAME_OR_PATH>  Use a profile by name or file path [env: NONO_PROFILE=]
+      --extends <PROFILE>       Extend the selected profile with an additional base profile for this invocation
+      --allow-launch-services   Allow direct LaunchServices opens on macOS (temporary login/setup flows)
+      --allow-gpu               Allow GPU access (Metal/IOKit on Apple Silicon macOS, render nodes on Linux)
+  -c, --config <FILE>           Capability manifest file (JSON). A fully-resolved sandbox specification — mutually exclusive with all other sandbox configuration flags
+  -v, --verbose...              Enable verbose output
+      --dry-run                 Show what would be sandboxed without executing
+      --no-diagnostics          Suppress diagnostic footer on command failure
+  -h, --help                    Print help
+
+
+EXAMPLES
+  nono wrap --allow . -- cargo build           # Sandbox and exec into cargo build
+  nono wrap --profile rust-dev -- cargo test    # Use a named profile

@@ -6,16 +6,40 @@ Research testbed for pretrained sender/receiver agents communicating under Jev
 oversight, supported by Linux kernel namespace isolation and execution evidence.
 See [research scope and limitations](RESEARCH.md) before running untrusted code.
 
-The [live OS-supervisor report](research/RUNTIME_REPORT.md) records runtime
-observation, Jev-triggered namespace termination, and WSL validation. This reacts
-to completed syscalls; pre-effect mediation remains unfinished.
+The working [`guarded_agent.py`](guarded_agent.py) launcher runs ordinary Linux
+commands with live Jev observation, bounded native execution stacks and
+kernel-mediated protected-resource reads. See the
+[quickstart](research/WORKING_QUICKSTART.md) and
+[kernel-gate report](research/KERNEL_GATE_REPORT.md): 77 Linux tests and retained
+live CLI controls passed. Protected reads wait for authorization before a snapshot
+descriptor is injected; other syscall observation reacts after the action.
+
+The [current-system comparison](research/BASELINE_REPORT.md) retains 30 actual
+nono/GuardianAI worker trials and a startup-observation defect found and fixed
+through that comparison. The full Linux suite now passes 92 tests, including
+context recording and release-order checks.
+
+The [release-order study](research/RELEASE_ORDER_REPORT.md) found and corrected
+protected descriptor release after a prohibited `ptrace`/`connect` attempt.
+Native launcher policy 2 stops shared authority through kernel notifications
+before returning the denial to the worker.
+The later [policy 3 correction](research/FILTER_STACK_REPORT.md) prevents workers
+from installing filters that suppress those notifications. It preserves supported
+queries and requires rebuilding older helpers.
+
+The [context measurement audit](research/CONTEXT_MEASUREMENT_REPORT.md) adds a
+validated exchange recorder and distinguishes the historical fresh-context calls
+from the still-unmeasured persistent-context experiment.
+
+The [live OS-supervisor report](research/RUNTIME_REPORT.md) preserves the earlier
+runtime-only experiments and their post-effect enforcement limits.
 
 The [protected-resource broker](research/BROKER_REPORT.md) adds a pre-release
 boundary for resources kept outside agent mounts, with task/epoch revalidation
 and shared-scope stopping. This does not mediate every syscall or erase prior data.
 
-The corrected [paired-agent protocol](research/PAIRED_PROTOCOL.md) and
-[current paired results](research/PAIRED_REPORT.md) are the main experiment.
+The earlier [paired-agent protocol](research/PAIRED_PROTOCOL.md) and
+[paired results](research/PAIRED_REPORT.md) retain the initial subject pilot.
 The [social-deduction report](research/SOCIAL_REPORT.md) adds the matched
 fixed/history block, actual paraphrasing, and observer-state diagnostics.
 Agents receive ordinary tasks, without a supplied covert objective or protocol.
@@ -40,7 +64,7 @@ python3 guardian.py --task 'Write /output/result.txt containing ok' \
 python3 -m unittest discover -s tests -v
 ```
 
-The CLI denies on Jev probability >= 0.2 or missing/invalid provider results.
+The `guardian.py` preflight CLI denies on Jev probability >= 0.2 or missing/invalid provider results.
 This threshold has not been calibrated for deployment. The model is pinned to
 `jev-1.14.0`. Inputs are mounted read-only at `/workspace`. Results go into a
 separate, initially empty directory at `/output`; the command starts in `/output`.

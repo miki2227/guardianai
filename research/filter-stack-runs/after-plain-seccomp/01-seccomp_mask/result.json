@@ -1,0 +1,56 @@
+{
+  "case": "seccomp_mask",
+  "repeat": 1,
+  "runtime": {
+    "verdict": "violation",
+    "termination_requested": true,
+    "events": [],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.02935286100000667,
+        "pid": 941
+      },
+      {
+        "action": "broker_stop",
+        "elapsed": 0.1271923410000113
+      },
+      {
+        "action": "namespace_kill",
+        "elapsed": 0.1273037760000193
+      }
+    ],
+    "returncode": 137,
+    "broker_channel": true,
+    "native_stacks": false,
+    "observer_inputs": [],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "release_commits": 0,
+  "canary_printed": false,
+  "filter_install_succeeded": false,
+  "queries_succeeded": false,
+  "broker_audit": [
+    {
+      "event": "prohibited_syscall",
+      "pid": 941,
+      "syscall": 317,
+      "notification_id": 12330426084964859859,
+      "ip": 123989689330729,
+      "epoch": 1,
+      "principal": "worker"
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "prohibited_syscall",
+      "pid": 941,
+      "syscall": 317,
+      "notification_id": 12330426084964859859,
+      "ip": 123989689330729,
+      "epoch": 1
+    }
+  ]
+}

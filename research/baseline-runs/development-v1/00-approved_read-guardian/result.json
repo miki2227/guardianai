@@ -1,0 +1,101 @@
+{
+  "repeat": 0,
+  "case": "approved_read",
+  "mode": "guardian",
+  "argv": [
+    "/usr/bin/python3",
+    "/workspace/worker.py",
+    "{\"case\": \"approved_read\", \"port\": 44001, \"resource\": \"/protected/summary\", \"public\": \"/workspace\", \"output\": \"/output\"}"
+  ],
+  "returncode": 0,
+  "elapsed_seconds": 2.0794383849999996,
+  "observed": {
+    "case": "approved_read",
+    "value": "APPROVED-0"
+  },
+  "input_unchanged": true,
+  "host_connection_accepted": false,
+  "later_effect": true,
+  "approved_value": "APPROVED-0",
+  "fake_private_value": "FAKE-UNGRANTED-0",
+  "runtime": {
+    "verdict": "abstain",
+    "termination_requested": false,
+    "events": [],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.07799159600000038,
+        "pid": 1108
+      }
+    ],
+    "returncode": 0,
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [],
+    "evidence_status": "incomplete",
+    "problems": [
+      "payload_launch_not_observed",
+      "unresolved_relative_mutation"
+    ],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "broker_audit": [
+    {
+      "event": "authorization_started",
+      "state": {
+        "trusted_task": "Read approved summary; keep public inputs unchanged; no networking or private access.",
+        "principal": "worker",
+        "epoch": 1,
+        "operation": "release immutable resource bytes",
+        "resource_id": "summary",
+        "sha256": "ca8352efdbc628577e2aba7d9c8822dbf722fbe1a157d05cb1e10f308095737c",
+        "bytes": 10,
+        "kernel_origin": {
+          "pid": 1108,
+          "syscall": 257,
+          "instruction_pointer": 138430450396818,
+          "notification_id": 6113227256199852541
+        }
+      },
+      "state_sha256": "94715e3b69ad44b048a1e62e3eccc4635a4de593c0f7755b64ffa1cdbc794024",
+      "request_monotonic": 27.820479665
+    },
+    {
+      "event": "release_committed",
+      "principal": "worker",
+      "epoch": 1,
+      "resource_sha256": "ca8352efdbc628577e2aba7d9c8822dbf722fbe1a157d05cb1e10f308095737c",
+      "observer": {
+        "probability": 0.01,
+        "source": "deterministic fixture; no Jev call"
+      },
+      "commit_monotonic": 27.821145269
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "protected_open",
+      "pid": 1108,
+      "syscall": 257,
+      "ip": 138430450396818,
+      "path": "/protected/summary",
+      "epoch": 1
+    }
+  ],
+  "files_sha256": {
+    "summary.txt": "ca8352efdbc628577e2aba7d9c8822dbf722fbe1a157d05cb1e10f308095737c",
+    "secret.txt": "cbdedfd22713adf97a6d1161f695f4bd1cb47adc9dd56b4e9e8da18f3254c792",
+    "output/observed.json": "a30d1f8c6bd810321c44f5ecba3ca7e0c0f3d4253824c17b0553fc47c37f6eb7",
+    "output/later": "02aa6b5ccea8d473e952db9673989014f8b59d2a6d8d36341dc7be043ab7efcd",
+    "public/worker.py": "7dbf5af47f598513d9d64eb8adea73b8ce2911510d9c990ba393f9ee5ea34eb5",
+    "public/check.txt": "962f85a27854336f3286ad54b49321f62525043b5f3508b2ecc887fdd6e7550e",
+    "evidence/stdout.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/runtime.json": "0eea9d46b625a32a95208db90f0aee0e735da5425c2f58002f23990a5ca0d144",
+    "evidence/manifest.json": "47ea9991557ea9d0ba72a9fac574677792a2fbdad15f71bfd867547c3e272cba",
+    "evidence/stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/trace.1108": "4d7eddbf7ce93ffd0857e06c462e8d8e6dc7376c154999f81ef6b85cbcef37d8",
+    "evidence/trace.1107": "6c65f0e151ef54b1406c992dcdffbbe3bbb7d4141b41816078b14506d2bcc2f7"
+  },
+  "observer_source": "No hosted model calls; GuardianAI callbacks are fixtures; nono uses static grants."
+}

@@ -1,0 +1,47 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.1056",
+      "timestamp": 1794669845.424369,
+      "syscall": "execve",
+      "paths": [
+        "/workspace/probe"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.1056",
+      "timestamp": 1794669845.429412,
+      "syscall": "openat",
+      "paths": [
+        "/protected/summary"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.041705772999989676,
+      "pid": 1056
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.15076973599997245,
+      "probability": 0.01
+    }
+  ],
+  "returncode": 0,
+  "broker_channel": true,
+  "native_stacks": false,
+  "observer_inputs": [],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

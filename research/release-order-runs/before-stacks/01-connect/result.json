@@ -1,0 +1,77 @@
+{
+  "case": "connect",
+  "repeat": 1,
+  "runtime": {
+    "verdict": "violation",
+    "termination_requested": true,
+    "events": [
+      {
+        "source": "trace.1002",
+        "timestamp": 1794669776.928187,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/probe"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+          "> /guardian/notify-launch(main+0x349) [0x1429]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /guardian/notify-launch(_start+0x21) [0x1451]"
+        ]
+      },
+      {
+        "source": "trace.1002",
+        "timestamp": 1794669776.948725,
+        "syscall": "connect",
+        "paths": [],
+        "write": false,
+        "denied": true,
+        "rule_violation": true,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__connect+0x18) [0x115538]",
+          "> /workspace/probe(main+0xea) [0x11da]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /workspace/probe(_start+0x21) [0x1241]"
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.06722986800002673,
+        "pid": 1002
+      },
+      {
+        "action": "namespace_kill",
+        "elapsed": 0.4759361189999822
+      }
+    ],
+    "returncode": 137,
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [
+      {
+        "path": "observer-input-0.json",
+        "sha256": "0f736c693e5d2f82fb0f5eafa92e542abd3b4f178923bc51d0736c433e6a8993",
+        "events": 1,
+        "frames": 7
+      }
+    ],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "release_commits": 0,
+  "canary_printed": false,
+  "broker_audit": [],
+  "kernel_gate_audit": []
+}

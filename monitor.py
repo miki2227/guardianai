@@ -77,7 +77,12 @@ def summarize(evidence):
             problems.append("trace_set_changed")
         payload_start = None
         if "argv" in manifest:
+            payload_pid = manifest.get("payload_pid")
+            if payload_pid is not None and (type(payload_pid) is not int or payload_pid <= 0):
+                raise ValueError("Invalid payload PID")
             for name in expected:
+                if payload_pid is not None and name != f"trace.{payload_pid}":
+                    continue
                 path = evidence / name
                 if not path.exists():
                     continue
@@ -85,7 +90,7 @@ def summarize(evidence):
                     match = LINE.match(line)
                     if match and match[2] == "execve" and match[4].startswith("0"):
                         quoted = QUOTED.findall(match[3])
-                        if quoted[1:1 + len(manifest["argv"])] == manifest["argv"]:
+                        if payload_pid is not None or quoted[1:1 + len(manifest["argv"])] == manifest["argv"]:
                             start = float(match[1])
                             payload_start = start if payload_start is None else min(start, payload_start)
             if payload_start is None:

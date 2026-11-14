@@ -1,0 +1,26 @@
+{
+  "cases": [
+    {
+      "case": "approved",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "cli_response": "{\"verdict\": \"no_observed_violation\", \"evidence\": \"/home/pratz/guardianai-filter-live-cli-v1/approved-evidence\"}\n",
+      "observer_source": "Configured live Jev; unregistered requests are denied before inference."
+    },
+    {
+      "case": "unregistered",
+      "exit_code": 77,
+      "expected_exit_code": 77,
+      "cli_response": "{\"verdict\": \"violation\", \"evidence\": \"/home/pratz/guardianai-filter-live-cli-v1/unregistered-evidence\"}\n",
+      "observer_source": "Configured live Jev; unregistered requests are denied before inference."
+    },
+    {
+      "case": "worker_error",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "cli_response": "{\"verdict\": \"no_observed_violation\", \"evidence\": \"/home/pratz/guardianai-filter-live-cli-v1/worker_error-evidence\"}\n",
+      "observer_source": "Configured live Jev; unregistered requests are denied before inference."
+    }
+  ],
+  "scope": "Synthetic CLI validation; no model-agent subjects or context-pressure experiment."
+}

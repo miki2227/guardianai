@@ -1,0 +1,31 @@
+test_escaped_and_truncated_argv_do_not_disable_live_observation (test_runtime.RuntimeKernelTests.test_escaped_and_truncated_argv_do_not_disable_live_observation) ... FAIL
+test_json_argv_cannot_hide_input_mutation_from_live_stop (test_runtime.RuntimeKernelTests.test_json_argv_cannot_hide_input_mutation_from_live_stop) ... FAIL
+
+======================================================================
+FAIL: test_escaped_and_truncated_argv_do_not_disable_live_observation (test_runtime.RuntimeKernelTests.test_escaped_and_truncated_argv_do_not_disable_live_observation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/pratz/guardianai-pilot/tests/test_runtime.py", line 61, in test_escaped_and_truncated_argv_do_not_disable_live_observation
+    self.assertEqual(report['verdict'], 'no_observed_violation', report)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'abstain' != 'no_observed_violation'
+- abstain
++ no_observed_violation
+ : {'verdict': 'abstain', 'termination_requested': False, 'events': [], 'actions': [{'action': 'released', 'elapsed': 0.06882425799999226, 'pid': 872}], 'returncode': 0, 'broker_channel': False, 'native_stacks': False, 'observer_inputs': [], 'evidence_status': 'incomplete', 'problems': ['payload_launch_not_observed', 'unresolved_relative_mutation'], 'scope': 'Live reaction to completed syscalls, not prevention or thought detection'}
+
+======================================================================
+FAIL: test_json_argv_cannot_hide_input_mutation_from_live_stop (test_runtime.RuntimeKernelTests.test_json_argv_cannot_hide_input_mutation_from_live_stop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/pratz/guardianai-pilot/tests/test_runtime.py", line 68, in test_json_argv_cannot_hide_input_mutation_from_live_stop
+    self.assertEqual(report['verdict'], 'violation', report)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'abstain' != 'violation'
+- abstain
++ violation
+ : {'verdict': 'abstain', 'termination_requested': False, 'events': [], 'actions': [{'action': 'released', 'elapsed': 0.034061596000000804, 'pid': 879}], 'returncode': 0, 'broker_channel': False, 'native_stacks': False, 'observer_inputs': [], 'evidence_status': 'incomplete', 'problems': ['payload_launch_not_observed', 'unresolved_relative_mutation'], 'scope': 'Live reaction to completed syscalls, not prevention or thought detection'}
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.835s
+
+FAILED (failures=2)

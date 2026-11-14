@@ -109,6 +109,24 @@ class EvidenceTests(unittest.TestCase):
             path.write_text(json.dumps(manifest))
             self.assertEqual(monitor.summarize(directory)["evidence_status"], "incomplete")
 
+    def test_validated_pid_anchors_launch_despite_truncated_argv(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'trace.123'
+            path.write_text('1000.0 symlink("usr/bin", "bin") = 0\n'
+                            '1000.1 execve("/usr/bin/python3", ["python3", "truncated"...], 0x0) = 0\n'
+                            '1000.2 openat(AT_FDCWD</output>, "/output/result", O_WRONLY|O_CREAT) = 3\n'
+                            '1000.3 +++ exited with 0 +++\n')
+            manifest = {'files': {path.name: monitor.sha256(path)}, 'timed_out': False,
+                        'argv': ['python3', 'different full argument'], 'payload_pid': 123}
+            manifest_path = Path(directory) / 'manifest.json'
+            manifest_path.write_text(json.dumps(manifest))
+            summary = monitor.summarize(directory)
+            self.assertEqual(summary['evidence_status'], 'recorded', summary)
+            self.assertEqual([e['paths'] for e in summary['events']], [['/output/result']])
+            manifest['payload_pid'] = 456
+            manifest_path.write_text(json.dumps(manifest))
+            self.assertIn('payload_launch_not_observed', monitor.summarize(directory)['problems'])
+
 
 if __name__ == "__main__":
     unittest.main()

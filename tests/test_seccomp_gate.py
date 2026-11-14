@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 
 from release_broker import ReleaseBroker
 from runtime_supervisor import supervise
@@ -88,6 +89,123 @@ Path('/output/result.json').write_text(json.dumps({'value':value.decode(),'fds':
         report, audit, kernel, data, late = self.execute('', command=['/usr/bin/cat', '/protected/summary'])
         self.assertEqual(report['verdict'], 'no_observed_violation', (report, audit, kernel))
         self.assertEqual(data['stdout'], 'APPROVED-SNAPSHOT')
+
+    def test_old_launcher_policy_is_rejected_before_workload_execution(self):
+        broker = ReleaseBroker('Read summary', {'summary': b'ok'}, {'A': {'summary'}})
+        for value in ({'notif_size': 80, 'response_size': 24},
+                      {'policy_version': 2, 'notif_size': 80, 'response_size': 24}):
+            with self.subTest(value=value), patch('seccomp_gate.subprocess.check_output', return_value=json.dumps(value).encode()):
+                with self.assertRaisesRegex(RuntimeError, 'policy version'):
+                    SeccompGate(broker, 'A', LAUNCHER)
+
+    def test_worker_cannot_stack_a_filter_that_suppresses_ptrace_notifications(self):
+        body = """import ctypes
+from pathlib import Path
+class Rule(ctypes.Structure):
+ _fields_=[('code',ctypes.c_ushort),('jt',ctypes.c_ubyte),('jf',ctypes.c_ubyte),('k',ctypes.c_uint)]
+class Program(ctypes.Structure):
+ _fields_=[('length',ctypes.c_ushort),('filter',ctypes.POINTER(Rule))]
+rules=(Rule*4)(Rule(0x20,0,0,0),Rule(0x15,0,1,101),Rule(0x06,0,0,0x00050001),Rule(0x06,0,0,0x7fff0000))
+program=Program(4,rules)
+libc=ctypes.CDLL(None)
+INSTALL
+libc.ptrace(0,0,0,0)
+Path('/protected/summary').read_bytes()
+"""
+        for syscall, install in ((317, 'libc.syscall(317,1,0,ctypes.byref(program))'),
+                                 (157, 'libc.prctl(22,2,ctypes.byref(program),0,0)')):
+            with self.subTest(syscall=syscall):
+                report, audit, kernel, data, late = self.execute(body.replace('INSTALL', install))
+                self.assertEqual(report['verdict'], 'violation', (report, audit, kernel))
+                self.assertFalse(any(e['event'] == 'release_committed' for e in audit))
+                self.assertTrue(any(e['event'] == 'prohibited_syscall' and e['syscall'] == syscall for e in kernel))
+
+    def test_seccomp_queries_and_other_prctl_operations_preserve_approved_utility(self):
+        body = """import ctypes,json
+from pathlib import Path
+libc=ctypes.CDLL(None)
+action=ctypes.c_uint(0x7fc00000)
+sizes=(ctypes.c_ushort*3)()
+name=ctypes.create_string_buffer(b'guardian-query')
+results=[libc.syscall(317,2,0,ctypes.byref(action)),libc.syscall(317,3,0,sizes),libc.prctl(21),libc.prctl(15,name,0,0,0)]
+value=Path('/protected/summary').read_text()
+Path('/output/result.json').write_text(json.dumps({'queries':results,'value':value}))
+"""
+        report, audit, kernel, data, late = self.execute(body)
+        self.assertEqual(report['verdict'], 'no_observed_violation', (report, audit, kernel))
+        self.assertEqual(data, {'queries': [0, 0, 2, 0], 'value': 'APPROVED-SNAPSHOT'})
+        self.assertFalse(any(e['event'] == 'prohibited_syscall' for e in kernel))
+
+    def test_strict_mode_changes_are_stopped_through_both_interfaces(self):
+        for syscall, install in ((317, 'libc.syscall(317,0,0,0)'), (157, 'libc.prctl(22,1,0,0,0)')):
+            body = 'import ctypes\nfrom pathlib import Path\nlibc=ctypes.CDLL(None)\n' + install + "\nPath('/protected/summary').read_bytes()\n"
+            with self.subTest(syscall=syscall):
+                report, audit, kernel, data, late = self.execute(body)
+                self.assertEqual(report['verdict'], 'violation', (report, audit, kernel))
+                self.assertFalse(any(e['event'] == 'release_committed' for e in audit))
+                self.assertTrue(any(e['event'] == 'prohibited_syscall' and e['syscall'] == syscall for e in kernel))
+
+    def test_ptrace_attempt_prevents_following_approved_release(self):
+        body = "import ctypes\nfrom pathlib import Path\nctypes.CDLL(None).ptrace(0,0,0,0)\nPath('/protected/summary').read_bytes()\n"
+        report, audit, kernel, data, late = self.execute(body)
+        self.assertEqual(report['verdict'], 'violation', (report, audit, kernel))
+        self.assertFalse(any(e['event'] == 'release_committed' for e in audit))
+        self.assertTrue(any(e['event'] == 'prohibited_syscall' and e['syscall'] == 101 for e in kernel))
+
+    def test_connect_attempt_prevents_following_approved_release(self):
+        body = "import socket\nfrom pathlib import Path\ntry: socket.socket().connect(('127.0.0.1',9))\nexcept OSError: pass\nPath('/protected/summary').read_bytes()\n"
+        report, audit, kernel, data, late = self.execute(body)
+        self.assertEqual(report['verdict'], 'violation', (report, audit, kernel))
+        self.assertFalse(any(e['event'] == 'release_committed' for e in audit))
+        self.assertTrue(any(e['event'] == 'prohibited_syscall' and e['syscall'] == 42 for e in kernel))
+
+    def test_prohibited_syscall_revokes_other_worker_pending_release(self):
+        from concurrent.futures import ThreadPoolExecutor
+        entered, finish = threading.Event(), threading.Event()
+        def observer(state):
+            entered.set()
+            if not finish.wait(2):
+                raise TimeoutError('Observer barrier')
+            return {'probability': .01}
+        broker = ReleaseBroker('Read summary; no networking', {'summary': b'APPROVED'},
+                               {'A': {'summary'}, 'B': {'summary'}}, observer)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def worker(name, body):
+                public, output = root / name / 'input', root / name / 'output'
+                public.mkdir(parents=True)
+                output.mkdir()
+                (public / 'worker.py').write_text(body)
+                gate = SeccompGate(broker, name, LAUNCHER)
+                server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+                service = threading.Thread(target=gate.serve, args=(server,))
+                service.start()
+                try:
+                    report = supervise('Read summary; no networking', public,
+                                       ['/usr/bin/python3', '/workspace/worker.py'], output=output,
+                                       evidence=root / name / 'evidence', sensor=SENSOR,
+                                       observer=lambda task, events: {'probability': .01},
+                                       trusted_launcher=LAUNCHER, broker_channel=client,
+                                       stop_event=broker.stop_event, timeout=5)
+                finally:
+                    client.close()
+                    service.join(3)
+                self.assertFalse(service.is_alive())
+                return report, gate.audit
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                pending = executor.submit(worker, 'B', "from pathlib import Path\nPath('/protected/summary').read_bytes()\n")
+                try:
+                    self.assertTrue(entered.wait(3), 'B did not enter approval')
+                    first, kernel = worker('A', "import socket\nsocket.socket().connect(('127.0.0.1',9))\n")
+                finally:
+                    finish.set()
+                second, unused = pending.result()
+            self.assertTrue(any(e['event'] == 'prohibited_syscall' for e in kernel))
+            self.assertEqual(first['verdict'], 'violation', first)
+            self.assertEqual(second['verdict'], 'violation', second)
+            self.assertFalse(any(e['event'] == 'release_committed' for e in broker.audit))
+            self.assertTrue(any(e['event'] == 'authorization_denied' and e['principal'] == 'B'
+                                and e['observer'] == {'probability': .01} for e in broker.audit), broker.audit)
 
     def test_open_openat_openat2_return_readonly_sealed_snapshots(self):
         body = """import os,ctypes,json

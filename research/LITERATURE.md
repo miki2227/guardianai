@@ -73,3 +73,22 @@ not the semantic meaning of text or containment of hosted model inference.
 No trained covert protocol, guaranteed detection, or original general causal
 criterion is claimed. Results must retain identity edits, false alarms, failed
 grounding, and null convention findings.
+
+## Kernel-gate implementation update, 2026-11-14
+
+2026 sources and components are in scope. The working observer uses TypeSafe's
+2026 Jev release. Kernel notifications and descriptor injection are established
+Linux mechanisms; [nono's primary security documentation](https://github.com/nolabs-ai/nono/blob/main/docs/cli/internals/security-model.mdx)
+already combines them with a supervisor. Our implementation uses these mechanisms
+for bounded synthetic snapshots; it does not claim to invent them or reproduce
+nono's full policy. The [Linux notification manual](https://man7.org/linux/man-pages/man2/seccomp_unotify.2.html)
+describes atomic ADDFD_SEND and the mutable-argument limitations of continuation.
+
+[Lilienthal and Hong, Mind the Gap](https://arxiv.org/abs/2508.17155) already studies
+TOCTOU in LLM-enabled agents. The October 2026
+[protected-execution-finality Internet-Draft](https://www.ietf.org/archive/id/draft-das-sandbox-credential-egress-finality-00.html)
+is close conceptual prior work on actual effects and authority separation; it is
+an individual informational proposal, not an adopted standard or vendor validation.
+See [KERNEL_GATE_REPORT.md](KERNEL_GATE_REPORT.md) for the working boundary, retained
+evidence, and narrower empirical questions. No comparative performance or journal
+novelty claim follows from this implementation alone.

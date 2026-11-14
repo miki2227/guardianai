@@ -1,0 +1,55 @@
+{
+  "verdict": "violation",
+  "termination_requested": true,
+  "events": [
+    {
+      "source": "trace.912",
+      "timestamp": 1794670355.309899,
+      "syscall": "execve",
+      "paths": [
+        "/workspace/probe"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.912",
+      "timestamp": 1794670355.321053,
+      "syscall": "ptrace",
+      "paths": [],
+      "write": false,
+      "denied": true,
+      "rule_violation": true
+    },
+    {
+      "source": "trace.912",
+      "timestamp": 1794670355.32157,
+      "syscall": "openat",
+      "paths": [
+        "/protected/summary"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.06887895700000968,
+      "pid": 912
+    },
+    {
+      "action": "namespace_kill",
+      "elapsed": 0.23422629500001335
+    }
+  ],
+  "returncode": 137,
+  "broker_channel": true,
+  "native_stacks": false,
+  "observer_inputs": [],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

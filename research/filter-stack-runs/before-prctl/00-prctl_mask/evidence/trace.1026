@@ -1,0 +1,241 @@
+1794670358.472737 socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0) = 5<UNIX:[20425]>
+1794670358.473769 socket(AF_NETLINK, SOCK_RAW|SOCK_CLOEXEC, NETLINK_ROUTE) = 5<NETLINK:[20426]>
+1794670358.474055 bind(5<NETLINK:[20426]>, {sa_family=AF_NETLINK, nl_pid=1, nl_groups=00000000}, 12) = 0
+1794670358.474636 sendto(5<NETLINK:[20426]>, [{nlmsg_len=40, nlmsg_type=0x14 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK|0x600, nlmsg_seq=0, nlmsg_pid=1}, "\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x02\x00\x7f\x00\x00\x01\x08\x00\x01\x00\x7f\x00\x00\x01"], 40, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 40
+1794670358.475064 recvfrom(5<NETLINK:[20426]>, [{nlmsg_len=36, nlmsg_type=NLMSG_ERROR, nlmsg_flags=NLM_F_CAPPED, nlmsg_seq=0, nlmsg_pid=1}, {error=0, msg={nlmsg_len=40, nlmsg_type=0x14 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK|0x600, nlmsg_seq=0, nlmsg_pid=1}}], 1024, 0, NULL, NULL) = 36
+1794670358.475787 sendto(5<NETLINK:[20426]>, [{nlmsg_len=32, nlmsg_type=0x10 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK, nlmsg_seq=1, nlmsg_pid=1}, "\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00"], 32, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 32
+1794670358.476207 recvfrom(5<NETLINK:[20426]>, [{nlmsg_len=36, nlmsg_type=NLMSG_ERROR, nlmsg_flags=NLM_F_CAPPED, nlmsg_seq=1, nlmsg_pid=1}, {error=0, msg={nlmsg_len=32, nlmsg_type=0x10 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK, nlmsg_seq=1, nlmsg_pid=1}}], 1024, 0, NULL, NULL) = 36
+1794670358.477203 openat(3</proc>, "self", O_RDONLY|O_PATH) = 5</proc/1026>
+1794670358.477560 openat(5</proc/1026>, "uid_map", O_RDWR|O_CLOEXEC) = 6</proc/1026/uid_map>
+1794670358.477913 write(6</proc/1026/uid_map>, "0 1000 1\n", 9) = 9
+1794670358.478530 openat(5</proc/1026>, "setgroups", O_RDWR|O_CLOEXEC) = 6</proc/1026/setgroups>
+1794670358.478951 write(6</proc/1026/setgroups>, "deny\n", 5) = 5
+1794670358.479610 openat(5</proc/1026>, "gid_map", O_RDWR|O_CLOEXEC) = 6</proc/1026/gid_map>
+1794670358.479961 write(6</proc/1026/gid_map>, "0 1000 1\n", 9) = 9
+1794670358.481084 readlink("/usr", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.481399 readlink("/bin", "usr/bin", 1023) = 7
+1794670358.481679 readlink("/usr", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.481939 readlink("/usr/bin", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.482169 readlink("/lib", "usr/lib", 1023) = 7
+1794670358.482392 readlink("/usr", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.482580 readlink("/usr/lib", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.482869 readlink("/lib64", "usr/lib64", 1023) = 9
+1794670358.483126 readlink("/usr", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.483320 readlink("/usr/lib64", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.483533 readlink("/home", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.483761 readlink("/home/pratz", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.483958 readlink("/home/pratz/guardianai-filter-before-prctl", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.484242 readlink("/home/pratz/guardianai-filter-before-prctl/00-prctl_mask", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.484498 readlink("/home/pratz/guardianai-filter-before-prctl/00-prctl_mask/public", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.484696 readlink("/home", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.484967 readlink("/home/pratz", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.485200 readlink("/home/pratz/guardianai-filter-before-prctl", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.485433 readlink("/home/pratz/guardianai-filter-before-prctl/00-prctl_mask", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.485682 readlink("/home/pratz/guardianai-filter-before-prctl/00-prctl_mask/output", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.485962 readlink("/home", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.486239 readlink("/home/pratz", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.486483 readlink("/home/pratz/guardianai-pilot", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.486706 readlink("/home/pratz/guardianai-pilot/native", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.486959 readlink("/home/pratz/guardianai-pilot/native/notify-launch", 0x7ffd67e7d760, 1023) = -1 EINVAL (Invalid argument)
+1794670358.487181 mount(NULL, "/", NULL, MS_REC|MS_SILENT|MS_SLAVE, NULL) = 0
+1794670358.487338 mount("tmpfs", "/tmp", "tmpfs", MS_NOSUID|MS_NODEV, NULL) = 0
+1794670358.487638 getcwd("/home/pratz/guardianai-pilot", 4096) = 29
+1794670358.487861 chdir("/tmp")         = 0
+1794670358.488078 mkdir("newroot", 0755) = 0
+1794670358.488355 mount("newroot", "newroot", NULL, MS_MGC_VAL|MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.488577 mkdir("oldroot", 0755) = 0
+1794670358.488811 pivot_root("/tmp", "oldroot") = 0
+1794670358.489336 chdir("/")            = 0
+1794670358.489593 newfstatat(AT_FDCWD</>, "/oldroot/usr", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794670358.489832 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=40, ...}, 0) = 0
+1794670358.490028 newfstatat(AT_FDCWD</>, "/newroot/usr", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.490216 mkdir("/newroot/usr", 0755) = 0
+1794670358.490699 mount("/oldroot/usr", "/newroot/usr", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.491028 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.491292 readlink("/newroot/usr", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.491542 openat(AT_FDCWD</>, "/newroot/usr", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/usr>
+1794670358.491940 readlink("/oldroot/proc/self/fd/5", "/newroot/usr", 99) = 12
+1794670358.492210 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.493937 mount("none", "/newroot/usr", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794670358.494224 mount("none", "/newroot/usr/lib/wsl/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794670358.494541 mount("none", "/newroot/usr/lib/modules/6.6.87.2-microsoft-standard-WSL2", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794670358.495148 newfstatat(AT_FDCWD</>, "/oldroot/usr/bin", {st_mode=S_IFDIR|0755, st_size=57344, ...}, 0) = 0
+1794670358.495446 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=60, ...}, 0) = 0
+1794670358.495691 newfstatat(AT_FDCWD</>, "/newroot/bin", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.495951 mkdir("/newroot/bin", 0755) = 0
+1794670358.496178 mount("/oldroot/usr/bin", "/newroot/bin", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.496380 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.496634 readlink("/newroot/bin", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.496870 openat(AT_FDCWD</>, "/newroot/bin", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/bin>
+1794670358.497324 readlink("/oldroot/proc/self/fd/5", "/newroot/bin", 99) = 12
+1794670358.497562 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.498800 mount("none", "/newroot/bin", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794670358.499233 newfstatat(AT_FDCWD</>, "/oldroot/usr/lib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794670358.499489 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=80, ...}, 0) = 0
+1794670358.499777 newfstatat(AT_FDCWD</>, "/newroot/lib", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.500065 mkdir("/newroot/lib", 0755) = 0
+1794670358.500389 mount("/oldroot/usr/lib", "/newroot/lib", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.500657 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.500951 readlink("/newroot/lib", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.501195 openat(AT_FDCWD</>, "/newroot/lib", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/lib>
+1794670358.501619 readlink("/oldroot/proc/self/fd/5", "/newroot/lib", 99) = 12
+1794670358.501975 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.503876 mount("none", "/newroot/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794670358.504140 mount("none", "/newroot/lib/wsl/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794670358.504413 mount("none", "/newroot/lib/modules/6.6.87.2-microsoft-standard-WSL2", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794670358.504941 newfstatat(AT_FDCWD</>, "/oldroot/usr/lib64", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794670358.505183 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=100, ...}, 0) = 0
+1794670358.505323 newfstatat(AT_FDCWD</>, "/newroot/lib64", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.505542 mkdir("/newroot/lib64", 0755) = 0
+1794670358.505815 mount("/oldroot/usr/lib64", "/newroot/lib64", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.506117 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.506299 readlink("/newroot/lib64", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.506490 openat(AT_FDCWD</>, "/newroot/lib64", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/lib64>
+1794670358.506762 readlink("/oldroot/proc/self/fd/5", "/newroot/lib64", 99) = 14
+1794670358.506988 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.508828 mount("none", "/newroot/lib64", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794670358.509437 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=120, ...}, 0) = 0
+1794670358.509630 newfstatat(AT_FDCWD</>, "/newroot/proc", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.509837 mkdir("/newroot/proc", 0755) = 0
+1794670358.510107 mount("proc", "/newroot/proc", "proc", MS_NOSUID|MS_NODEV|MS_NOEXEC, NULL) = 0
+1794670358.510445 access("/newroot/proc/sys", W_OK) = -1 EACCES (Permission denied)
+1794670358.510806 access("/newroot/proc/sysrq-trigger", W_OK) = -1 EACCES (Permission denied)
+1794670358.511134 access("/newroot/proc/irq", W_OK) = -1 EACCES (Permission denied)
+1794670358.511478 access("/newroot/proc/bus", W_OK) = -1 EACCES (Permission denied)
+1794670358.511825 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=140, ...}, 0) = 0
+1794670358.512194 newfstatat(AT_FDCWD</>, "/newroot/dev", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.512411 mkdir("/newroot/dev", 0755) = 0
+1794670358.512698 mount("tmpfs", "/newroot/dev", "tmpfs", MS_NOSUID|MS_NODEV, "mode=0755") = 0
+1794670358.513134 creat("/newroot/dev/null", 0444) = 5</newroot/dev/null>
+1794670358.513788 mount("/oldroot/dev/null", "/newroot/dev/null", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.514149 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.514487 readlink("/newroot/dev", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.514824 readlink("/newroot/dev/null", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.515163 openat(AT_FDCWD</>, "/newroot/dev/null", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/null>
+1794670358.515528 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/null", 99) = 17
+1794670358.515799 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.518158 creat("/newroot/dev/zero", 0444) = 5</newroot/dev/zero>
+1794670358.518651 mount("/oldroot/dev/zero", "/newroot/dev/zero", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.518992 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.519324 readlink("/newroot/dev", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.519687 readlink("/newroot/dev/zero", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.520020 openat(AT_FDCWD</>, "/newroot/dev/zero", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/zero>
+1794670358.520374 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/zero", 99) = 17
+1794670358.520806 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.522875 creat("/newroot/dev/full", 0444) = 5</newroot/dev/full>
+1794670358.523427 mount("/oldroot/dev/full", "/newroot/dev/full", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.523640 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.523914 readlink("/newroot/dev", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.524253 readlink("/newroot/dev/full", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.524589 openat(AT_FDCWD</>, "/newroot/dev/full", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/full>
+1794670358.524919 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/full", 99) = 17
+1794670358.525292 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.527006 creat("/newroot/dev/random", 0444) = 5</newroot/dev/random>
+1794670358.527580 mount("/oldroot/dev/random", "/newroot/dev/random", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.527936 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.528236 readlink("/newroot/dev", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.528496 readlink("/newroot/dev/random", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.528860 openat(AT_FDCWD</>, "/newroot/dev/random", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/random>
+1794670358.529208 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/random", 99) = 19
+1794670358.529443 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.531675 creat("/newroot/dev/urandom", 0444) = 5</newroot/dev/urandom>
+1794670358.532280 mount("/oldroot/dev/urandom", "/newroot/dev/urandom", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.532568 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.532866 readlink("/newroot/dev", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.533156 readlink("/newroot/dev/urandom", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.533434 openat(AT_FDCWD</>, "/newroot/dev/urandom", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/urandom>
+1794670358.533751 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/urandom", 99) = 20
+1794670358.534142 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.536533 creat("/newroot/dev/tty", 0444) = 5</newroot/dev/tty>
+1794670358.537096 mount("/oldroot/dev/tty", "/newroot/dev/tty", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.537320 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.537626 readlink("/newroot/dev", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.537948 readlink("/newroot/dev/tty", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.538293 openat(AT_FDCWD</>, "/newroot/dev/tty", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/tty>
+1794670358.538573 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/tty", 99) = 16
+1794670358.538845 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.541188 symlink("/proc/self/fd/0", "/newroot/dev/stdin") = 0
+1794670358.541555 symlink("/proc/self/fd/1", "/newroot/dev/stdout") = 0
+1794670358.541809 symlink("/proc/self/fd/2", "/newroot/dev/stderr") = 0
+1794670358.542241 symlink("/proc/self/fd", "/newroot/dev/fd") = 0
+1794670358.542523 symlink("/proc/kcore", "/newroot/dev/core") = 0
+1794670358.542861 mkdir("/newroot/dev/shm", 0755) = 0
+1794670358.543138 mkdir("/newroot/dev/pts", 0755) = 0
+1794670358.543431 mount("devpts", "/newroot/dev/pts", "devpts", MS_NOSUID|MS_NOEXEC, "newinstance,ptmxmode=0666,mode=620") = 0
+1794670358.543790 symlink("pts/ptmx", "/newroot/dev/ptmx") = 0
+1794670358.543985 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=160, ...}, 0) = 0
+1794670358.544344 newfstatat(AT_FDCWD</>, "/newroot/tmp", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.544643 mkdir("/newroot/tmp", 0755) = 0
+1794670358.544930 mount("tmpfs", "/newroot/tmp", "tmpfs", MS_NOSUID|MS_NODEV, "mode=0755") = 0
+1794670358.545190 newfstatat(AT_FDCWD</>, "/oldroot/home/pratz/guardianai-filter-before-prctl/00-prctl_mask/public", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794670358.545347 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=180, ...}, 0) = 0
+1794670358.545540 newfstatat(AT_FDCWD</>, "/newroot/workspace", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.545890 mkdir("/newroot/workspace", 0755) = 0
+1794670358.546218 mount("/oldroot/home/pratz/guardianai-filter-before-prctl/00-prctl_mask/public", "/newroot/workspace", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.546551 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.546930 readlink("/newroot/workspace", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.547273 openat(AT_FDCWD</>, "/newroot/workspace", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/workspace>
+1794670358.547637 readlink("/oldroot/proc/self/fd/5", "/newroot/workspace", 99) = 18
+1794670358.548005 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.549691 mount("none", "/newroot/workspace", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794670358.550321 newfstatat(AT_FDCWD</>, "/oldroot/home/pratz/guardianai-filter-before-prctl/00-prctl_mask/output", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794670358.550869 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=200, ...}, 0) = 0
+1794670358.551205 newfstatat(AT_FDCWD</>, "/newroot/output", 0x7ffd67e7d920, 0) = -1 ENOENT (No such file or directory)
+1794670358.551515 mkdir("/newroot/output", 0755) = 0
+1794670358.551849 mount("/oldroot/home/pratz/guardianai-filter-before-prctl/00-prctl_mask/output", "/newroot/output", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.552222 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.552586 readlink("/newroot/output", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.552977 openat(AT_FDCWD</>, "/newroot/output", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/output>
+1794670358.553255 readlink("/oldroot/proc/self/fd/5", "/newroot/output", 99) = 15
+1794670358.553666 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.555575 mount("none", "/newroot/output", NULL, MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794670358.556012 newfstatat(AT_FDCWD</>, "/oldroot/home/pratz/guardianai-pilot/native/notify-launch", {st_mode=S_IFREG|0755, st_size=16432, ...}, 0) = 0
+1794670358.556250 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=220, ...}, 0) = 0
+1794670358.556502 newfstatat(AT_FDCWD</>, "/newroot/guardian", 0x7ffd67e7d8f0, 0) = -1 ENOENT (No such file or directory)
+1794670358.556710 mkdir("/newroot/guardian", 0700) = 0
+1794670358.556973 newfstatat(AT_FDCWD</>, "/newroot/guardian/notify-launch", 0x7ffd67e7d910, 0) = -1 ENOENT (No such file or directory)
+1794670358.557346 creat("/newroot/guardian/notify-launch", 0444) = 5</newroot/guardian/notify-launch>
+1794670358.557744 mount("/oldroot/home/pratz/guardianai-pilot/native/notify-launch", "/newroot/guardian/notify-launch", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794670358.557985 readlink("/newroot", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.558440 readlink("/newroot/guardian", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.558795 readlink("/newroot/guardian/notify-launch", 0x7ffd67e7b440, 1023) = -1 EINVAL (Invalid argument)
+1794670358.559230 openat(AT_FDCWD</>, "/newroot/guardian/notify-launch", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/guardian/notify-launch>
+1794670358.559595 readlink("/oldroot/proc/self/fd/5", "/newroot/guardian/notify-launch", 99) = 31
+1794670358.559994 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/1026/mountinfo>
+1794670358.561590 mount("none", "/newroot/guardian/notify-launch", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794670358.561968 mount("oldroot", "oldroot", NULL, MS_REC|MS_SILENT|MS_PRIVATE, NULL) = 0
+1794670358.562201 umount2("oldroot", MNT_DETACH) = 0
+1794670358.562633 openat(AT_FDCWD</>, "/", O_RDONLY|O_DIRECTORY) = 5</>
+1794670358.562873 chdir("/newroot")     = 0
+1794670358.563249 pivot_root(".", ".")  = 0
+1794670358.564082 umount2(".", MNT_DETACH) = 0
+1794670358.564557 chdir("/")            = 0
+1794670358.576604 openat(3</proc>, "self", O_RDONLY|O_PATH) = 5</proc/1026>
+1794670358.576973 openat(5</proc/1026>, "uid_map", O_RDWR|O_CLOEXEC) = 6</proc/1026/uid_map>
+1794670358.577330 write(6</proc/1026/uid_map>, "1000 0 1\n", 9) = 9
+1794670358.577958 openat(5</proc/1026>, "gid_map", O_RDWR|O_CLOEXEC) = 6</proc/1026/gid_map>
+1794670358.578263 write(6</proc/1026/gid_map>, "1000 0 1\n", 9) = 9
+1794670358.580429 chdir("/output")      = 0
+1794670358.581724 execve("/guardian/notify-launch", ["/guardian/notify-launch", "/workspace/probe", "prctl_mask"], 0x631cf0757f20 /* 4 vars */) = 0
+1794670358.583050 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+1794670358.583433 openat(AT_FDCWD</output>, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794670358.583714 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v3/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794670358.584031 newfstatat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v3/", 0x7fff1e97a6e0, 0) = -1 ENOENT (No such file or directory)
+1794670358.584327 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v2/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794670358.584623 newfstatat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v2/", 0x7fff1e97a6e0, 0) = -1 ENOENT (No such file or directory)
+1794670358.584956 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3</lib/x86_64-linux-gnu/libc.so.6>
+1794670358.591594 sendmsg(4<UNIX:[26047->26046]>, {msg_name=NULL, msg_namelen=0, msg_iov=[{iov_base="GNF1", iov_len=4}], msg_iovlen=1, msg_control=[{cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=SCM_RIGHTS, cmsg_data=[3<anon_inode:seccomp notify>]}], msg_controllen=24, msg_flags=0}, MSG_NOSIGNAL) = 4
+1794670358.592712 execve("/workspace/probe", ["/workspace/probe", "prctl_mask"], 0x7fff1e97b5f8 /* 3 vars */) = 0
+1794670358.594216 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+1794670358.594546 openat(AT_FDCWD</output>, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794670358.595839 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v3/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794670358.596324 newfstatat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v3/", 0x7ffdcf5141a0, 0) = -1 ENOENT (No such file or directory)
+1794670358.596660 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v2/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794670358.597158 newfstatat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v2/", 0x7ffdcf5141a0, 0) = -1 ENOENT (No such file or directory)
+1794670358.597363 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3</lib/x86_64-linux-gnu/libc.so.6>
+1794670358.602704 write(1</home/pratz/guardianai-filter-before-prctl/00-prctl_mask/evidence/stdout.txt>, "filter_install=0\n", 17) = 17
+1794670358.603027 ptrace(PTRACE_TRACEME) = -1 EPERM (Operation not permitted)
+1794670358.603244 write(1</home/pratz/guardianai-filter-before-prctl/00-prctl_mask/evidence/stdout.txt>, "prior_result=-1\n", 16) = 16
+1794670358.603494 openat(AT_FDCWD</output>, "/protected/summary", O_RDONLY|O_CLOEXEC) = 3</memfd:guardian-approved-snapshot>(deleted)
+1794670358.604532 write(1</home/pratz/guardianai-filter-before-prctl/00-prctl_mask/evidence/stdout.txt>, "SYNTHETIC-ORDER-CANARY", 22) = 22
+1794670358.606819 +++ killed by SIGKILL +++

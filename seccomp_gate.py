@@ -40,9 +40,10 @@ class SeccompGate:
         self.broker, self.principal = broker, principal
         self.epoch = broker.epoch
         self.abi = json.loads(subprocess.check_output([str(launcher), "--abi"]))
-        if (self.abi["notif_size"] != ctypes.sizeof(Notification)
+        if (self.abi.get("policy_version") != 3
+                or self.abi["notif_size"] != ctypes.sizeof(Notification)
                 or self.abi["response_size"] != ctypes.sizeof(Response)):
-            raise RuntimeError("Unsupported seccomp notification ABI")
+            raise RuntimeError("Unsupported seccomp notification ABI or policy version")
         self.libc = ctypes.CDLL(None, use_errno=True)
         self.libc.ioctl.restype = ctypes.c_int
         self.audit = []
@@ -121,6 +122,20 @@ class SeccompGate:
                 try:
                     self.ioctl(listener, "recv", notification)
                     self.ioctl(listener, "valid", ctypes.c_uint64(notification.id))
+                    # connect, ptrace, filter changes via prctl/seccomp. The
+                    # native filter passes through the supported query operations.
+                    if notification.data.nr in (42, 101, 157, 317):
+                        event = {"event": "prohibited_syscall", "pid": notification.pid,
+                                 "syscall": notification.data.nr, "notification_id": notification.id,
+                                 "ip": notification.data.instruction_pointer, "epoch": self.epoch}
+                        # Stop before returning to the caller. Pending approvals in
+                        # other workers recheck this same lock at descriptor commit.
+                        with self.broker.lock:
+                            self.broker.stop_event.set()
+                            self.audit.append(event)
+                            self.broker.audit.append({**event, "principal": self.principal})
+                        self._reply(listener, notification, errno.EPERM)
+                        return
                     path = self.path(notification)
                     self.ioctl(listener, "valid", ctypes.c_uint64(notification.id))
                     if not path.startswith(b"/protected/"):
@@ -130,6 +145,8 @@ class SeccompGate:
                         if notification.data.args[3] < 8:
                             raise ValueError("Incomplete open_how")
                         raw = self.memory(notification, notification.data.args[2], 8)
+                        if len(raw) != 8:
+                            raise ValueError("Incomplete open_how flags")
                         flags = int.from_bytes(raw, "little")
                     else:
                         flags = notification.data.args[1 if notification.data.nr == 2 else 2]

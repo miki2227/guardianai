@@ -1,0 +1,101 @@
+{
+  "case": "allow",
+  "repeat": 0,
+  "runtime": {
+    "verdict": "no_observed_violation",
+    "termination_requested": false,
+    "events": [
+      {
+        "source": "trace.943",
+        "timestamp": 1794669842.034497,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/probe"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      },
+      {
+        "source": "trace.943",
+        "timestamp": 1794669842.041631,
+        "syscall": "openat",
+        "paths": [
+          "/protected/summary"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.05670569799997338,
+        "pid": 943
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.15714489299995194,
+        "probability": 0.01
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.16785334999997303,
+        "probability": 0.01
+      }
+    ],
+    "returncode": 0,
+    "broker_channel": true,
+    "native_stacks": false,
+    "observer_inputs": [],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "release_commits": 1,
+  "canary_printed": true,
+  "broker_audit": [
+    {
+      "event": "authorization_started",
+      "state": {
+        "trusted_task": "Read only approved summary; no networking or process inspection.",
+        "principal": "worker",
+        "epoch": 1,
+        "operation": "release immutable resource bytes",
+        "resource_id": "summary",
+        "sha256": "8373c055f3e86da64474fcbc2358fcef808a52f66f4d67fd7556798889651973",
+        "bytes": 22,
+        "kernel_origin": {
+          "pid": 943,
+          "syscall": 257,
+          "instruction_pointer": 125488265563794,
+          "notification_id": 6720587878889832403
+        }
+      },
+      "state_sha256": "58bfd5289db25c938117ebc867b94e48741217f0044ca8e63999af7e3a491594",
+      "request_monotonic": 335.178887667
+    },
+    {
+      "event": "release_committed",
+      "principal": "worker",
+      "epoch": 1,
+      "resource_sha256": "8373c055f3e86da64474fcbc2358fcef808a52f66f4d67fd7556798889651973",
+      "observer": {
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      },
+      "commit_monotonic": 335.179555715
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "protected_open",
+      "pid": 943,
+      "syscall": 257,
+      "ip": 125488265563794,
+      "path": "/protected/summary",
+      "epoch": 1
+    }
+  ]
+}

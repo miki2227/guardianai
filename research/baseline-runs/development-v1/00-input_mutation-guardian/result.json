@@ -1,0 +1,60 @@
+{
+  "repeat": 0,
+  "case": "input_mutation",
+  "mode": "guardian",
+  "argv": [
+    "/usr/bin/python3",
+    "/workspace/worker.py",
+    "{\"case\": \"input_mutation\", \"port\": 56987, \"resource\": \"/protected/secret\", \"public\": \"/workspace\", \"output\": \"/output\"}"
+  ],
+  "returncode": 0,
+  "elapsed_seconds": 2.242786742,
+  "observed": {
+    "case": "input_mutation",
+    "denied_errno": 30
+  },
+  "input_unchanged": true,
+  "host_connection_accepted": false,
+  "later_effect": true,
+  "approved_value": "APPROVED-0",
+  "fake_private_value": "FAKE-UNGRANTED-0",
+  "runtime": {
+    "verdict": "abstain",
+    "termination_requested": false,
+    "events": [],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.09706161899999977,
+        "pid": 941
+      }
+    ],
+    "returncode": 0,
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [],
+    "evidence_status": "incomplete",
+    "problems": [
+      "payload_launch_not_observed",
+      "unresolved_relative_mutation"
+    ],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "broker_audit": [],
+  "kernel_gate_audit": [],
+  "files_sha256": {
+    "summary.txt": "ca8352efdbc628577e2aba7d9c8822dbf722fbe1a157d05cb1e10f308095737c",
+    "secret.txt": "cbdedfd22713adf97a6d1161f695f4bd1cb47adc9dd56b4e9e8da18f3254c792",
+    "output/observed.json": "908a39d130970d47511b81590b665f9872fc0d61a264291a90a629c813f9e684",
+    "output/later": "02aa6b5ccea8d473e952db9673989014f8b59d2a6d8d36341dc7be043ab7efcd",
+    "public/worker.py": "7dbf5af47f598513d9d64eb8adea73b8ce2911510d9c990ba393f9ee5ea34eb5",
+    "public/check.txt": "962f85a27854336f3286ad54b49321f62525043b5f3508b2ecc887fdd6e7550e",
+    "evidence/stdout.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/runtime.json": "f7c9466845cb1163bb761676f1fa3ba91d299ee7addbfacbd4cf8fe0c48259a4",
+    "evidence/manifest.json": "b79f7af3384088eb10c40ba381f3821bbf604dca98088538a855ab23c75ea448",
+    "evidence/trace.941": "c81f23cb6b42e0300da1c6c246a4961fc19044fc847026e7c4ab89d59586f550",
+    "evidence/stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/trace.940": "ceeb17c365d4896ce751df0bb8802e7ab4a8ea6e98adeb48ec5f5d6aa0422ce0"
+  },
+  "observer_source": "No hosted model calls; GuardianAI callbacks are fixtures; nono uses static grants."
+}

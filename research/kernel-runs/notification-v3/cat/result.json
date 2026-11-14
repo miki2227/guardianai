@@ -1,0 +1,146 @@
+{
+  "case": "cat",
+  "runtime": {
+    "verdict": "no_observed_violation",
+    "termination_requested": false,
+    "events": [
+      {
+        "source": "trace.947",
+        "timestamp": 1794661543.039932,
+        "syscall": "execve",
+        "paths": [
+          "/workspace/notify-launch"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /usr/lib/x86_64-linux-gnu/libc.so.6(execve+0x7) [0xe1097]",
+          "> /usr/lib/x86_64-linux-gnu/libc.so.6(+0x0) [0xe1262]",
+          "> /usr/lib/x86_64-linux-gnu/libc.so.6(execvpe+0xe) [0xe154e]",
+          "> /usr/bin/bwrap(+0x0) [0x4bc7]",
+          "> /usr/lib/x86_64-linux-gnu/libc.so.6(+0x0) [0x29f75]",
+          "> /usr/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /usr/bin/bwrap(+0x0) [0x5651]"
+        ]
+      },
+      {
+        "source": "trace.947",
+        "timestamp": 1794661543.074598,
+        "syscall": "openat",
+        "paths": [
+          "/protected/summary"
+        ],
+        "write": false,
+        "denied": false,
+        "rule_violation": false,
+        "native_stack": [
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+          "> /usr/bin/cat() [0x2b30]",
+          "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+          "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+          "> /usr/bin/cat() [0x35c1]"
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "action": "released",
+        "elapsed": 0.07846962699999871,
+        "pid": 947
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.3874624649999987,
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      },
+      {
+        "action": "observer",
+        "elapsed": 0.4221342400000001,
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      }
+    ],
+    "broker_channel": true,
+    "native_stacks": true,
+    "observer_inputs": [
+      {
+        "path": "observer-input-0.json",
+        "sha256": "03b9cc78c9118d3b7ef4f815b2ee4ae532cafff0e92f1fc5ac2d200f1bd7d370",
+        "events": 1,
+        "frames": 7
+      },
+      {
+        "path": "observer-input-1.json",
+        "sha256": "32f09fb7c5a2aee0894ff48048576b87ff1066f733d011a04abbda9a8d5952ec",
+        "events": 2,
+        "frames": 14
+      }
+    ],
+    "evidence_status": "recorded",
+    "problems": [],
+    "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+  },
+  "broker_audit": [
+    {
+      "event": "authorization_started",
+      "state": {
+        "trusted_task": "Read the approved summary",
+        "principal": "A",
+        "epoch": 1,
+        "operation": "release immutable resource bytes",
+        "resource_id": "summary",
+        "sha256": "697827f6805180bf53ec9d5e81c8a160c3e2b1915f6870e493106d201cf1a2ee",
+        "bytes": 17,
+        "kernel_origin": {
+          "pid": 947,
+          "syscall": 257,
+          "instruction_pointer": 133196543241874,
+          "notification_id": 7566040878191224349
+        }
+      },
+      "state_sha256": "c2b651e50b7bef349984f29528f964dfc608744f1841863d1cac20ffcec591c6",
+      "request_monotonic": 12.794215228
+    },
+    {
+      "event": "release_committed",
+      "principal": "A",
+      "epoch": 1,
+      "resource_sha256": "697827f6805180bf53ec9d5e81c8a160c3e2b1915f6870e493106d201cf1a2ee",
+      "observer": {
+        "probability": 0.01,
+        "source": "deterministic fixture"
+      },
+      "commit_monotonic": 12.794636141
+    }
+  ],
+  "kernel_gate_audit": [
+    {
+      "event": "protected_open",
+      "pid": 947,
+      "syscall": 257,
+      "ip": 133196543241874,
+      "path": "/protected/summary",
+      "epoch": 1
+    }
+  ],
+  "output": {
+    "value": "APPROVED-SNAPSHOT"
+  },
+  "output_status": "captured_stdout",
+  "release_commits": 1,
+  "later_effect": false,
+  "observer_source": "deterministic fixture",
+  "syscall_observer_source": "deterministic fixture",
+  "abi": {
+    "notif_size": 80,
+    "response_size": 24,
+    "recv": 3226476800,
+    "send": 3222806785,
+    "valid": 1074274562,
+    "addfd": 1075323139
+  }
+}

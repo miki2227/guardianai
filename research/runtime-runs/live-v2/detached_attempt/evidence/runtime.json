@@ -1,0 +1,102 @@
+{
+  "verdict": "violation",
+  "termination_requested": true,
+  "events": [
+    {
+      "source": "trace.1317",
+      "timestamp": 1794657486.308748,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.1317",
+      "timestamp": 1794657486.308843,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.1317",
+      "timestamp": 1794657486.309992,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.1317",
+      "timestamp": 1794657486.310146,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.1317",
+      "timestamp": 1794657486.310304,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.1317",
+      "timestamp": 1794657486.310391,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.1317",
+      "timestamp": 1794657486.370633,
+      "syscall": "unlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": true,
+      "denied": true,
+      "rule_violation": true
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.028502045999999837,
+      "pid": 1317
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.15923047699999415,
+      "probability": 0.0
+    },
+    {
+      "action": "namespace_kill",
+      "elapsed": 0.21357582100000627
+    }
+  ],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

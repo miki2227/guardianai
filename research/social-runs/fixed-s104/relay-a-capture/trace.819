@@ -1,0 +1,202 @@
+1794628430.206577 socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0) = 5<UNIX:[24336]>
+1794628430.207266 socket(AF_NETLINK, SOCK_RAW|SOCK_CLOEXEC, NETLINK_ROUTE) = 5<NETLINK:[24337]>
+1794628430.207451 bind(5<NETLINK:[24337]>, {sa_family=AF_NETLINK, nl_pid=1, nl_groups=00000000}, 12) = 0
+1794628430.207615 sendto(5<NETLINK:[24337]>, [{nlmsg_len=40, nlmsg_type=0x14 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK|0x600, nlmsg_seq=0, nlmsg_pid=1}, "\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x02\x00\x7f\x00\x00\x01\x08\x00\x01\x00\x7f\x00\x00\x01"], 40, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 40
+1794628430.207751 recvfrom(5<NETLINK:[24337]>, [{nlmsg_len=36, nlmsg_type=NLMSG_ERROR, nlmsg_flags=NLM_F_CAPPED, nlmsg_seq=0, nlmsg_pid=1}, {error=0, msg={nlmsg_len=40, nlmsg_type=0x14 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK|0x600, nlmsg_seq=0, nlmsg_pid=1}}], 1024, 0, NULL, NULL) = 36
+1794628430.207997 sendto(5<NETLINK:[24337]>, [{nlmsg_len=32, nlmsg_type=0x10 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK, nlmsg_seq=1, nlmsg_pid=1}, "\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00"], 32, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 32
+1794628430.208353 recvfrom(5<NETLINK:[24337]>, [{nlmsg_len=36, nlmsg_type=NLMSG_ERROR, nlmsg_flags=NLM_F_CAPPED, nlmsg_seq=1, nlmsg_pid=1}, {error=0, msg={nlmsg_len=32, nlmsg_type=0x10 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK, nlmsg_seq=1, nlmsg_pid=1}}], 1024, 0, NULL, NULL) = 36
+1794628430.208606 openat(3</proc>, "self", O_RDONLY|O_PATH) = 5</proc/819>
+1794628430.208697 openat(5</proc/819>, "uid_map", O_RDWR|O_CLOEXEC) = 6</proc/819/uid_map>
+1794628430.208805 write(6</proc/819/uid_map>, "0 1000 1\n", 9) = 9
+1794628430.208974 openat(5</proc/819>, "setgroups", O_RDWR|O_CLOEXEC) = 6</proc/819/setgroups>
+1794628430.209095 write(6</proc/819/setgroups>, "deny\n", 5) = 5
+1794628430.209224 openat(5</proc/819>, "gid_map", O_RDWR|O_CLOEXEC) = 6</proc/819/gid_map>
+1794628430.209300 write(6</proc/819/gid_map>, "0 1000 1\n", 9) = 9
+1794628430.209570 readlink("/usr", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.209657 readlink("/bin", "usr/bin", 1023) = 7
+1794628430.209723 readlink("/usr", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.209789 readlink("/usr/bin", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.209850 readlink("/lib", "usr/lib", 1023) = 7
+1794628430.209920 readlink("/usr", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.209999 readlink("/usr/lib", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210088 readlink("/lib64", "usr/lib64", 1023) = 9
+1794628430.210155 readlink("/usr", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210217 readlink("/usr/lib64", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210284 readlink("/tmp", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210361 readlink("/tmp/guardian-pair-relay-_rvo9bow", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210425 readlink("/tmp/guardian-pair-relay-_rvo9bow/input", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210492 readlink("/tmp", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210564 readlink("/tmp/guardian-pair-relay-_rvo9bow", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210631 readlink("/tmp/guardian-pair-relay-_rvo9bow/output", 0x7ffdee2293c0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.210692 mount(NULL, "/", NULL, MS_REC|MS_SILENT|MS_SLAVE, NULL) = 0
+1794628430.210758 mount("tmpfs", "/tmp", "tmpfs", MS_NOSUID|MS_NODEV, NULL) = 0
+1794628430.210856 getcwd("/home/pratz/guardianai-pilot", 4096) = 29
+1794628430.210932 chdir("/tmp")         = 0
+1794628430.211009 mkdir("newroot", 0755) = 0
+1794628430.211076 mount("newroot", "newroot", NULL, MS_MGC_VAL|MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.211164 mkdir("oldroot", 0755) = 0
+1794628430.211230 pivot_root("/tmp", "oldroot") = 0
+1794628430.211393 chdir("/")            = 0
+1794628430.211458 newfstatat(AT_FDCWD</>, "/oldroot/usr", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794628430.211536 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=40, ...}, 0) = 0
+1794628430.211603 newfstatat(AT_FDCWD</>, "/newroot/usr", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.211669 mkdir("/newroot/usr", 0755) = 0
+1794628430.211737 mount("/oldroot/usr", "/newroot/usr", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.211815 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.211890 readlink("/newroot/usr", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.211969 openat(AT_FDCWD</>, "/newroot/usr", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/usr>
+1794628430.212094 readlink("/oldroot/proc/self/fd/5", "/newroot/usr", 99) = 12
+1794628430.212188 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.212646 mount("none", "/newroot/usr", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794628430.212719 mount("none", "/newroot/usr/lib/wsl/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794628430.212788 mount("none", "/newroot/usr/lib/modules/6.6.87.2-microsoft-standard-WSL2", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794628430.213031 newfstatat(AT_FDCWD</>, "/oldroot/usr/bin", {st_mode=S_IFDIR|0755, st_size=57344, ...}, 0) = 0
+1794628430.213159 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=60, ...}, 0) = 0
+1794628430.213259 newfstatat(AT_FDCWD</>, "/newroot/bin", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.213378 mkdir("/newroot/bin", 0755) = 0
+1794628430.213488 mount("/oldroot/usr/bin", "/newroot/bin", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.213621 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.213709 readlink("/newroot/bin", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.213808 openat(AT_FDCWD</>, "/newroot/bin", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/bin>
+1794628430.213918 readlink("/oldroot/proc/self/fd/5", "/newroot/bin", 99) = 12
+1794628430.214005 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.214456 mount("none", "/newroot/bin", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794628430.214616 newfstatat(AT_FDCWD</>, "/oldroot/usr/lib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794628430.214688 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=80, ...}, 0) = 0
+1794628430.214752 newfstatat(AT_FDCWD</>, "/newroot/lib", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.214825 mkdir("/newroot/lib", 0755) = 0
+1794628430.214895 mount("/oldroot/usr/lib", "/newroot/lib", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.214970 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.215038 readlink("/newroot/lib", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.215122 openat(AT_FDCWD</>, "/newroot/lib", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/lib>
+1794628430.215213 readlink("/oldroot/proc/self/fd/5", "/newroot/lib", 99) = 12
+1794628430.215281 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.215994 mount("none", "/newroot/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794628430.216125 mount("none", "/newroot/lib/wsl/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794628430.216199 mount("none", "/newroot/lib/modules/6.6.87.2-microsoft-standard-WSL2", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794628430.216371 newfstatat(AT_FDCWD</>, "/oldroot/usr/lib64", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794628430.216493 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=100, ...}, 0) = 0
+1794628430.216602 newfstatat(AT_FDCWD</>, "/newroot/lib64", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.216723 mkdir("/newroot/lib64", 0755) = 0
+1794628430.216830 mount("/oldroot/usr/lib64", "/newroot/lib64", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.217008 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.217178 readlink("/newroot/lib64", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.217313 openat(AT_FDCWD</>, "/newroot/lib64", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/lib64>
+1794628430.217449 readlink("/oldroot/proc/self/fd/5", "/newroot/lib64", 99) = 14
+1794628430.217624 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.218479 mount("none", "/newroot/lib64", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794628430.218627 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=120, ...}, 0) = 0
+1794628430.218712 newfstatat(AT_FDCWD</>, "/newroot/proc", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.218790 mkdir("/newroot/proc", 0755) = 0
+1794628430.218888 mount("proc", "/newroot/proc", "proc", MS_NOSUID|MS_NODEV|MS_NOEXEC, NULL) = 0
+1794628430.218978 access("/newroot/proc/sys", W_OK) = -1 EACCES (Permission denied)
+1794628430.219070 access("/newroot/proc/sysrq-trigger", W_OK) = -1 EACCES (Permission denied)
+1794628430.219135 access("/newroot/proc/irq", W_OK) = -1 EACCES (Permission denied)
+1794628430.219202 access("/newroot/proc/bus", W_OK) = -1 EACCES (Permission denied)
+1794628430.219273 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=140, ...}, 0) = 0
+1794628430.219340 newfstatat(AT_FDCWD</>, "/newroot/dev", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.219403 mkdir("/newroot/dev", 0755) = 0
+1794628430.219468 mount("tmpfs", "/newroot/dev", "tmpfs", MS_NOSUID|MS_NODEV, "mode=0755") = 0
+1794628430.219544 creat("/newroot/dev/null", 0444) = 5</newroot/dev/null>
+1794628430.219677 mount("/oldroot/dev/null", "/newroot/dev/null", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.219746 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.219807 readlink("/newroot/dev", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.219874 readlink("/newroot/dev/null", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.219933 openat(AT_FDCWD</>, "/newroot/dev/null", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/null>
+1794628430.220008 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/null", 99) = 17
+1794628430.220074 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.220679 creat("/newroot/dev/zero", 0444) = 5</newroot/dev/zero>
+1794628430.220817 mount("/oldroot/dev/zero", "/newroot/dev/zero", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.220944 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.221017 readlink("/newroot/dev", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.221083 readlink("/newroot/dev/zero", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.221160 openat(AT_FDCWD</>, "/newroot/dev/zero", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/zero>
+1794628430.221241 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/zero", 99) = 17
+1794628430.221311 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.221895 creat("/newroot/dev/full", 0444) = 5</newroot/dev/full>
+1794628430.222061 mount("/oldroot/dev/full", "/newroot/dev/full", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.222146 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.222211 readlink("/newroot/dev", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.222272 readlink("/newroot/dev/full", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.222335 openat(AT_FDCWD</>, "/newroot/dev/full", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/full>
+1794628430.222408 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/full", 99) = 17
+1794628430.222478 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.223062 creat("/newroot/dev/random", 0444) = 5</newroot/dev/random>
+1794628430.223248 mount("/oldroot/dev/random", "/newroot/dev/random", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.223327 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.223394 readlink("/newroot/dev", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.223498 readlink("/newroot/dev/random", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.223618 openat(AT_FDCWD</>, "/newroot/dev/random", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/random>
+1794628430.223726 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/random", 99) = 19
+1794628430.223799 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.224411 creat("/newroot/dev/urandom", 0444) = 5</newroot/dev/urandom>
+1794628430.224578 mount("/oldroot/dev/urandom", "/newroot/dev/urandom", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.224656 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.224740 readlink("/newroot/dev", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.224819 readlink("/newroot/dev/urandom", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.224955 openat(AT_FDCWD</>, "/newroot/dev/urandom", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/urandom>
+1794628430.225051 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/urandom", 99) = 20
+1794628430.225139 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.225683 creat("/newroot/dev/tty", 0444) = 5</newroot/dev/tty>
+1794628430.225834 mount("/oldroot/dev/tty", "/newroot/dev/tty", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.225931 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.225996 readlink("/newroot/dev", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.226055 readlink("/newroot/dev/tty", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.226122 openat(AT_FDCWD</>, "/newroot/dev/tty", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/dev/tty>
+1794628430.226192 readlink("/oldroot/proc/self/fd/5", "/newroot/dev/tty", 99) = 16
+1794628430.226258 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.226929 symlink("/proc/self/fd/0", "/newroot/dev/stdin") = 0
+1794628430.227048 symlink("/proc/self/fd/1", "/newroot/dev/stdout") = 0
+1794628430.227117 symlink("/proc/self/fd/2", "/newroot/dev/stderr") = 0
+1794628430.227184 symlink("/proc/self/fd", "/newroot/dev/fd") = 0
+1794628430.227256 symlink("/proc/kcore", "/newroot/dev/core") = 0
+1794628430.227354 mkdir("/newroot/dev/shm", 0755) = 0
+1794628430.227465 mkdir("/newroot/dev/pts", 0755) = 0
+1794628430.227569 mount("devpts", "/newroot/dev/pts", "devpts", MS_NOSUID|MS_NOEXEC, "newinstance,ptmxmode=0666,mode=620") = 0
+1794628430.227698 symlink("pts/ptmx", "/newroot/dev/ptmx") = 0
+1794628430.227791 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=160, ...}, 0) = 0
+1794628430.227868 newfstatat(AT_FDCWD</>, "/newroot/tmp", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.227944 mkdir("/newroot/tmp", 0755) = 0
+1794628430.228055 mount("tmpfs", "/newroot/tmp", "tmpfs", MS_NOSUID|MS_NODEV, "mode=0755") = 0
+1794628430.228147 newfstatat(AT_FDCWD</>, "/oldroot/tmp/guardian-pair-relay-_rvo9bow/input", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794628430.228216 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=180, ...}, 0) = 0
+1794628430.228301 newfstatat(AT_FDCWD</>, "/newroot/workspace", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.228443 mkdir("/newroot/workspace", 0755) = 0
+1794628430.228551 mount("/oldroot/tmp/guardian-pair-relay-_rvo9bow/input", "/newroot/workspace", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.228650 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.228799 readlink("/newroot/workspace", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.229145 openat(AT_FDCWD</>, "/newroot/workspace", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/workspace>
+1794628430.229232 readlink("/oldroot/proc/self/fd/5", "/newroot/workspace", 99) = 18
+1794628430.229346 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.230235 mount("none", "/newroot/workspace", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794628430.230408 newfstatat(AT_FDCWD</>, "/oldroot/tmp/guardian-pair-relay-_rvo9bow/output", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794628430.230520 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=200, ...}, 0) = 0
+1794628430.230618 newfstatat(AT_FDCWD</>, "/newroot/output", 0x7ffdee229580, 0) = -1 ENOENT (No such file or directory)
+1794628430.230720 mkdir("/newroot/output", 0755) = 0
+1794628430.230820 mount("/oldroot/tmp/guardian-pair-relay-_rvo9bow/output", "/newroot/output", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794628430.230954 readlink("/newroot", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.231052 readlink("/newroot/output", 0x7ffdee2270a0, 1023) = -1 EINVAL (Invalid argument)
+1794628430.231201 openat(AT_FDCWD</>, "/newroot/output", O_RDONLY|O_CLOEXEC|O_PATH) = 5</newroot/output>
+1794628430.231486 readlink("/oldroot/proc/self/fd/5", "/newroot/output", 99) = 15
+1794628430.231586 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/819/mountinfo>
+1794628430.232211 mount("none", "/newroot/output", NULL, MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794628430.232355 mount("oldroot", "oldroot", NULL, MS_REC|MS_SILENT|MS_PRIVATE, NULL) = 0
+1794628430.232421 umount2("oldroot", MNT_DETACH) = 0
+1794628430.232576 openat(AT_FDCWD</>, "/", O_RDONLY|O_DIRECTORY) = 5</>
+1794628430.232691 chdir("/newroot")     = 0
+1794628430.232764 pivot_root(".", ".")  = 0
+1794628430.233243 umount2(".", MNT_DETACH) = 0
+1794628430.233344 chdir("/")            = 0
+1794628430.236432 openat(3</proc>, "self", O_RDONLY|O_PATH) = 5</proc/819>
+1794628430.236551 openat(5</proc/819>, "uid_map", O_RDWR|O_CLOEXEC) = 6</proc/819/uid_map>
+1794628430.236623 write(6</proc/819/uid_map>, "1000 0 1\n", 9) = 9
+1794628430.236754 openat(5</proc/819>, "gid_map", O_RDWR|O_CLOEXEC) = 6</proc/819/gid_map>
+1794628430.236887 write(6</proc/819/gid_map>, "1000 0 1\n", 9) = 9
+1794628430.237317 chdir("/output")      = 0
+1794628430.237551 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x79451274e550) = 2
+1794628430.237910 openat(3</proc>, "self/fd", O_RDONLY|O_NOCTTY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 5</proc/819/fd>
+1794628430.238804 wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 2
+1794628430.307747 write(4<{eventfd-count=0, eventfd-id=17, eventfd-semaphore=0}>, "\1\0\0\0\0\0\0\0", 8) = 8
+1794628430.307888 wait4(-1, 0x7ffdee229854, 0, NULL) = -1 ECHILD (No child processes)
+1794628430.308016 exit_group(0)         = ?
+1794628430.308367 +++ exited with 0 +++

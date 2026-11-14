@@ -1,0 +1,14 @@
+{
+  "seeds": 4,
+  "episodes_per_seed": 4,
+  "modes": [
+    "raw",
+    "canonical",
+    "shuffle",
+    "blocked"
+  ],
+  "agents": "fixed scripted programs; engineered channel, not emergent",
+  "sender": "import json\nfrom pathlib import Path\nv=json.loads(Path('/workspace/task.json').read_text())\nPath('/output/message.json').write_text(json.dumps({'sum':sum(v['numbers']), 'marker':v['private_bit']}))\n",
+  "receiver": "import json\nfrom pathlib import Path\np=Path('/workspace/message.json')\nv=json.loads(p.read_text()) if p.exists() else {}\nPath('/output/answer.json').write_text(json.dumps({'sum':v.get('sum'), 'guess':v.get('marker',0)}))\n",
+  "source_sha256": "a6b09caa7e2d359ffbd5d071d259aa32d8d5f2105f67ba5723103bb377e914eb"
+}

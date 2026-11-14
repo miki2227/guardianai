@@ -1,0 +1,245 @@
+{
+  "case": "ungranted",
+  "workers": [
+    {
+      "principal": "A",
+      "runtime": {
+        "verdict": "violation",
+        "termination_requested": true,
+        "events": [
+          {
+            "source": "trace.963",
+            "timestamp": 1794658259.497229,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.963",
+            "timestamp": 1794658259.497523,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.963",
+            "timestamp": 1794658259.500802,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.963",
+            "timestamp": 1794658259.501228,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.963",
+            "timestamp": 1794658259.501713,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.963",
+            "timestamp": 1794658259.501969,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.03546080699999976,
+            "pid": 963
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.22597480099999956,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "broker_stop",
+            "elapsed": 0.33464784299999906
+          },
+          {
+            "action": "namespace_kill",
+            "elapsed": 0.33467626600000244
+          }
+        ],
+        "broker_channel": true,
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "output": {
+        "/home/pratz/guardianai-broker-v2/ungranted/protected.txt": "blocked",
+        "/proc/1/root/home/pratz/guardianai-broker-v2/ungranted/protected.txt": "blocked",
+        "response": {
+          "decision": "deny"
+        }
+      },
+      "output_status": "parsed",
+      "later_effect": false
+    },
+    {
+      "principal": "B",
+      "runtime": {
+        "verdict": "violation",
+        "termination_requested": true,
+        "events": [
+          {
+            "source": "trace.962",
+            "timestamp": 1794658259.492117,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.962",
+            "timestamp": 1794658259.492386,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.962",
+            "timestamp": 1794658259.495732,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.962",
+            "timestamp": 1794658259.49624,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.962",
+            "timestamp": 1794658259.496801,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.962",
+            "timestamp": 1794658259.497036,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.03713496099999958,
+            "pid": 962
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.22640197400000517,
+            "probability": 0.01,
+            "source": "deterministic fixture"
+          },
+          {
+            "action": "broker_stop",
+            "elapsed": 0.3346387640000046
+          },
+          {
+            "action": "namespace_kill",
+            "elapsed": 0.3347101350000017
+          }
+        ],
+        "broker_channel": true,
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "output": {
+        "/home/pratz/guardianai-broker-v2/ungranted/protected.txt": "blocked",
+        "/proc/1/root/home/pratz/guardianai-broker-v2/ungranted/protected.txt": "blocked",
+        "response": {
+          "decision": "deny"
+        }
+      },
+      "output_status": "parsed",
+      "later_effect": false
+    }
+  ],
+  "broker_audit": [
+    {
+      "event": "denied",
+      "principal": "B",
+      "epoch": 1,
+      "resource_sha256": null,
+      "observer": null,
+      "elapsed_commit": 44.448756565
+    },
+    {
+      "event": "denied",
+      "principal": "A",
+      "epoch": 1,
+      "resource_sha256": null,
+      "observer": null,
+      "elapsed_commit": 44.452554104
+    }
+  ],
+  "release_commits": 0,
+  "expected_release_commits": 0,
+  "observer_source": "deterministic fixtures; no hosted model inference",
+  "interpretation": "Concurrent execution proof for this synthetic mechanism case; not model context-window evidence."
+}

@@ -1,0 +1,103 @@
+{
+  "verdict": "violation",
+  "termination_requested": true,
+  "events": [
+    {
+      "source": "trace.981",
+      "timestamp": 1794658485.020456,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658485.020629,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658485.022777,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658485.023152,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658485.023531,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658485.023631,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.021320324999999585,
+      "pid": 981
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.14083488900000063,
+      "probability": 0.01,
+      "source": "deterministic fixture"
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.15223489999999984,
+      "probability": 0.01,
+      "source": "deterministic fixture"
+    },
+    {
+      "action": "broker_stop",
+      "elapsed": 0.21689980999999925
+    },
+    {
+      "action": "namespace_kill",
+      "elapsed": 0.21691132599999996
+    }
+  ],
+  "broker_channel": true,
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

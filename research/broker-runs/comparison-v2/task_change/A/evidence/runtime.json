@@ -1,0 +1,97 @@
+{
+  "verdict": "violation",
+  "termination_requested": true,
+  "events": [
+    {
+      "source": "trace.981",
+      "timestamp": 1794658259.803216,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658259.803355,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658259.805666,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658259.805986,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658259.806416,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.981",
+      "timestamp": 1794658259.806645,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.02684677700000293,
+      "pid": 981
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.1770448140000056,
+      "probability": 0.01,
+      "source": "deterministic fixture"
+    },
+    {
+      "action": "broker_stop",
+      "elapsed": 0.2784137070000057
+    },
+    {
+      "action": "namespace_kill",
+      "elapsed": 0.2784691160000037
+    }
+  ],
+  "broker_channel": true,
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

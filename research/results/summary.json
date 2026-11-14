@@ -1,0 +1,187 @@
+{
+  "sessions": 48,
+  "workload_families": 12,
+  "task_data_seeds": 4,
+  "utility_pass": 48,
+  "input_preserved": 48,
+  "evidence_status": {
+    "recorded": 44,
+    "incomplete": 4
+  },
+  "damaged_evidence_abstentions": 48,
+  "detectors": {
+    "preflight": {
+      "tp": 27,
+      "fp": 17,
+      "fn": 1,
+      "tn": 3,
+      "abstain_positive": 0,
+      "abstain_negative": 0,
+      "positive": 28,
+      "negative": 20,
+      "recall_all_positive": 0.9642857142857143,
+      "fpr_all_negative": 0.85,
+      "coverage": 1.0,
+      "recall_family_bootstrap_95": [
+        0.8888888888888888,
+        1.0
+      ],
+      "fpr_family_bootstrap_95": [
+        0.5,
+        1.0
+      ]
+    },
+    "kernel": {
+      "tp": 16,
+      "fp": 0,
+      "fn": 8,
+      "tn": 20,
+      "abstain_positive": 4,
+      "abstain_negative": 0,
+      "positive": 28,
+      "negative": 20,
+      "recall_all_positive": 0.5714285714285714,
+      "fpr_all_negative": 0.0,
+      "coverage": 0.9166666666666666,
+      "recall_family_bootstrap_95": [
+        0.2916666666666667,
+        0.8333333333333334
+      ],
+      "fpr_family_bootstrap_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "joined": {
+      "tp": 10,
+      "fp": 0,
+      "fn": 14,
+      "tn": 20,
+      "abstain_positive": 4,
+      "abstain_negative": 0,
+      "positive": 28,
+      "negative": 20,
+      "recall_all_positive": 0.35714285714285715,
+      "fpr_all_negative": 0.0,
+      "coverage": 0.9166666666666666,
+      "recall_family_bootstrap_95": [
+        0.0,
+        0.7142857142857143
+      ],
+      "fpr_family_bootstrap_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "rule": {
+      "tp": 24,
+      "fp": 0,
+      "fn": 0,
+      "tn": 20,
+      "abstain_positive": 4,
+      "abstain_negative": 0,
+      "positive": 28,
+      "negative": 20,
+      "recall_all_positive": 0.8571428571428571,
+      "fpr_all_negative": 0.0,
+      "coverage": 0.9166666666666666,
+      "recall_family_bootstrap_95": [
+        0.5555555555555556,
+        1.0
+      ],
+      "fpr_family_bootstrap_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "effects_only_rule": {
+      "tp": 4,
+      "fp": 0,
+      "fn": 20,
+      "tn": 20,
+      "abstain_positive": 4,
+      "abstain_negative": 0,
+      "positive": 28,
+      "negative": 20,
+      "recall_all_positive": 0.14285714285714285,
+      "fpr_all_negative": 0.0,
+      "coverage": 0.9166666666666666,
+      "recall_family_bootstrap_95": [
+        0.0,
+        0.4444444444444444
+      ],
+      "fpr_family_bootstrap_95": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "counterfactual": {
+    "channel": {
+      "raw": {
+        "n": 16,
+        "bit_recovered": 16,
+        "utility": 16
+      },
+      "canonical": {
+        "n": 16,
+        "bit_recovered": 8,
+        "utility": 16
+      },
+      "shuffle": {
+        "n": 16,
+        "bit_recovered": 8,
+        "utility": 16
+      },
+      "blocked": {
+        "n": 16,
+        "bit_recovered": 8,
+        "utility": 0
+      }
+    },
+    "honest": {
+      "raw": {
+        "n": 16,
+        "bit_recovered": 8,
+        "utility": 16
+      },
+      "canonical": {
+        "n": 16,
+        "bit_recovered": 8,
+        "utility": 16
+      },
+      "shuffle": {
+        "n": 16,
+        "bit_recovered": 8,
+        "utility": 16
+      },
+      "blocked": {
+        "n": 16,
+        "bit_recovered": 8,
+        "utility": 0
+      }
+    }
+  },
+  "counterfactual_capture_revalidation": {
+    "recorded": 144
+  },
+  "interpretation": "Family bootstrap intervals are descriptive over 12 handcrafted families, not population guarantees. Four seeds vary task data, not model weights. Counterfactual balanced bits make the zero-guess baseline exactly 50%; no emergence is tested.",
+  "counterfactual_paired_effects": {
+    "bit_recovered": {
+      "raw_minus_canonical": 0.5,
+      "seed_block_bootstrap_95": [
+        0.5,
+        0.5
+      ],
+      "note": "Design-descriptive; degenerate intervals arise from balanced scripted controls."
+    },
+    "utility": {
+      "raw_minus_canonical": 0.0,
+      "seed_block_bootstrap_95": [
+        0.0,
+        0.0
+      ],
+      "note": "Design-descriptive; degenerate intervals arise from balanced scripted controls."
+    }
+  }
+}

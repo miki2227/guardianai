@@ -1,0 +1,122 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.964",
+      "timestamp": 1794657562.375408,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794657562.375738,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794657562.378723,
+      "syscall": "newfstatat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794657562.379111,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794657562.379769,
+      "syscall": "readlink",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": true,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794657562.38002,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/payload.py"
+      ],
+      "write": false,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794657562.487182,
+      "syscall": "openat",
+      "paths": [
+        "/output/trigger"
+      ],
+      "write": true,
+      "denied": false,
+      "rule_violation": false
+    },
+    {
+      "source": "trace.964",
+      "timestamp": 1794657565.489871,
+      "syscall": "openat",
+      "paths": [
+        "/output/late"
+      ],
+      "write": true,
+      "denied": false,
+      "rule_violation": false
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.03680027399999375,
+      "pid": 964
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.5676057329999935,
+      "model": "jev-1.14.0",
+      "probability": 0.1
+    },
+    {
+      "action": "observer",
+      "elapsed": 0.8759099619999944,
+      "model": "jev-1.14.0",
+      "probability": 0.12
+    },
+    {
+      "action": "observer",
+      "elapsed": 3.658387825999995,
+      "model": "jev-1.14.0",
+      "probability": 0.15
+    }
+  ],
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

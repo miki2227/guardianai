@@ -1,0 +1,42 @@
+1794657486.167849 execve("/usr/bin/bwrap", ["/usr/bin/bwrap", "--as-pid-1", "--info-fd", "4", "--block-fd", "6", "--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv", "--ro-bind", "/usr", "/usr", "--ro-bind", "/bin", "/bin", "--ro-bind", "/lib", "/lib", "--ro-bind", "/lib64", "/lib64", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--ro-bind", "/home/pratz/guardianai-live-v2/detached_attempt/input", "/workspace", "--bind", "/home/pratz/guardianai-live-v2/detached_attempt/output", "/output", "--chdir", "/output", "--setenv", "PATH", "/usr/bin:/bin", "--setenv", "HOME", "/tmp", "--", "/usr/bin/python3", "/workspace/payload.py"], 0x7ffdb160cf10 /* 1 var */) = 0
+1794657486.169537 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+1794657486.169828 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3</etc/ld.so.cache>
+1794657486.170917 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/usr/lib/x86_64-linux-gnu/libselinux.so.1", O_RDONLY|O_CLOEXEC) = 3</usr/lib/x86_64-linux-gnu/libselinux.so.1>
+1794657486.172748 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/usr/lib/x86_64-linux-gnu/libcap.so.2", O_RDONLY|O_CLOEXEC) = 3</usr/lib/x86_64-linux-gnu/libcap.so.2.75>
+1794657486.174043 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/usr/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3</usr/lib/x86_64-linux-gnu/libc.so.6>
+1794657486.175481 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/usr/lib/x86_64-linux-gnu/libpcre2-8.so.0", O_RDONLY|O_CLOEXEC) = 3</usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.14.0>
+1794657486.179033 statfs("/sys/fs/selinux", {f_type=SYSFS_MAGIC, f_bsize=4096, f_blocks=0, f_bfree=0, f_bavail=0, f_files=0, f_ffree=0, f_fsid={val=[0xf463b6be, 0x1f580c72]}, f_namelen=255, f_frsize=4096, f_flags=ST_VALID|ST_NOSUID|ST_NODEV|ST_NOEXEC|ST_NOATIME}) = 0
+1794657486.179264 statfs("/selinux", 0x7ffe18b59a50) = -1 ENOENT (No such file or directory)
+1794657486.179800 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/filesystems", O_RDONLY|O_CLOEXEC) = 3</proc/filesystems>
+1794657486.180754 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/mounts", O_RDONLY|O_CLOEXEC) = 3</proc/1316/mounts>
+1794657486.182679 access("/etc/selinux/config", F_OK) = -1 ENOENT (No such file or directory)
+1794657486.183902 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/sys/kernel/overflowuid", O_RDONLY|O_CLOEXEC) = 3</proc/sys/kernel/overflowuid>
+1794657486.184698 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/sys/kernel/overflowgid", O_RDONLY|O_CLOEXEC) = 3</proc/sys/kernel/overflowgid>
+1794657486.185678 newfstatat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/self/ns/user", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.185878 newfstatat(AT_FDCWD</home/pratz/guardianai-pilot>, "/sys/module/user_namespace/parameters/enable", 0x7ffe18b57a00, 0) = -1 ENOENT (No such file or directory)
+1794657486.186028 newfstatat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/sys/user/max_user_namespaces", {st_mode=S_IFREG|0644, st_size=0, ...}, 0) = 0
+1794657486.186201 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/sys/user/max_user_namespaces", O_RDONLY|O_CLOEXEC) = 3</proc/sys/user/max_user_namespaces>
+1794657486.186779 openat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc", O_RDONLY|O_PATH) = 3</proc>
+1794657486.187060 wait4(-1, 0x7ffe18b57930, WNOHANG, NULL) = -1 ECHILD (No child processes)
+1794657486.187185 newfstatat(AT_FDCWD</home/pratz/guardianai-pilot>, "/proc/self/ns/cgroup", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.187713 clone(child_stack=NULL, flags=CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWUSER|CLONE_NEWPID|CLONE_NEWNET|SIGCHLD) = 1317
+1794657486.188985 openat(3</proc>, "1317/ns", O_RDONLY|O_PATH) = 7</proc/1317/ns>
+1794657486.189161 newfstatat(7</proc/1317/ns>, "cgroup", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.189393 newfstatat(7</proc/1317/ns>, "ipc", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.189648 newfstatat(7</proc/1317/ns>, "mnt", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.189872 newfstatat(7</proc/1317/ns>, "net", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.190024 newfstatat(7</proc/1317/ns>, "pid", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.190166 newfstatat(7</proc/1317/ns>, "uts", {st_mode=S_IFREG|0444, st_size=0, ...}, 0) = 0
+1794657486.190730 write(4<pipe:[42420]>, "{\n    \"child-pid\": 1317", 23) = 23
+1794657486.190923 write(4<pipe:[42420]>, ",\n    \"cgroup-namespace\": 4026532425", 36) = 36
+1794657486.191135 write(4<pipe:[42420]>, ",\n    \"ipc-namespace\": 4026532389", 33) = 33
+1794657486.191269 write(4<pipe:[42420]>, ",\n    \"mnt-namespace\": 4026532387", 33) = 33
+1794657486.191480 write(4<pipe:[42420]>, ",\n    \"net-namespace\": 4026532426", 33) = 33
+1794657486.191599 write(4<pipe:[42420]>, ",\n    \"pid-namespace\": 4026532390", 33) = 33
+1794657486.191705 write(4<pipe:[42420]>, ",\n    \"uts-namespace\": 4026532388", 33) = 33
+1794657486.191808 write(4<pipe:[42420]>, "\n}\n", 3) = 3
+1794657486.192140 write(5<{eventfd-count=0, eventfd-id=74, eventfd-semaphore=0}>, "\1\0\0\0\0\0\0\0", 8) = 8
+1794657486.192491 openat(3</proc>, "self/fd", O_RDONLY|O_NOCTTY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 4</proc/1316/fd>
+1794657486.378588 wait4(-1, [{WIFSIGNALED(s) && WTERMSIG(s) == SIGKILL}], WNOHANG, NULL) = 1317
+1794657486.378766 exit_group(137)       = ?
+1794657486.379089 +++ exited with 137 +++

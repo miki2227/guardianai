@@ -1,0 +1,450 @@
+1794657453.137158 socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0) = 4<UNIX:[35076]>
+1794657453.138052 socket(AF_NETLINK, SOCK_RAW|SOCK_CLOEXEC, NETLINK_ROUTE) = 4<NETLINK:[35077]>
+1794657453.138467 bind(4<NETLINK:[35077]>, {sa_family=AF_NETLINK, nl_pid=1, nl_groups=00000000}, 12) = 0
+1794657453.138908 sendto(4<NETLINK:[35077]>, [{nlmsg_len=40, nlmsg_type=0x14 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK|0x600, nlmsg_seq=0, nlmsg_pid=1}, "\x02\x08\x80\xfe\x01\x00\x00\x00\x08\x00\x02\x00\x7f\x00\x00\x01\x08\x00\x01\x00\x7f\x00\x00\x01"], 40, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 40
+1794657453.139316 recvfrom(4<NETLINK:[35077]>, [{nlmsg_len=36, nlmsg_type=NLMSG_ERROR, nlmsg_flags=NLM_F_CAPPED, nlmsg_seq=0, nlmsg_pid=1}, {error=0, msg={nlmsg_len=40, nlmsg_type=0x14 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK|0x600, nlmsg_seq=0, nlmsg_pid=1}}], 1024, 0, NULL, NULL) = 36
+1794657453.140162 sendto(4<NETLINK:[35077]>, [{nlmsg_len=32, nlmsg_type=0x10 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK, nlmsg_seq=1, nlmsg_pid=1}, "\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00"], 32, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 32
+1794657453.140661 recvfrom(4<NETLINK:[35077]>, [{nlmsg_len=36, nlmsg_type=NLMSG_ERROR, nlmsg_flags=NLM_F_CAPPED, nlmsg_seq=1, nlmsg_pid=1}, {error=0, msg={nlmsg_len=32, nlmsg_type=0x10 /* NLMSG_??? */, nlmsg_flags=NLM_F_REQUEST|NLM_F_ACK, nlmsg_seq=1, nlmsg_pid=1}}], 1024, 0, NULL, NULL) = 36
+1794657453.141513 openat(3</proc>, "self", O_RDONLY|O_PATH) = 4</proc/914>
+1794657453.141771 openat(4</proc/914>, "uid_map", O_RDWR|O_CLOEXEC) = 6</proc/914/uid_map>
+1794657453.141972 write(6</proc/914/uid_map>, "0 1000 1\n", 9) = 9
+1794657453.142347 openat(4</proc/914>, "setgroups", O_RDWR|O_CLOEXEC) = 6</proc/914/setgroups>
+1794657453.142603 write(6</proc/914/setgroups>, "deny\n", 5) = 5
+1794657453.142934 openat(4</proc/914>, "gid_map", O_RDWR|O_CLOEXEC) = 6</proc/914/gid_map>
+1794657453.143090 write(6</proc/914/gid_map>, "0 1000 1\n", 9) = 9
+1794657453.144029 readlink("/usr", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.144268 readlink("/bin", "usr/bin", 1023) = 7
+1794657453.144384 readlink("/usr", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.144526 readlink("/usr/bin", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.144645 readlink("/lib", "usr/lib", 1023) = 7
+1794657453.144772 readlink("/usr", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.144868 readlink("/usr/lib", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.144972 readlink("/lib64", "usr/lib64", 1023) = 9
+1794657453.145117 readlink("/usr", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.145235 readlink("/usr/lib64", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.145333 readlink("/home", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.145415 readlink("/home/pratz", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.145623 readlink("/home/pratz/guardianai-live-v1", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.145761 readlink("/home/pratz/guardianai-live-v1/detached_attempt", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.145867 readlink("/home/pratz/guardianai-live-v1/detached_attempt/input", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.145957 readlink("/home", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.146029 readlink("/home/pratz", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.146101 readlink("/home/pratz/guardianai-live-v1", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.146173 readlink("/home/pratz/guardianai-live-v1/detached_attempt", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.146244 readlink("/home/pratz/guardianai-live-v1/detached_attempt/output", 0x7ffd43cf2c20, 1023) = -1 EINVAL (Invalid argument)
+1794657453.146318 mount(NULL, "/", NULL, MS_REC|MS_SILENT|MS_SLAVE, NULL) = 0
+1794657453.146452 mount("tmpfs", "/tmp", "tmpfs", MS_NOSUID|MS_NODEV, NULL) = 0
+1794657453.146743 getcwd("/home/pratz/guardianai-pilot", 4096) = 29
+1794657453.146886 chdir("/tmp")         = 0
+1794657453.146974 mkdir("newroot", 0755) = 0
+1794657453.147065 mount("newroot", "newroot", NULL, MS_MGC_VAL|MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.147149 mkdir("oldroot", 0755) = 0
+1794657453.147274 pivot_root("/tmp", "oldroot") = 0
+1794657453.147626 chdir("/")            = 0
+1794657453.147762 newfstatat(AT_FDCWD</>, "/oldroot/usr", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.147908 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=40, ...}, 0) = 0
+1794657453.148020 newfstatat(AT_FDCWD</>, "/newroot/usr", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.148110 mkdir("/newroot/usr", 0755) = 0
+1794657453.148217 mount("/oldroot/usr", "/newroot/usr", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.148379 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.148489 readlink("/newroot/usr", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.148615 openat(AT_FDCWD</>, "/newroot/usr", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/usr>
+1794657453.148722 readlink("/oldroot/proc/self/fd/4", "/newroot/usr", 99) = 12
+1794657453.148865 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.149849 mount("none", "/newroot/usr", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794657453.149992 mount("none", "/newroot/usr/lib/wsl/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794657453.150203 mount("none", "/newroot/usr/lib/modules/6.6.87.2-microsoft-standard-WSL2", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794657453.150549 newfstatat(AT_FDCWD</>, "/oldroot/usr/bin", {st_mode=S_IFDIR|0755, st_size=57344, ...}, 0) = 0
+1794657453.150748 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=60, ...}, 0) = 0
+1794657453.150858 newfstatat(AT_FDCWD</>, "/newroot/bin", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.150995 mkdir("/newroot/bin", 0755) = 0
+1794657453.151150 mount("/oldroot/usr/bin", "/newroot/bin", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.151268 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.151456 readlink("/newroot/bin", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.151622 openat(AT_FDCWD</>, "/newroot/bin", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/bin>
+1794657453.151858 readlink("/oldroot/proc/self/fd/4", "/newroot/bin", 99) = 12
+1794657453.152059 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.152858 mount("none", "/newroot/bin", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794657453.153250 newfstatat(AT_FDCWD</>, "/oldroot/usr/lib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.153542 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=80, ...}, 0) = 0
+1794657453.153759 newfstatat(AT_FDCWD</>, "/newroot/lib", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.153953 mkdir("/newroot/lib", 0755) = 0
+1794657453.154098 mount("/oldroot/usr/lib", "/newroot/lib", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.154298 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.154529 readlink("/newroot/lib", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.154722 openat(AT_FDCWD</>, "/newroot/lib", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/lib>
+1794657453.154954 readlink("/oldroot/proc/self/fd/4", "/newroot/lib", 99) = 12
+1794657453.155136 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.156549 mount("none", "/newroot/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794657453.156764 mount("none", "/newroot/lib/wsl/lib", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794657453.156914 mount("none", "/newroot/lib/modules/6.6.87.2-microsoft-standard-WSL2", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_NOATIME|MS_BIND|MS_SILENT, NULL) = 0
+1794657453.157112 newfstatat(AT_FDCWD</>, "/oldroot/usr/lib64", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.157349 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=100, ...}, 0) = 0
+1794657453.157476 newfstatat(AT_FDCWD</>, "/newroot/lib64", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.157610 mkdir("/newroot/lib64", 0755) = 0
+1794657453.157810 mount("/oldroot/usr/lib64", "/newroot/lib64", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.157933 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.158128 readlink("/newroot/lib64", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.158289 openat(AT_FDCWD</>, "/newroot/lib64", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/lib64>
+1794657453.158502 readlink("/oldroot/proc/self/fd/4", "/newroot/lib64", 99) = 14
+1794657453.158710 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.160481 mount("none", "/newroot/lib64", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794657453.160889 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=120, ...}, 0) = 0
+1794657453.161208 newfstatat(AT_FDCWD</>, "/newroot/proc", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.161550 mkdir("/newroot/proc", 0755) = 0
+1794657453.161734 mount("proc", "/newroot/proc", "proc", MS_NOSUID|MS_NODEV|MS_NOEXEC, NULL) = 0
+1794657453.161874 access("/newroot/proc/sys", W_OK) = -1 EACCES (Permission denied)
+1794657453.162006 access("/newroot/proc/sysrq-trigger", W_OK) = -1 EACCES (Permission denied)
+1794657453.162207 access("/newroot/proc/irq", W_OK) = -1 EACCES (Permission denied)
+1794657453.162329 access("/newroot/proc/bus", W_OK) = -1 EACCES (Permission denied)
+1794657453.162424 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=140, ...}, 0) = 0
+1794657453.162547 newfstatat(AT_FDCWD</>, "/newroot/dev", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.162632 mkdir("/newroot/dev", 0755) = 0
+1794657453.162728 mount("tmpfs", "/newroot/dev", "tmpfs", MS_NOSUID|MS_NODEV, "mode=0755") = 0
+1794657453.162900 creat("/newroot/dev/null", 0444) = 4</newroot/dev/null>
+1794657453.163181 mount("/oldroot/dev/null", "/newroot/dev/null", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.163421 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.163855 readlink("/newroot/dev", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.164158 readlink("/newroot/dev/null", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.164322 openat(AT_FDCWD</>, "/newroot/dev/null", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/dev/null>
+1794657453.164489 readlink("/oldroot/proc/self/fd/4", "/newroot/dev/null", 99) = 17
+1794657453.164622 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.166021 creat("/newroot/dev/zero", 0444) = 4</newroot/dev/zero>
+1794657453.166296 mount("/oldroot/dev/zero", "/newroot/dev/zero", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.166439 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.166576 readlink("/newroot/dev", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.166736 readlink("/newroot/dev/zero", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.166885 openat(AT_FDCWD</>, "/newroot/dev/zero", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/dev/zero>
+1794657453.167041 readlink("/oldroot/proc/self/fd/4", "/newroot/dev/zero", 99) = 17
+1794657453.167192 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.168567 creat("/newroot/dev/full", 0444) = 4</newroot/dev/full>
+1794657453.168826 mount("/oldroot/dev/full", "/newroot/dev/full", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.169046 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.169293 readlink("/newroot/dev", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.169474 readlink("/newroot/dev/full", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.169802 openat(AT_FDCWD</>, "/newroot/dev/full", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/dev/full>
+1794657453.170187 readlink("/oldroot/proc/self/fd/4", "/newroot/dev/full", 99) = 17
+1794657453.170398 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.171890 creat("/newroot/dev/random", 0444) = 4</newroot/dev/random>
+1794657453.172243 mount("/oldroot/dev/random", "/newroot/dev/random", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.172431 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.172584 readlink("/newroot/dev", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.172744 readlink("/newroot/dev/random", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.172953 openat(AT_FDCWD</>, "/newroot/dev/random", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/dev/random>
+1794657453.173186 readlink("/oldroot/proc/self/fd/4", "/newroot/dev/random", 99) = 19
+1794657453.173356 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.174599 creat("/newroot/dev/urandom", 0444) = 4</newroot/dev/urandom>
+1794657453.174819 mount("/oldroot/dev/urandom", "/newroot/dev/urandom", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.174986 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.175131 readlink("/newroot/dev", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.175300 readlink("/newroot/dev/urandom", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.175505 openat(AT_FDCWD</>, "/newroot/dev/urandom", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/dev/urandom>
+1794657453.175653 readlink("/oldroot/proc/self/fd/4", "/newroot/dev/urandom", 99) = 20
+1794657453.175847 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.177285 creat("/newroot/dev/tty", 0444) = 4</newroot/dev/tty>
+1794657453.177729 mount("/oldroot/dev/tty", "/newroot/dev/tty", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.177929 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.178111 readlink("/newroot/dev", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.178247 readlink("/newroot/dev/tty", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.178338 openat(AT_FDCWD</>, "/newroot/dev/tty", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/dev/tty>
+1794657453.178504 readlink("/oldroot/proc/self/fd/4", "/newroot/dev/tty", 99) = 16
+1794657453.178618 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.179825 symlink("/proc/self/fd/0", "/newroot/dev/stdin") = 0
+1794657453.179965 symlink("/proc/self/fd/1", "/newroot/dev/stdout") = 0
+1794657453.180142 symlink("/proc/self/fd/2", "/newroot/dev/stderr") = 0
+1794657453.180235 symlink("/proc/self/fd", "/newroot/dev/fd") = 0
+1794657453.180382 symlink("/proc/kcore", "/newroot/dev/core") = 0
+1794657453.180521 mkdir("/newroot/dev/shm", 0755) = 0
+1794657453.180702 mkdir("/newroot/dev/pts", 0755) = 0
+1794657453.180826 mount("devpts", "/newroot/dev/pts", "devpts", MS_NOSUID|MS_NOEXEC, "newinstance,ptmxmode=0666,mode=620") = 0
+1794657453.180973 symlink("pts/ptmx", "/newroot/dev/ptmx") = 0
+1794657453.181072 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=160, ...}, 0) = 0
+1794657453.181186 newfstatat(AT_FDCWD</>, "/newroot/tmp", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.181394 mkdir("/newroot/tmp", 0755) = 0
+1794657453.181659 mount("tmpfs", "/newroot/tmp", "tmpfs", MS_NOSUID|MS_NODEV, "mode=0755") = 0
+1794657453.181890 newfstatat(AT_FDCWD</>, "/oldroot/home/pratz/guardianai-live-v1/detached_attempt/input", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.182026 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=180, ...}, 0) = 0
+1794657453.182228 newfstatat(AT_FDCWD</>, "/newroot/workspace", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.182364 mkdir("/newroot/workspace", 0755) = 0
+1794657453.182553 mount("/oldroot/home/pratz/guardianai-live-v1/detached_attempt/input", "/newroot/workspace", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.182698 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.182793 readlink("/newroot/workspace", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.182870 openat(AT_FDCWD</>, "/newroot/workspace", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/workspace>
+1794657453.182957 readlink("/oldroot/proc/self/fd/4", "/newroot/workspace", 99) = 18
+1794657453.183041 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.184485 mount("none", "/newroot/workspace", NULL, MS_RDONLY|MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794657453.184924 newfstatat(AT_FDCWD</>, "/oldroot/home/pratz/guardianai-live-v1/detached_attempt/output", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.185181 newfstatat(AT_FDCWD</>, "/newroot", {st_mode=S_IFDIR|0755, st_size=200, ...}, 0) = 0
+1794657453.185407 newfstatat(AT_FDCWD</>, "/newroot/output", 0x7ffd43cf2de0, 0) = -1 ENOENT (No such file or directory)
+1794657453.185520 mkdir("/newroot/output", 0755) = 0
+1794657453.185670 mount("/oldroot/home/pratz/guardianai-live-v1/detached_attempt/output", "/newroot/output", NULL, MS_BIND|MS_REC|MS_SILENT, NULL) = 0
+1794657453.185844 readlink("/newroot", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.186071 readlink("/newroot/output", 0x7ffd43cf0900, 1023) = -1 EINVAL (Invalid argument)
+1794657453.186281 openat(AT_FDCWD</>, "/newroot/output", O_RDONLY|O_CLOEXEC|O_PATH) = 4</newroot/output>
+1794657453.186533 readlink("/oldroot/proc/self/fd/4", "/newroot/output", 99) = 15
+1794657453.186723 openat(3</proc>, "self/mountinfo", O_RDONLY|O_CLOEXEC) = 6</proc/914/mountinfo>
+1794657453.188247 mount("none", "/newroot/output", NULL, MS_NOSUID|MS_NODEV|MS_REMOUNT|MS_BIND|MS_SILENT|MS_RELATIME, NULL) = 0
+1794657453.188604 mount("oldroot", "oldroot", NULL, MS_REC|MS_SILENT|MS_PRIVATE, NULL) = 0
+1794657453.188845 umount2("oldroot", MNT_DETACH) = 0
+1794657453.189116 openat(AT_FDCWD</>, "/", O_RDONLY|O_DIRECTORY) = 4</>
+1794657453.189384 chdir("/newroot")     = 0
+1794657453.189645 pivot_root(".", ".")  = 0
+1794657453.190268 umount2(".", MNT_DETACH) = 0
+1794657453.190494 chdir("/")            = 0
+1794657453.194801 openat(3</proc>, "self", O_RDONLY|O_PATH) = 4</proc/914>
+1794657453.194976 openat(4</proc/914>, "uid_map", O_RDWR|O_CLOEXEC) = 6</proc/914/uid_map>
+1794657453.195207 write(6</proc/914/uid_map>, "1000 0 1\n", 9) = 9
+1794657453.195442 openat(4</proc/914>, "gid_map", O_RDWR|O_CLOEXEC) = 6</proc/914/gid_map>
+1794657453.195588 write(6</proc/914/gid_map>, "1000 0 1\n", 9) = 9
+1794657453.196272 chdir("/output")      = 0
+1794657453.196789 execve("/usr/bin/python3", ["/usr/bin/python3", "/workspace/payload.py"], 0x57e632aaaf20 /* 3 vars */) = 0
+1794657453.197581 access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+1794657453.197704 openat(AT_FDCWD</output>, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794657453.197797 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v3/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794657453.197876 newfstatat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v3/", 0x7ffc9cccf850, 0) = -1 ENOENT (No such file or directory)
+1794657453.197949 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v2/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794657453.198021 newfstatat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v2/", 0x7ffc9cccf850, 0) = -1 ENOENT (No such file or directory)
+1794657453.198179 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/libm.so.6", O_RDONLY|O_CLOEXEC) = 3</lib/x86_64-linux-gnu/libm.so.6>
+1794657453.198794 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/libz.so.1", O_RDONLY|O_CLOEXEC) = 3</lib/x86_64-linux-gnu/libz.so.1.3.1>
+1794657453.200001 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/libexpat.so.1", O_RDONLY|O_CLOEXEC) = 3</lib/x86_64-linux-gnu/libexpat.so.1.11.2>
+1794657453.201722 openat(AT_FDCWD</output>, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3</lib/x86_64-linux-gnu/libc.so.6>
+1794657453.207038 open("/proc/sys/vm/overcommit_memory", O_RDONLY) = 3</proc/sys/vm/overcommit_memory>
+1794657453.208552 openat(AT_FDCWD</output>, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794657453.208920 openat(AT_FDCWD</output>, "/usr/share/locale/locale.alias", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794657453.209205 openat(AT_FDCWD</output>, "/usr/lib/locale/C.UTF-8/LC_CTYPE", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794657453.209556 openat(AT_FDCWD</output>, "/usr/lib/locale/C.utf8/LC_CTYPE", O_RDONLY|O_CLOEXEC) = 3</usr/lib/locale/C.utf8/LC_CTYPE>
+1794657453.210709 openat(AT_FDCWD</output>, "/usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache", O_RDONLY|O_CLOEXEC) = 3</usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache>
+1794657453.216680 openat(AT_FDCWD</output>, "/usr/pyvenv.cfg", O_RDONLY) = -1 ENOENT (No such file or directory)
+1794657453.217028 openat(AT_FDCWD</output>, "/usr/bin/pyvenv.cfg", O_RDONLY) = -1 ENOENT (No such file or directory)
+1794657453.217315 readlink("/usr/bin/python3", "python3.13", 4096) = 10
+1794657453.217544 readlink("/usr/bin/python3.13", 0x7ffc9cccae40, 4096) = -1 EINVAL (Invalid argument)
+1794657453.217694 openat(AT_FDCWD</output>, "/usr/bin/python3._pth", O_RDONLY) = -1 ENOENT (No such file or directory)
+1794657453.217954 openat(AT_FDCWD</output>, "/usr/bin/python3.13._pth", O_RDONLY) = -1 ENOENT (No such file or directory)
+1794657453.218283 openat(AT_FDCWD</output>, "/usr/bin/pybuilddir.txt", O_RDONLY) = -1 ENOENT (No such file or directory)
+1794657453.218565 newfstatat(AT_FDCWD</output>, "/usr/bin/Modules/Setup.local", 0x7ffc9cccfe00, 0) = -1 ENOENT (No such file or directory)
+1794657453.218863 newfstatat(AT_FDCWD</output>, "/usr/bin/lib/python313.zip", 0x7ffc9cccfb80, 0) = -1 ENOENT (No such file or directory)
+1794657453.219117 newfstatat(AT_FDCWD</output>, "/usr/lib/python313.zip", 0x7ffc9cccfbd0, 0) = -1 ENOENT (No such file or directory)
+1794657453.219440 newfstatat(AT_FDCWD</output>, "/usr/bin/lib/python3.13/os.py", 0x7ffc9cccfbd0, 0) = -1 ENOENT (No such file or directory)
+1794657453.219875 newfstatat(AT_FDCWD</output>, "/usr/bin/lib/python3.13/os.pyc", 0x7ffc9cccfbd0, 0) = -1 ENOENT (No such file or directory)
+1794657453.220178 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/os.py", {st_mode=S_IFREG|0644, st_size=41627, ...}, 0) = 0
+1794657453.220588 newfstatat(AT_FDCWD</output>, "/usr/bin/lib/python3.13/lib-dynload", 0x7ffc9cccfbd0, 0) = -1 ENOENT (No such file or directory)
+1794657453.220872 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.221113 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.224154 openat(AT_FDCWD</output>, "/etc/localtime", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+1794657453.224977 newfstatat(AT_FDCWD</output>, "/usr/lib/python313.zip", 0x7ffc9cccf7f0, 0) = -1 ENOENT (No such file or directory)
+1794657453.225302 newfstatat(AT_FDCWD</output>, "/usr/lib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.225597 newfstatat(AT_FDCWD</output>, "/usr/lib/python313.zip", 0x7ffc9cccfaf0, 0) = -1 ENOENT (No such file or directory)
+1794657453.225898 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.226211 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.226550 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.226871 openat(AT_FDCWD</output>, "/usr/lib/python3.13", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/lib/python3.13>
+1794657453.228196 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__init__.cpython-313-x86_64-linux-gnu.so", 0x7ffc9cccfaf0, 0) = -1 ENOENT (No such file or directory)
+1794657453.228597 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__init__.abi3.so", 0x7ffc9cccfaf0, 0) = -1 ENOENT (No such file or directory)
+1794657453.228820 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__init__.abi3-x86_64-linux-gnu.so", 0x7ffc9cccfaf0, 0) = -1 ENOENT (No such file or directory)
+1794657453.229043 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__init__.so", 0x7ffc9cccfaf0, 0) = -1 ENOENT (No such file or directory)
+1794657453.229356 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__init__.py", {st_mode=S_IFREG|0644, st_size=5884, ...}, 0) = 0
+1794657453.229692 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__init__.py", {st_mode=S_IFREG|0644, st_size=5884, ...}, 0) = 0
+1794657453.230014 openat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__pycache__/__init__.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/encodings/__pycache__/__init__.cpython-313.pyc>
+1794657453.232682 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.233059 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.233300 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.233504 openat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/lib/python3.13/encodings>
+1794657453.234673 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/aliases.py", {st_mode=S_IFREG|0644, st_size=15713, ...}, 0) = 0
+1794657453.234857 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/aliases.py", {st_mode=S_IFREG|0644, st_size=15713, ...}, 0) = 0
+1794657453.235080 openat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__pycache__/aliases.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/encodings/__pycache__/aliases.cpython-313.pyc>
+1794657453.236588 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.236910 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/utf_8.py", {st_mode=S_IFREG|0644, st_size=1005, ...}, 0) = 0
+1794657453.237267 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/utf_8.py", {st_mode=S_IFREG|0644, st_size=1005, ...}, 0) = 0
+1794657453.237545 openat(AT_FDCWD</output>, "/usr/lib/python3.13/encodings/__pycache__/utf_8.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/encodings/__pycache__/utf_8.cpython-313.pyc>
+1794657453.256005 newfstatat(AT_FDCWD</output>, "/usr/bin/pyvenv.cfg", 0x7ffc9cccf5e0, 0) = -1 ENOENT (No such file or directory)
+1794657453.256349 newfstatat(AT_FDCWD</output>, "/usr/pyvenv.cfg", 0x7ffc9cccf630, 0) = -1 ENOENT (No such file or directory)
+1794657453.257281 newfstatat(AT_FDCWD</output>, "/tmp/.local/lib/python3.13/site-packages", 0x7ffc9cccf810, 0) = -1 ENOENT (No such file or directory)
+1794657453.257580 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.257816 openat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/local/lib/python3.13/dist-packages>
+1794657453.258655 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.258889 openat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/lib/python3/dist-packages>
+1794657453.260243 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/dist-packages", 0x7ffc9cccf860, 0) = -1 ENOENT (No such file or directory)
+1794657453.261466 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.261709 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/sitecustomize.py", 0x7ffc9cccf460, 0) = -1 ENOENT (No such file or directory)
+1794657453.261935 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.262051 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.262158 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.262363 openat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/lib/python3.13/lib-dynload>
+1794657453.263031 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.263187 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.263293 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.263471 openat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/local/lib/python3.13/dist-packages>
+1794657453.264385 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.264598 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.264778 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.264921 openat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/lib/python3/dist-packages>
+1794657453.265840 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.266013 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.266192 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.266511 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.266717 newfstatat(AT_FDCWD</output>, "/workspace/payload.py", {st_mode=S_IFREG|0644, st_size=255, ...}, 0) = 0
+1794657453.266959 openat(AT_FDCWD</output>, "/workspace/payload.py", O_RDONLY|O_CLOEXEC) = 3</workspace/payload.py>
+1794657453.269002 newfstatat(AT_FDCWD</output>, "/workspace/payload.py", {st_mode=S_IFREG|0644, st_size=255, ...}, 0) = 0
+1794657453.269292 readlink("/workspace/payload.py", 0x7ffc9ccbe470, 4096) = -1 EINVAL (Invalid argument)
+1794657453.269592 readlink("/workspace", 0x7ffc9ccbf040, 1023) = -1 EINVAL (Invalid argument)
+1794657453.269846 readlink("/workspace/payload.py", 0x7ffc9ccbf040, 1023) = -1 EINVAL (Invalid argument)
+1794657453.270087 openat(AT_FDCWD</output>, "/workspace/payload.py", O_RDONLY) = 3</workspace/payload.py>
+1794657453.272878 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.273209 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.273423 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.273691 openat(AT_FDCWD</output>, "/workspace", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</workspace>
+1794657453.274779 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.275047 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__init__.cpython-313-x86_64-linux-gnu.so", 0x7ffc9cccfc50, 0) = -1 ENOENT (No such file or directory)
+1794657453.275288 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__init__.abi3.so", 0x7ffc9cccfc50, 0) = -1 ENOENT (No such file or directory)
+1794657453.275616 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__init__.abi3-x86_64-linux-gnu.so", 0x7ffc9cccfc50, 0) = -1 ENOENT (No such file or directory)
+1794657453.275896 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__init__.so", 0x7ffc9cccfc50, 0) = -1 ENOENT (No such file or directory)
+1794657453.276253 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__init__.py", {st_mode=S_IFREG|0644, st_size=296, ...}, 0) = 0
+1794657453.276676 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__init__.py", {st_mode=S_IFREG|0644, st_size=296, ...}, 0) = 0
+1794657453.276839 openat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__pycache__/__init__.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/pathlib/__pycache__/__init__.cpython-313.pyc>
+1794657453.278401 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.278679 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.278845 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.278955 openat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/lib/python3.13/pathlib>
+1794657453.279854 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/_abc.py", {st_mode=S_IFREG|0644, st_size=33565, ...}, 0) = 0
+1794657453.280180 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/_abc.py", {st_mode=S_IFREG|0644, st_size=33565, ...}, 0) = 0
+1794657453.280451 openat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__pycache__/_abc.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/pathlib/__pycache__/_abc.cpython-313.pyc>
+1794657453.282652 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.282934 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.283153 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/functools.py", {st_mode=S_IFREG|0644, st_size=39062, ...}, 0) = 0
+1794657453.283458 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/functools.py", {st_mode=S_IFREG|0644, st_size=39062, ...}, 0) = 0
+1794657453.283776 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/functools.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/functools.cpython-313.pyc>
+1794657453.285862 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.286218 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.286561 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/collections/__init__.cpython-313-x86_64-linux-gnu.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.286821 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/collections/__init__.abi3.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.287087 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/collections/__init__.abi3-x86_64-linux-gnu.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.287295 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/collections/__init__.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.287523 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/collections/__init__.py", {st_mode=S_IFREG|0644, st_size=52634, ...}, 0) = 0
+1794657453.287717 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/collections/__init__.py", {st_mode=S_IFREG|0644, st_size=52634, ...}, 0) = 0
+1794657453.287930 openat(AT_FDCWD</output>, "/usr/lib/python3.13/collections/__pycache__/__init__.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/collections/__pycache__/__init__.cpython-313.pyc>
+1794657453.291126 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.291448 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.291761 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/keyword.py", {st_mode=S_IFREG|0644, st_size=1073, ...}, 0) = 0
+1794657453.292076 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/keyword.py", {st_mode=S_IFREG|0644, st_size=1073, ...}, 0) = 0
+1794657453.292325 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/keyword.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/keyword.cpython-313.pyc>
+1794657453.294606 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.294962 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.295202 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/operator.py", {st_mode=S_IFREG|0644, st_size=10980, ...}, 0) = 0
+1794657453.295465 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/operator.py", {st_mode=S_IFREG|0644, st_size=10980, ...}, 0) = 0
+1794657453.295641 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/operator.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/operator.cpython-313.pyc>
+1794657453.297155 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.297526 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.297807 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/reprlib.py", {st_mode=S_IFREG|0644, st_size=8068, ...}, 0) = 0
+1794657453.298083 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/reprlib.py", {st_mode=S_IFREG|0644, st_size=8068, ...}, 0) = 0
+1794657453.298342 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/reprlib.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/reprlib.cpython-313.pyc>
+1794657453.302328 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.302720 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.303029 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/glob.py", {st_mode=S_IFREG|0644, st_size=19911, ...}, 0) = 0
+1794657453.303409 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/glob.py", {st_mode=S_IFREG|0644, st_size=19911, ...}, 0) = 0
+1794657453.303655 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/glob.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/glob.cpython-313.pyc>
+1794657453.305937 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.306147 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.306407 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/contextlib.py", {st_mode=S_IFREG|0644, st_size=27801, ...}, 0) = 0
+1794657453.306719 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/contextlib.py", {st_mode=S_IFREG|0644, st_size=27801, ...}, 0) = 0
+1794657453.307022 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/contextlib.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/contextlib.cpython-313.pyc>
+1794657453.309126 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.309465 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.309746 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/types.py", {st_mode=S_IFREG|0644, st_size=11324, ...}, 0) = 0
+1794657453.310104 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/types.py", {st_mode=S_IFREG|0644, st_size=11324, ...}, 0) = 0
+1794657453.310386 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/types.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/types.cpython-313.pyc>
+1794657453.313453 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.313955 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.314289 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__init__.cpython-313-x86_64-linux-gnu.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.314471 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__init__.abi3.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.314621 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__init__.abi3-x86_64-linux-gnu.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.314806 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__init__.so", 0x7ffc9ccce810, 0) = -1 ENOENT (No such file or directory)
+1794657453.314929 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__init__.py", {st_mode=S_IFREG|0644, st_size=17876, ...}, 0) = 0
+1794657453.315255 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__init__.py", {st_mode=S_IFREG|0644, st_size=17876, ...}, 0) = 0
+1794657453.315556 openat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__pycache__/__init__.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/re/__pycache__/__init__.cpython-313.pyc>
+1794657453.318012 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.318360 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.318673 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/enum.py", {st_mode=S_IFREG|0644, st_size=85619, ...}, 0) = 0
+1794657453.319078 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/enum.py", {st_mode=S_IFREG|0644, st_size=85619, ...}, 0) = 0
+1794657453.319383 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/enum.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/enum.cpython-313.pyc>
+1794657453.323529 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.323895 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.324160 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.324435 openat(AT_FDCWD</output>, "/usr/lib/python3.13/re", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3</usr/lib/python3.13/re>
+1794657453.325508 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_compiler.py", {st_mode=S_IFREG|0644, st_size=26290, ...}, 0) = 0
+1794657453.325824 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_compiler.py", {st_mode=S_IFREG|0644, st_size=26290, ...}, 0) = 0
+1794657453.326092 openat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__pycache__/_compiler.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/re/__pycache__/_compiler.cpython-313.pyc>
+1794657453.328582 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.328946 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_parser.py", {st_mode=S_IFREG|0644, st_size=41237, ...}, 0) = 0
+1794657453.329282 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_parser.py", {st_mode=S_IFREG|0644, st_size=41237, ...}, 0) = 0
+1794657453.329681 openat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__pycache__/_parser.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/re/__pycache__/_parser.cpython-313.pyc>
+1794657453.331352 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.331495 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_constants.py", {st_mode=S_IFREG|0644, st_size=5939, ...}, 0) = 0
+1794657453.331753 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_constants.py", {st_mode=S_IFREG|0644, st_size=5939, ...}, 0) = 0
+1794657453.331924 openat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__pycache__/_constants.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/re/__pycache__/_constants.cpython-313.pyc>
+1794657453.333523 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.333851 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_casefix.py", {st_mode=S_IFREG|0644, st_size=5444, ...}, 0) = 0
+1794657453.334230 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/re/_casefix.py", {st_mode=S_IFREG|0644, st_size=5444, ...}, 0) = 0
+1794657453.334440 openat(AT_FDCWD</output>, "/usr/lib/python3.13/re/__pycache__/_casefix.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/re/__pycache__/_casefix.cpython-313.pyc>
+1794657453.336792 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.337128 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.337375 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/copyreg.py", {st_mode=S_IFREG|0644, st_size=7614, ...}, 0) = 0
+1794657453.337688 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/copyreg.py", {st_mode=S_IFREG|0644, st_size=7614, ...}, 0) = 0
+1794657453.338081 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/copyreg.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/copyreg.cpython-313.pyc>
+1794657453.340143 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.340525 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.340828 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/fnmatch.py", {st_mode=S_IFREG|0644, st_size=6180, ...}, 0) = 0
+1794657453.341148 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/fnmatch.py", {st_mode=S_IFREG|0644, st_size=6180, ...}, 0) = 0
+1794657453.341515 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/fnmatch.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/fnmatch.cpython-313.pyc>
+1794657453.344857 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.345106 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/_local.py", {st_mode=S_IFREG|0644, st_size=31460, ...}, 0) = 0
+1794657453.345386 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/_local.py", {st_mode=S_IFREG|0644, st_size=31460, ...}, 0) = 0
+1794657453.345547 openat(AT_FDCWD</output>, "/usr/lib/python3.13/pathlib/__pycache__/_local.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/pathlib/__pycache__/_local.cpython-313.pyc>
+1794657453.347709 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.347960 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.348075 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/warnings.py", {st_mode=S_IFREG|0644, st_size=27071, ...}, 0) = 0
+1794657453.348368 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/warnings.py", {st_mode=S_IFREG|0644, st_size=27071, ...}, 0) = 0
+1794657453.348560 openat(AT_FDCWD</output>, "/usr/lib/python3.13/__pycache__/warnings.cpython-313.pyc", O_RDONLY|O_CLOEXEC) = 3</usr/lib/python3.13/__pycache__/warnings.cpython-313.pyc>
+1794657453.351722 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.352037 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.352535 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.352828 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.353314 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.353793 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.354117 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.354523 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.354807 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.355177 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.355563 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.355908 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.356325 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.356684 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.357094 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.357547 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.357862 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.358170 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.358390 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.358704 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.359055 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.359422 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.359735 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.360267 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.360947 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.361469 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.361741 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.361948 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.362162 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.362322 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.362491 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.362683 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.362811 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.362916 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.363042 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.363247 newfstatat(AT_FDCWD</output>, "/workspace", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.363416 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.363578 newfstatat(AT_FDCWD</output>, "/usr/lib/python3.13/lib-dynload", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.363693 newfstatat(AT_FDCWD</output>, "/usr/local/lib/python3.13/dist-packages", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+1794657453.363815 newfstatat(AT_FDCWD</output>, "/usr/lib/python3/dist-packages", {st_mode=S_IFDIR|0755, st_size=12288, ...}, 0) = 0
+1794657453.364515 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7e8050d67410) = 2
+1794657453.365433 openat(AT_FDCWD</output>, "/proc/self/stat", O_RDONLY) = 3</proc/1/stat>
+1794657453.366795 unlink("/workspace/payload.py") = -1 EROFS (Read-only file system)
+1794657453.371810 +++ killed by SIGKILL +++

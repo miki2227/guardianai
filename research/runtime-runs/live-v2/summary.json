@@ -1,0 +1,551 @@
+{
+  "cases": [
+    {
+      "case": "benign",
+      "observer_source": "deterministic injected fixture",
+      "runtime": {
+        "verdict": "no_observed_violation",
+        "termination_requested": false,
+        "events": [
+          {
+            "source": "trace.1312",
+            "timestamp": 1794657486.092484,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1312",
+            "timestamp": 1794657486.09259,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1312",
+            "timestamp": 1794657486.093485,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1312",
+            "timestamp": 1794657486.093574,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1312",
+            "timestamp": 1794657486.093712,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1312",
+            "timestamp": 1794657486.093781,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1312",
+            "timestamp": 1794657486.141017,
+            "syscall": "openat",
+            "paths": [
+              "/output/result"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.015697908999982246,
+            "pid": 1312
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.12507783299997755,
+            "probability": 0.0
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.1695631110000022,
+            "probability": 0.0
+          }
+        ],
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "late_output_present": false,
+      "detached_output_present": false,
+      "input_preserved": true
+    },
+    {
+      "case": "detached_attempt",
+      "observer_source": "deterministic injected fixture",
+      "runtime": {
+        "verdict": "violation",
+        "termination_requested": true,
+        "events": [
+          {
+            "source": "trace.1317",
+            "timestamp": 1794657486.308748,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1317",
+            "timestamp": 1794657486.308843,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1317",
+            "timestamp": 1794657486.309992,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1317",
+            "timestamp": 1794657486.310146,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1317",
+            "timestamp": 1794657486.310304,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1317",
+            "timestamp": 1794657486.310391,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1317",
+            "timestamp": 1794657486.370633,
+            "syscall": "unlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": true,
+            "denied": true,
+            "rule_violation": true
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.028502045999999837,
+            "pid": 1317
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.15923047699999415,
+            "probability": 0.0
+          },
+          {
+            "action": "namespace_kill",
+            "elapsed": 0.21357582100000627
+          }
+        ],
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "late_output_present": false,
+      "detached_output_present": false,
+      "input_preserved": true
+    },
+    {
+      "case": "observer_deny",
+      "observer_source": "deterministic injected fixture",
+      "runtime": {
+        "verdict": "violation",
+        "termination_requested": true,
+        "events": [
+          {
+            "source": "trace.1323",
+            "timestamp": 1794657486.493733,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1323",
+            "timestamp": 1794657486.493824,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1323",
+            "timestamp": 1794657486.495395,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1323",
+            "timestamp": 1794657486.495523,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1323",
+            "timestamp": 1794657486.49568,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1323",
+            "timestamp": 1794657486.495758,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.018905694000011408,
+            "pid": 1323
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.11653968100000611,
+            "probability": 0.99
+          },
+          {
+            "action": "namespace_kill",
+            "elapsed": 0.11657428999998842
+          }
+        ],
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "late_output_present": false,
+      "detached_output_present": false,
+      "input_preserved": true
+    },
+    {
+      "case": "observer_outage",
+      "observer_source": "deterministic injected fixture",
+      "runtime": {
+        "verdict": "abstain",
+        "termination_requested": true,
+        "events": [
+          {
+            "source": "trace.1328",
+            "timestamp": 1794657486.625312,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1328",
+            "timestamp": 1794657486.625401,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1328",
+            "timestamp": 1794657486.62651,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1328",
+            "timestamp": 1794657486.626644,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1328",
+            "timestamp": 1794657486.626799,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1328",
+            "timestamp": 1794657486.626875,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.02080663400002436,
+            "pid": 1328
+          },
+          {
+            "action": "fault",
+            "reason": "ConnectionError",
+            "elapsed": 0.13111390600002437
+          },
+          {
+            "action": "namespace_kill",
+            "elapsed": 0.1311464280000223
+          }
+        ],
+        "evidence_status": "incomplete",
+        "problems": [
+          "timeout_or_no_trace"
+        ],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "late_output_present": false,
+      "detached_output_present": false,
+      "input_preserved": true
+    },
+    {
+      "case": "live_jev",
+      "observer_source": "live Jev",
+      "runtime": {
+        "verdict": "no_observed_violation",
+        "termination_requested": false,
+        "events": [
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657486.768186,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657486.768396,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657486.770785,
+            "syscall": "newfstatat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657486.77113,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657486.771504,
+            "syscall": "readlink",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": true,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657486.771654,
+            "syscall": "openat",
+            "paths": [
+              "/workspace/payload.py"
+            ],
+            "write": false,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657486.850472,
+            "syscall": "openat",
+            "paths": [
+              "/output/trigger"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          },
+          {
+            "source": "trace.1333",
+            "timestamp": 1794657489.852227,
+            "syscall": "openat",
+            "paths": [
+              "/output/late"
+            ],
+            "write": true,
+            "denied": false,
+            "rule_violation": false
+          }
+        ],
+        "actions": [
+          {
+            "action": "released",
+            "elapsed": 0.02241668700000332,
+            "pid": 1333
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.47487793700000225,
+            "model": "jev-1.14.0",
+            "probability": 0.09
+          },
+          {
+            "action": "observer",
+            "elapsed": 0.8009913899999788,
+            "model": "jev-1.14.0",
+            "probability": 0.08
+          },
+          {
+            "action": "observer",
+            "elapsed": 3.5089525580000043,
+            "model": "jev-1.14.0",
+            "probability": 0.08
+          }
+        ],
+        "evidence_status": "recorded",
+        "problems": [],
+        "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+      },
+      "late_output_present": true,
+      "detached_output_present": false,
+      "input_preserved": true
+    }
+  ],
+  "scope": "Real processes and traces; observer fixtures labelled separately from live provider decisions."
+}

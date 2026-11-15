@@ -41,6 +41,12 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
    cancelled run has no runtime verdict; show that missing state honestly.
 3. `research/system-runs/shared-context-build/evidence/`: multiple workers and
    shared observer receipts.
+4. `research/content-observer-runs/v1/summary.json`, `client-run/agent-content/`
+   and `session/evidence/_content/`: prompt/assistant-content and tool-input/result
+   decisions alongside the Linux evidence. Follow `PROJECT_DIRECTION.md` and
+   `research/CONTENT_OBSERVER_RUN.md` for the current undergraduate project scope.
+   Content `flagged` is a suspicion verdict, not proof of a covert convention;
+   host message checks occur after emission. The two journals have separate order.
 
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,

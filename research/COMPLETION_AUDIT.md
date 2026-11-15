@@ -1,5 +1,13 @@
 # Research scope and completion audit
 
+**15 November user clarification:** the completion target is now an undergraduate
+systems project based on attributed recent work, not a Q1 novelty requirement.
+The [current direction](../PROJECT_DIRECTION.md) supersedes that earlier priority.
+The [combined content-observer run](CONTENT_OBSERVER_RUN.md) adds real prompt,
+assistant text, tool-input and tool-result observation alongside Linux evidence.
+Historical publication audits and missing scientific outcomes below remain
+valid descriptions of what was and was not established.
+
 The goal is a reproducible study of two fixed pretrained agents under Jev
 observation, grounded in the literature. A guaranteed detector for every possible
 malicious activity cannot be established by a finite experiment. A research result

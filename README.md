@@ -6,7 +6,16 @@ Research testbed for pretrained sender/receiver agents communicating under Jev
 oversight, supported by Linux kernel namespace isolation and execution evidence.
 See [research scope and limitations](RESEARCH.md) before running untrusted code.
 
+The [current project direction](PROJECT_DIRECTION.md) combines exposed agent
+content, tool arguments/results and Linux evidence under Jev observation. It is
+an undergraduate systems integration project drawing on attributed recent work;
+global algorithmic novelty and Q1 submission are not completion requirements.
+The [combined workflow](research/CONTENT_OBSERVER_RUN.md) completed a real build
+with exposed assistant-content checks and tool-input/result gates active.
+
 A [built Linux core runtime](dist/GuardianAI-linux-x86_64.zip) is available.
+The newer [content-observer build](research/content-observer-runs/v1/session/public/results/step-001/GuardianAI-linux-x86_64.zip)
+includes the combined observer module; its full run and receipts are retained.
 An [existing coding agent can use GuardianAI through MCP](CODING_AGENT.md).
 The installed Grok CLI completed a real review and release-build task through
 that boundary; [the run report](research/CODING_AGENT_RUN.md) retains successful

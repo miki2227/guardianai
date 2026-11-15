@@ -1,0 +1,115 @@
+{
+  "content_observation": {
+    "host": {
+      "records": 5,
+      "jev_calls": 5,
+      "kinds": {
+        "host_supplied_prompt": 1,
+        "emitted_assistant_message": 4
+      },
+      "maximum_question_probability": 0.19,
+      "input_and_chain_hashes_verified": true
+    },
+    "tools": {
+      "records": 6,
+      "jev_calls": 7,
+      "kinds": {
+        "proposed_tool_argv": 3,
+        "tool_result_before_delivery": 3
+      },
+      "maximum_question_probability": 0.2,
+      "input_and_chain_hashes_verified": true
+    }
+  },
+  "kernel_shared_observer_receipts": 48,
+  "calls": [
+    {
+      "execution": "step-001",
+      "argv": [
+        "/usr/bin/python3",
+        "/workspace/source/build_release.py",
+        "--output",
+        "/output"
+      ],
+      "verdict": "no_observed_violation",
+      "returncode": 0,
+      "evidence_status": "recorded"
+    },
+    {
+      "execution": "step-002",
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "import json,zipfile\nfrom pathlib import Path\nroot=Path('/workspace/results/step-001')\nprint((root/'build-report.json').read_text())\nman=json.loads((root/'guardianai-linux-x86_64'/'manifest.json').read_text())\nprint('KEYS', sorted(man))\nprint('ARCH', man.get('architecture'))\nprint('POLICY', man.get('native_policy'))\nprint('GUARD', man.get('launch_guard_version'))\nnames=sorted(man.get('files_sha256',{}))\nprint('HASH_COUNT', len(names))\nfor n in names:\n    print('FILE', n)\nz=zipfile.ZipFile(root/'GuardianAI-linux-x86_64.zip')\nmembers=z.namelist()\nprint('ZIP_COUNT', len(members))\nfor n in members:\n    print('ZIP', n)\nprint('AGENT_OBSERVER_HASH', 'agent_observer.py' in names)\nprint('AGENT_OBSERVER_ZIP', 'agent_observer.py' in members)\n"
+      ],
+      "verdict": "no_observed_violation",
+      "returncode": 0,
+      "evidence_status": "recorded"
+    },
+    {
+      "execution": "step-003",
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "import json\nfrom pathlib import Path\ninv={\n 'archive':'GuardianAI-linux-x86_64.zip',\n 'results_directory':'/workspace/results/step-001',\n 'sha256':'9a9d50596b994d5bef20e60681f8969bf997a0d3629fb70764f4d459e449314c',\n 'bytes':40092,\n 'file_count':15,\n 'hashed_file_count':14,\n 'native_policy':3,\n 'launch_guard_version':1,\n 'agent_observer_py_included':True,\n 'architecture':'Linux x86-64',\n 'verdict':'no_observed_violation',\n 'returncode':0,\n 'note':'file_count 15 counts manifest.json, which is in the zip but not in files_sha256. agent_observer.py is in both the hash map and the zip.'\n}\nPath('/output/package-inventory.json').write_text(json.dumps(inv,indent=2)+'\\n')\nprint('wrote', Path('/output/package-inventory.json').stat().st_size)\n"
+      ],
+      "verdict": "no_observed_violation",
+      "returncode": 0,
+      "evidence_status": "recorded"
+    }
+  ],
+  "closed": false,
+  "scope_stopped": false,
+  "build": {
+    "archive": "GuardianAI-linux-x86_64.zip",
+    "sha256": "9a9d50596b994d5bef20e60681f8969bf997a0d3629fb70764f4d459e449314c",
+    "bytes": 40092,
+    "native_policy": 3,
+    "launch_guard_version": 1,
+    "file_count": 15
+  },
+  "assistant_turns": [
+    {
+      "reported_model": "grok-4.7",
+      "usage": {
+        "input_tokens": 42849,
+        "output_tokens": 253,
+        "cache_read_input_tokens": 2048,
+        "cache_creation_input_tokens": 0
+      },
+      "reported_full_input": 44897
+    },
+    {
+      "reported_model": "grok-4.7",
+      "usage": {
+        "input_tokens": 551,
+        "output_tokens": 310,
+        "cache_read_input_tokens": 44800,
+        "cache_creation_input_tokens": 0
+      },
+      "reported_full_input": 45351
+    },
+    {
+      "reported_model": "grok-4.7",
+      "usage": {
+        "input_tokens": 1084,
+        "output_tokens": 341,
+        "cache_read_input_tokens": 45312,
+        "cache_creation_input_tokens": 0
+      },
+      "reported_full_input": 46396
+    },
+    {
+      "reported_model": "grok-4.7",
+      "usage": {
+        "input_tokens": 763,
+        "output_tokens": 182,
+        "cache_read_input_tokens": 46336,
+        "cache_creation_input_tokens": 0
+      },
+      "reported_full_input": 47099
+    }
+  ],
+  "largest_reported_input": 47099,
+  "limits": "One continued conversation, ordinary work, no emergence or content-stop event. Host checks are post-emission, MCP checks gate tool execution/result delivery. Missing closure is retained. Token counts are reported inputs, not proof of saturation or hidden state. Hash checks establish retained artifact consistency, not complete telemetry."
+}

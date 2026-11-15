@@ -1,0 +1,20 @@
+{
+  "execution": "step-002",
+  "argv": [
+    "/usr/bin/python3",
+    "-c",
+    "import json,zipfile\nfrom pathlib import Path\nroot=Path('/workspace/results/step-001')\nprint((root/'build-report.json').read_text())\nman=json.loads((root/'guardianai-linux-x86_64'/'manifest.json').read_text())\nprint('KEYS', sorted(man))\nprint('ARCH', man.get('architecture'))\nprint('POLICY', man.get('native_policy'))\nprint('GUARD', man.get('launch_guard_version'))\nnames=sorted(man.get('files_sha256',{}))\nprint('HASH_COUNT', len(names))\nfor n in names:\n    print('FILE', n)\nz=zipfile.ZipFile(root/'GuardianAI-linux-x86_64.zip')\nmembers=z.namelist()\nprint('ZIP_COUNT', len(members))\nfor n in members:\n    print('ZIP', n)\nprint('AGENT_OBSERVER_HASH', 'agent_observer.py' in names)\nprint('AGENT_OBSERVER_ZIP', 'agent_observer.py' in members)\n"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "{\n  \"archive\": \"GuardianAI-linux-x86_64.zip\",\n  \"sha256\": \"9a9d50596b994d5bef20e60681f8969bf997a0d3629fb70764f4d459e449314c\",\n  \"bytes\": 40092,\n  \"native_policy\": 3,\n  \"launch_guard_version\": 1,\n  \"file_count\": 15\n}\n\nKEYS ['architecture', 'compiler_argv', 'files_sha256', 'launch_guard_version', 'native_policy', 'scope']\nARCH Linux x86-64\nPOLICY 3\nGUARD 1\nHASH_COUNT 14\nFILE RUNNING.txt\nFILE agent_observer.py\nFILE build_release.py\nFILE guarded_agent.py\nFILE guarded_session.py\nFILE guardian.py\nFILE guardian_mcp.py\nFILE monitor.py\nFILE native/notify-launch\nFILE native/notify_launch.c\nFILE release_broker.py\nFILE runtime_supervisor.py\nFILE seccomp_gate.py\nFILE session_observer.py\nZIP_COUNT 15\nZIP RUNNING.txt\nZIP agent_observer.py\nZIP build_release.py\nZIP guarded_agent.py\nZIP guarded_session.py\nZIP guardian.py\nZIP guardian_mcp.py\nZIP manifest.json\nZIP monitor.py\nZIP native/notify-launch\nZIP native/notify_launch.c\nZIP release_broker.py\nZIP runtime_supervisor.py\nZIP seccomp_gate.py\nZIP session_observer.py\nAGENT_OBSERVER_HASH True\nAGENT_OBSERVER_ZIP True\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-002"
+}

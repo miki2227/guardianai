@@ -54,6 +54,13 @@ to a 30-second execution deadline; the host can set `--command-timeout` up to
 600 seconds for actual longer jobs. The observer's separate deadline is unchanged.
 This does not establish context-window pressure.
 
+The current MCP adapter additionally sends proposed argv to `AgentObserver`
+before execution and returned tool content before delivery. A flag or observer
+fault revokes the session. Inputs, content chunks and three Jev scores are retained
+under `evidence/_content/`. The existing syscall observer remains active.
+The [combined workflow report](research/CONTENT_OBSERVER_RUN.md) records actual
+operation and its limits.
+
 The gate emulates a missing private NSS service for the two exact pathname
 sockets `/var/run/nscd/socket` and `/run/nscd/socket`. It returns `ENOENT` without
 executing a connection; other connection requests still stop the scope. This
@@ -71,6 +78,18 @@ Optional `--resume` continues an existing Grok conversation under a newly
 provisioned scope. The launcher limits a run to 12 model rounds and ten minutes.
 Its environment disables workflows, memory and compatibility discovery for that
 process. User authentication remains with the existing Grok installation.
+
+The host launcher now observes its supplied prompt and complete emitted assistant
+messages, including exposed thinking/text/tool-request blocks, under
+`agent-content/` in launcher evidence. It does not access hidden provider reasoning
+or reconstruct the pre-existing history of a resumed conversation. These checks
+are post-emission; the CLI may already have dispatched a tool. The separate MCP
+argv check is the pre-execution content gate. Tool results are checked inside MCP.
+A host observer stop writes `external-stop.json` in the trusted Linux evidence
+directory; the MCP watcher revokes the broker and the host terminates the local
+CLI. The content observer uses the provider client's 20-second HTTP timeout per
+chunk, not the syscall observer's two-second completion contract. Full details
+and remaining gaps are in [PROJECT_DIRECTION.md](PROJECT_DIRECTION.md).
 
 The host harness and launch configuration are trusted. A poll failure can delay
 client termination; the stopped Linux broker still refuses subsequent commands.

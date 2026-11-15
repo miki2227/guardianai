@@ -1,0 +1,19 @@
+GuardianAI core runtime for Linux x86-64
+
+Requires Python 3.10+, Bubblewrap with user namespaces, and strace with native stack support.
+Provide TYPESAFE_API_KEY only to the trusted supervisor environment.
+Use a dedicated public input directory, an empty output directory and a new evidence directory.
+Keep protected resources outside every public/runtime mount; snapshots are limited to 32 KiB.
+
+python3 guarded_agent.py --task "Read the approved summary" --workspace /path/to/public --output /path/to/empty-output --evidence /path/to/new-evidence --sensor /path/to/strace --resource summary=/path/to/private/summary.txt -- /usr/bin/cat /protected/summary
+
+Workers cannot install their own seccomp filters in this profile.
+Private /var/run/nscd/socket and /run/nscd/socket connects receive emulated ENOENT without executing a connection. Other connect requests stop the scope.
+Requires strace --kill-on-exit and a guard-version-1 helper. The trusted tracer is tied to the supervising Linux thread by SIGKILL parent-death notification.
+For multiple workers: python3 guarded_session.py --manifest /path/to/session.json --evidence /path/to/new-evidence --sensor /path/to/strace
+Session manifests are trusted host configuration with task, resources, and workers. Each worker supplies name, workspace, output, command, and resource-name array resources.
+For coding-agent MCP tools: python3 guardian_mcp.py --task "Declared task" --workspace /path/to/public-source --session /path/to/new-session --sensor /path/to/strace
+MCP clients must disable other execution tools. Only MCP-dispatched Linux commands are contained; the model transport and host harness remain trusted and external.
+Exit 77: detected violation. Exit 78: abstention. Otherwise the worker exit status is preserved.
+This archive contains the core runtime; historical research evidence is retained in the source project.
+OS evidence observes execution and cannot reveal latent model thoughts.

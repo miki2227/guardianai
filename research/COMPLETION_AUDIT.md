@@ -1,5 +1,11 @@
 # Research scope and completion audit
 
+The [persistent-flow run](FLOW_POLICY_RUN.md) completed real Linux build/index
+work, two permitted publications and two policy refusals. It adds kernel-commit
+exposure checkpoints and persistent handoff labels through an optional coordinator
+API. The metadata classification was controlled; no malicious model behavior,
+covert convention or universal output containment was demonstrated.
+
 The [history-retrieval run](HISTORY_RETRIEVAL_RUN.md) adds verified older source
 excerpts to actual Jev inputs within the same state budget. Its archive uses real
 paired-run records, and its live release build completed without additional Grok

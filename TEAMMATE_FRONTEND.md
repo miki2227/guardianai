@@ -66,6 +66,15 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
    precomputed JSON packets without needing a browser SQLite engine. A matching
    hash verifies the recorded text, not the truth of an old agent claim.
 
+8. `research/flow-runs/v3/summary.json`, `flow-policy.json` and `audit.json`:
+   real build/index work, two allowed publications and two hard flow denials.
+   Show possible-exposure labels, recipient clearances and their propagation.
+   A receipt's `commit_prepared` is distinct from the final ledger's `committed`.
+   A null observer sequence means a hard policy decision before Jev. This is a
+   controlled classification, not malicious intent. Calls without flow tracking
+   use `mode: untracked`. Retain failed v1/v2 runs separately; see `FLOW.md`
+   and `research/FLOW_POLICY_RUN.md`.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

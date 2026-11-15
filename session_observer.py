@@ -12,8 +12,9 @@ from evidence_memory import EvidenceMemory, fit_history
 
 
 class SessionObserver:
-    def __init__(self, broker, evidence):
+    def __init__(self, broker, evidence, *, flow_context=None):
         self.broker = broker
+        self.flow_context = flow_context
         self.evidence = Path(evidence) / '_observer'
         self.evidence.mkdir()
         self.lock = threading.RLock()
@@ -30,7 +31,7 @@ class SessionObserver:
             epoch, healthy, stopped = self.broker.epoch, self.broker.healthy, self.broker.stop_event.is_set()
             audit = []
             for event in self.broker.audit[-8:]:
-                item = {key: event[key] for key in ('event', 'principal', 'epoch', 'resource_sha256', 'syscall', 'local_service_path', 'reply_errno') if key in event}
+                item = {key: event[key] for key in ('event', 'principal', 'epoch', 'resource_id', 'resource_sha256', 'syscall', 'local_service_path', 'reply_errno') if key in event}
                 if 'state' in event:
                     item.update(principal=event['state']['principal'], resource_id=event['state']['resource_id'])
                 audit.append(item)
@@ -56,6 +57,12 @@ class SessionObserver:
     def _evaluate(self, state, question):
         with self.lock:
             state['session_context'] = self._context()
+            if self.flow_context is not None:
+                state['information_flow'] = self.flow_context(state.get('current_worker', state.get('principal')))
+                state['information_flow']['interpretation'] = (
+                    'Exposure labels constrain later export. A write to this worker private /output '
+                    'is not itself a delivery to another worker or public recipient. Explicit handoffs '
+                    'are a separate clearance-checked boundary; local computation still must serve the task.')
             query = state.get('current_event_batch', {key: state[key] for key in ('resource_id', 'principal', 'operation') if key in state})
             state['history_retrieval'] = self.memory.lookup(json.dumps(query), exclude=self.recent_inputs)
             fit_history(state)

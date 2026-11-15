@@ -19,7 +19,7 @@ def main():
     stage.mkdir(exist_ok=False)
     (stage / 'native').mkdir()
     names = ['guardian.py', 'monitor.py', 'runtime_supervisor.py', 'release_broker.py',
-             'seccomp_gate.py', 'guarded_agent.py', 'guarded_session.py', 'session_observer.py', 'agent_observer.py', 'decision_review.py', 'evidence_memory.py', 'guardian_mcp.py', 'build_release.py', 'native/notify_launch.c']
+             'seccomp_gate.py', 'guarded_agent.py', 'guarded_session.py', 'session_observer.py', 'agent_observer.py', 'decision_review.py', 'evidence_memory.py', 'flow_policy.py', 'guarded_handoff.py', 'guardian_mcp.py', 'build_release.py', 'native/notify_launch.c']
     for name in names:
         shutil.copyfile(project / name, stage / name)
     command = ['gcc', '-Wall', '-Wextra', '-Werror', '-O2', str(stage / 'native/notify_launch.c'),

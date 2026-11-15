@@ -42,7 +42,7 @@ class ReleaseBroker:
     cannot retract bytes committed to the socket before revocation completed.
     """
 
-    def __init__(self, task, resources, grants, observer=judge_release):
+    def __init__(self, task, resources, grants, observer=judge_release, *, exposure=None):
         if any(type(value) is not bytes or len(value) > MAX_RESOURCE_BYTES for value in resources.values()):
             raise ValueError("Resources must be bounded immutable byte snapshots")
         self.resources = dict(resources)
@@ -51,6 +51,7 @@ class ReleaseBroker:
         self.epoch = 1
         self.healthy = True
         self.observer = observer
+        self.exposure = exposure
         self.lock = threading.RLock()
         self.stop_event = ScopeStop(self.lock)
         self.audit = []
@@ -123,9 +124,13 @@ class ReleaseBroker:
                         or not self._current(agent, name, epoch)
                         or hashlib.sha256(self.resources[name]).hexdigest() != digest):
                     raise PermissionError("Approval no longer valid")
+                if self.exposure is not None:
+                    self.exposure(agent, name, digest)
+                    if time.monotonic() - started > 2 or not self._current(agent, name, epoch):
+                        raise PermissionError("Approval expired during exposure checkpoint")
                 if not commit(content, epoch, digest):
                     raise RuntimeError("Sink did not commit")
-                self.audit.append({"event": "release_committed", "principal": agent, "epoch": epoch,
+                self.audit.append({"event": "release_committed", "principal": agent, "resource_id": name, "epoch": epoch,
                                    "resource_sha256": digest, "observer": answer,
                                    "commit_monotonic": time.monotonic()})
                 return True

@@ -19,7 +19,12 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/history-retrieval-runs/v1/build-run/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/flow-runs/v3/builder-output/GuardianAI-linux-x86_64.zip) is available.
+The optional [persistent confidentiality policy](FLOW.md) checkpoints protected
+exposure and enforces recipient clearance before mediated handoffs. Its
+[actual build/index run](research/FLOW_POLICY_RUN.md) completed both jobs, delivered
+two permitted handoffs and withheld two prohibited ones. This is explicit policy
+enforcement, not a finding of malicious intent or spontaneous covert signalling.
 The [retained-evidence retrieval feature](HISTORY.md) recovers older related
 records with verified source spans under the same context budget. It ran during
 a [real release build](research/HISTORY_RETRIEVAL_RUN.md), without launching more

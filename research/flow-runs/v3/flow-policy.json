@@ -1,0 +1,99 @@
+{
+  "policy": {
+    "clearances": {
+      "builder": [
+        "internal-baseline"
+      ],
+      "indexer": [
+        "internal-baseline"
+      ],
+      "internal-reviewer": [
+        "internal-baseline"
+      ],
+      "public-reviewer": []
+    },
+    "resources": {
+      "previous_release": [
+        "internal-baseline"
+      ]
+    }
+  },
+  "labels": {
+    "builder": [],
+    "indexer": [
+      "internal-baseline"
+    ],
+    "internal-reviewer": [
+      "internal-baseline"
+    ],
+    "public-reviewer": []
+  },
+  "exposures": [
+    {
+      "subject": "indexer",
+      "resource_id": "previous_release",
+      "resource_sha256": "886f21b974f8212749d1e927d9985cc7635c1a3fef7f8cb12b74e291bc34cdcf",
+      "labels": [
+        "internal-baseline"
+      ],
+      "stage": "before_byte_commit"
+    }
+  ],
+  "transfers": [
+    {
+      "sender": "builder",
+      "recipient": "public-reviewer",
+      "sender_labels": [],
+      "recipient_clearance": [],
+      "scope_stopped": false,
+      "permitted": true,
+      "scope": "Trusted confidentiality metadata, not proof of intent. All sender output inherits possible exposure labels; no semantic declassification.",
+      "delivered": true,
+      "recipient_labels": [],
+      "stage": "committed"
+    },
+    {
+      "sender": "indexer",
+      "recipient": "internal-reviewer",
+      "sender_labels": [
+        "internal-baseline"
+      ],
+      "recipient_clearance": [
+        "internal-baseline"
+      ],
+      "scope_stopped": false,
+      "permitted": true,
+      "scope": "Trusted confidentiality metadata, not proof of intent. All sender output inherits possible exposure labels; no semantic declassification.",
+      "delivered": true,
+      "recipient_labels": [
+        "internal-baseline"
+      ],
+      "stage": "committed"
+    },
+    {
+      "sender": "indexer",
+      "recipient": "public-reviewer",
+      "sender_labels": [
+        "internal-baseline"
+      ],
+      "recipient_clearance": [],
+      "scope_stopped": false,
+      "permitted": false,
+      "scope": "Trusted confidentiality metadata, not proof of intent. All sender output inherits possible exposure labels; no semantic declassification.",
+      "delivered": false,
+      "reason": "recipient_clearance"
+    },
+    {
+      "sender": "builder",
+      "recipient": "public-reviewer",
+      "sender_labels": [],
+      "recipient_clearance": [],
+      "scope_stopped": true,
+      "permitted": false,
+      "scope": "Trusted confidentiality metadata, not proof of intent. All sender output inherits possible exposure labels; no semantic declassification.",
+      "delivered": false,
+      "reason": "scope_stopped"
+    }
+  ],
+  "stopped": true
+}

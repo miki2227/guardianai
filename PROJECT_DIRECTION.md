@@ -1,5 +1,11 @@
 # GuardianAI: agent activity observer
 
+The [persistent exposure policy](FLOW.md) now complements Jev with deterministic
+recipient clearance at mediated artifact handoffs. The
+[actual build/index run](research/FLOW_POLICY_RUN.md) exercised label persistence,
+propagation and stop-on-denial. This optional coordinator API is not automatically
+enabled for every existing hosted-agent path.
+
 The current objective is an undergraduate systems project that combines and
 attributes recent research. A globally new algorithm or Q1 submission is not a
 completion requirement. Earlier journal-readiness audits remain historical

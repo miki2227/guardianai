@@ -113,3 +113,20 @@ character spans and explicit match/omission counts. The
 [actual archive and live-build report](HISTORY_RETRIEVAL_RUN.md) verifies this
 path. Search, persistent memory and retrieval are not claimed as new algorithms;
 better detection and context-exhaustion behavior remain unmeasured.
+
+## Persistent-flow integration update, 2026-11-15
+
+[Shim et al., FLOWSEAL](https://arxiv.org/abs/2609.14003) already places
+provenance-based confidentiality enforcement outside the LLM, including controlled
+declassification. [Girrens and Wang, SPA](https://arxiv.org/abs/2608.27234) already
+preserves labelled artifacts across queries within a plan-first architecture.
+Neither external information-flow control nor persistent labels are claimed as new.
+
+The [implemented integration](../FLOW.md) uses a simpler coarse confidentiality
+rule without declassification. It checkpoints possible exposure before kernel
+resource commits, preserves labels across task epochs and propagates them before
+mediated text publication. Jev separately sees exposure facts and assesses
+admissible content. The [real build/index run](FLOW_POLICY_RUN.md) establishes
+these boundary mechanics under a controlled classification of real metadata;
+it does not reproduce either paper, establish general noninterference or validate
+spontaneous covert coordination. This is an undergraduate systems contribution.

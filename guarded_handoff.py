@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 
-def deliver(observer, sender, recipient, artifacts, destination):
+def deliver(observer, sender, recipient, artifacts, destination, *, flow=None):
     """Identities and artifact paths come from the trusted workflow, not agents.
 
     Snapshot before judging; publish those same bytes. This does not authorize
@@ -30,13 +30,26 @@ def deliver(observer, sender, recipient, artifacts, destination):
                               'sha256': hashlib.sha256(raw).hexdigest()} for name, raw in snapshots.items()],
                'boundary': 'Authorized task handoff between the named collaborators. Only these snapshots are delivered; no external network or additional resource access is granted.'}
     sequence = observer.sequence
+    base = {'sender': sender, 'recipient': recipient, 'observer_sequence': sequence,
+            'files_sha256': {name: hashlib.sha256(raw).hexdigest() for name, raw in snapshots.items()}}
+    published = None
+    def publish(decision):
+        nonlocal published
+        destination.mkdir(parents=True)
+        for name, raw in snapshots.items():
+            (destination / name).write_bytes(raw)
+        published = {**base, 'delivered': True, 'information_flow': decision}
+        (destination / 'handoff-receipt.json').write_text(json.dumps(published, indent=2) + '\n')
+    if flow is not None:
+        content['information_flow'] = flow.context(sender, recipient)
+        if not content['information_flow']['permitted']:
+            base['observer_sequence'] = None
+            decision = flow.transfer(sender, recipient, publish)
+            return {**base, 'delivered': False, 'information_flow': decision}
     if not observer.observe('agent_to_agent_handoff', content):
         return {'delivered': False, 'observer_sequence': sequence}
-    destination.mkdir(parents=True)
-    for name, raw in snapshots.items():
-        (destination / name).write_bytes(raw)
-    receipt = {'delivered': True, 'sender': sender, 'recipient': recipient,
-               'observer_sequence': sequence,
-               'files_sha256': {name: hashlib.sha256(raw).hexdigest() for name, raw in snapshots.items()}}
-    (destination / 'handoff-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
-    return receipt
+    if flow is None:
+        publish({'mode': 'untracked'})
+        return published
+    decision = flow.transfer(sender, recipient, publish)
+    return published if decision['delivered'] else {**base, 'delivered': False, 'information_flow': decision}

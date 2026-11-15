@@ -1,0 +1,62 @@
+64|## Scope
+65|
+66|All output from a labelled subject inherits possible exposure, even when its
+67|literal text appears harmless. This coarse rule can block useful public work.
+68|The generic `deliver` helper guards selected text artifacts, not binary handoffs.
+69|The MCP integration below gates the entire worker output directory, including
+70|binary files such as a release ZIP. It does not semantically inspect arbitrary
+71|binary contents; its content check covers the serialized tool response. Arbitrary
+72|hosted-model final chat, unmediated files, timing, termination and hardware side
+73|channels remain outside these interfaces.
+74|It does not label facts inferred entirely from public inputs.
+75|
+76|The [real build/index run](research/FLOW_POLICY_RUN.md) records permitted and
+77|prohibited handoffs, retained failures and precise enforcement limits.
+78|
+79|## Coding-agent MCP sessions
+80|
+81|Pass `--flow-manifest /absolute/host/flow.json` to `guardian_mcp.py`. It accepts:
+82|
+83|```json
+84|{
+85|  "resources": {
+86|    "baseline": {"path": "/private/previous-release.json", "labels": ["internal"]}
+87|  },
+88|  "worker_clearance": ["internal"],
+89|  "client_clearance": []
+90|}
+91|```
+92|
+93|Paths are absolute Linux host paths outside source, runtime, session and system
+94|mounts. Resources use the existing 32 KiB immutable broker snapshots. The trusted
+95|task must authorize their use; a grant does not bypass Jev. Never let a model
+96|choose the manifest, clearances, resource paths or its session's identity.
+97|
+98|All fresh command processes map to one persistent `coding-worker` subject in
+99|that session. Actual resource exposure checkpoints that subject before delivery.
+100|`coding-client` is the external coding agent receiving tool results. A protected
+101|read taints subsequent command results too; spawning another command does not
+102|clear it. Successful delivery propagates the label to the client. To authorize an
+103|internal client, explicitly include `internal` in its clearance. That authorizes
+104|the external model provider to receive the data; it does not contain its later
+105|chat or remote inference.
+106|Jev's hosted endpoint remains a trusted recipient of submitted observer evidence;
+107|the client-clearance gate does not restrict what the trusted observer is shown.
+108|
+109|Both stdout/stderr delivery and publishing `/output` into later commands' result
+110|history wait for the runtime outcome, recipient clearance and content check.
+111|On a hard denial neither is published. Only execution/verdict metadata and the
+112|denial are returned; original output stays in the private host session directory.
+113|Subsequent commands are refused. A semantic stop also withholds result history.
+114|Runtime violation or abstention withholds stdout/stderr and result history even
+115|without a flow manifest. Ordinary nonzero exits with complete, unflagged evidence
+116|can still return diagnostics.
+117|
+118|The final ledger is `session/evidence/flow-policy.json`. Kernel principals remain
+119|`step-NNN`; their exposure callbacks map to `coding-worker`, with resource hashes
+120|retained on both sides. Labels persist within this MCP session, not across newly
+121|created sessions unless the persistent identity option below is used. Existing public source
+122|and copied inputs are assumed public; private data placed there bypasses this
+123|declared-resource registration contract. This is a trusted-host boundary, not
+124|automatic classification of every byte an agent may encounter.
+125|

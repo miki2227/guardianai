@@ -54,6 +54,8 @@ def main():
             return {'status': 'tool_session_not_yet_available'}
         state = json.loads(report.read_text())
         return {'scope_stopped': state['scope_stopped'], 'closed': state['closed'],
+                'information_flow': state.get('information_flow', {'mode': 'untracked'}),
+                'identity_at_start': state.get('identity_at_start'),
                 'recent_calls': [{key: call[key] for key in ('execution', 'verdict', 'returncode', 'reason') if key in call}
                                  for call in state['calls'][-4:]],
                 'earlier_calls_omitted': max(0, len(state['calls']) - 4)}

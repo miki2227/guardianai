@@ -1,0 +1,38 @@
+{
+  "execution": "step-003",
+  "argv": [
+    "/usr/bin/python3",
+    "-c",
+    "from pathlib import Path\nlines=Path('/workspace/source/FLOW.md').read_text().splitlines()\nfor i,l in enumerate(lines[63:125],64):\n    print(f'{i}|{l}')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "64|## Scope\n65|\n66|All output from a labelled subject inherits possible exposure, even when its\n67|literal text appears harmless. This coarse rule can block useful public work.\n68|The generic `deliver` helper guards selected text artifacts, not binary handoffs.\n69|The MCP integration below gates the entire worker output directory, including\n70|binary files such as a release ZIP. It does not semantically inspect arbitrary\n71|binary contents; its content check covers the serialized tool response. Arbitrary\n72|hosted-model final chat, unmediated files, timing, termination and hardware side\n73|channels remain outside these interfaces.\n74|It does not label facts inferred entirely from public inputs.\n75|\n76|The [real build/index run](research/FLOW_POLICY_RUN.md) records permitted and\n77|prohibited handoffs, retained failures and precise enforcement limits.\n78|\n79|## Coding-agent MCP sessions\n80|\n81|Pass `--flow-manifest /absolute/host/flow.json` to `guardian_mcp.py`. It accepts:\n82|\n83|```json\n84|{\n85|  \"resources\": {\n86|    \"baseline\": {\"path\": \"/private/previous-release.json\", \"labels\": [\"internal\"]}\n87|  },\n88|  \"worker_clearance\": [\"internal\"],\n89|  \"client_clearance\": []\n90|}\n91|```\n92|\n93|Paths are absolute Linux host paths outside source, runtime, session and system\n94|mounts. Resources use the existing 32 KiB immutable broker snapshots. The trusted\n95|task must authorize their use; a grant does not bypass Jev. Never let a model\n96|choose the manifest, clearances, resource paths or its session's identity.\n97|\n98|All fresh command processes map to one persistent `coding-worker` subject in\n99|that session. Actual resource exposure checkpoints that subject before delivery.\n100|`coding-client` is the external coding agent receiving tool results. A protected\n101|read taints subsequent command results too; spawning another command does not\n102|clear it. Successful delivery propagates the label to the client. To authorize an\n103|internal client, explicitly include `internal` in its clearance. That authorizes\n104|the external model provider to receive the data; it does not contain its later\n105|chat or remote inference.\n106|Jev's hosted endpoint remains a trusted recipient of submitted observer evidence;\n107|the client-clearance gate does not restrict what the trusted observer is shown.\n108|\n109|Both stdout/stderr delivery and publishing `/output` into later commands' result\n110|history wait for the runtime outcome, recipient clearance and content check.\n111|On a hard denial neither is published. Only execution/verdict metadata and the\n112|denial are returned; original output stays in the private host session directory.\n113|Subsequent commands are refused. A semantic stop also withholds result history.\n114|Runtime violation or abstention withholds stdout/stderr and result history even\n115|without a flow manifest. Ordinary nonzero exits with complete, unflagged evidence\n116|can still return diagnostics.\n117|\n118|The final ledger is `session/evidence/flow-policy.json`. Kernel principals remain\n119|`step-NNN`; their exposure callbacks map to `coding-worker`, with resource hashes\n120|retained on both sides. Labels persist within this MCP session, not across newly\n121|created sessions unless the persistent identity option below is used. Existing public source\n122|and copied inputs are assumed public; private data placed there bypasses this\n123|declared-resource registration contract. This is a trusted-host boundary, not\n124|automatic classification of every byte an agent may encounter.\n125|\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-003",
+  "information_flow": {
+    "sender": "coding-worker",
+    "recipient": "coding-client",
+    "sender_labels": [
+      "internal-baseline"
+    ],
+    "recipient_clearance": [
+      "internal-baseline"
+    ],
+    "scope_stopped": false,
+    "permitted": true,
+    "scope": "Trusted confidentiality metadata, not proof of intent. All sender output inherits possible exposure labels; no semantic declassification.",
+    "delivered": true,
+    "recipient_labels": [
+      "internal-baseline"
+    ],
+    "stage": "committed"
+  }
+}

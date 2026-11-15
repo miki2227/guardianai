@@ -34,6 +34,10 @@ retains labels and revocation under an exclusive host lease. Explicit `finish`
 closes a local scope while retaining a resumable identity; unclean closure or a
 security/operator stop revokes it. The host must bind the same path to the same
 conversation. See [the identity contract](FLOW.md#continuing-one-identity-across-mcp-processes).
+The [real continued-agent workflow](research/CONTINUED_AGENT_RUN.md) exercised
+this setup with one retained Grok conversation. The host content observer now
+receives saved `information_flow` and `identity_at_start` facts. These remain
+bounded session snapshots, not direct access to the provider's hidden context.
 
 Disable the client's other execution, filesystem, web and delegation tools.
 Otherwise they can bypass this adapter. The installed Grok CLI supports

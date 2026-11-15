@@ -8,6 +8,10 @@ the policy with an explicit trusted flow manifest; it remains opt-in.
 The optional [persistent identity ledger](research/IDENTITY_RUN.md) also carries
 those labels and revocation across server processes under an exclusive host
 lease. Actual index/build work verified continuity under a declared host binding.
+The later [existing-agent continuation](research/CONTINUED_AGENT_RUN.md) exercised
+that ledger with one retained Grok conversation, shared host evidence retrieval
+and actual release/documentation work. It is not a context-saturation or covert
+coordination result.
 
 The current objective is an undergraduate systems project that combines and
 attributes recent research. A globally new algorithm or Q1 submission is not a

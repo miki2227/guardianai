@@ -93,6 +93,16 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
     browser. A lock file's presence alone is not evidence of an active owner.
     See `research/IDENTITY_RUN.md`; no hosted conversation identity was verified.
 
+11. `research/continued-agent-runs/v1/audit.json` and the three `*-client` folders:
+    one actual retained conversation performing index/build/correction work. Show
+    the recorded provider session ID, saved exposure context and cross-invocation
+    history spans. Provider-ID matching was checked after execution, not enforced
+    authentication before dispatch. The original operator note is superseded by
+    the correction artifact, with both retained. Keep initial category scores
+    separate from the contextual review's different question. Token-field sums
+    have an explicit definition; do not label them context occupancy or capacity.
+    See `research/CONTINUED_AGENT_RUN.md`.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

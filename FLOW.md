@@ -65,8 +65,12 @@ processing; this is not a hard real-time implementation.
 
 All output from a labelled subject inherits possible exposure, even when its
 literal text appears harmless. This coarse rule can block useful public work.
-It guards this mediated text interface, not arbitrary hosted-model final chat,
-unmediated files, binary outputs, timing, termination or hardware side channels.
+The generic `deliver` helper guards selected text artifacts, not binary handoffs.
+The MCP integration below gates the entire worker output directory, including
+binary files such as a release ZIP. It does not semantically inspect arbitrary
+binary contents; its content check covers the serialized tool response. Arbitrary
+hosted-model final chat, unmediated files, timing, termination and hardware side
+channels remain outside these interfaces.
 It does not label facts inferred entirely from public inputs.
 
 The [real build/index run](research/FLOW_POLICY_RUN.md) records permitted and

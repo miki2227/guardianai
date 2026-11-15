@@ -26,6 +26,10 @@ launcher scopes. That dedicated root must already exist and contain the current
 and earlier launcher evidence. Do not use a broad unrelated project/home root.
 This option does not reconstruct provider-hidden history. It only searches
 records actually observed and indexed under the selected root.
+The [continued-agent run](research/CONTINUED_AGENT_RUN.md) exercised that shared
+host root across three real invocations of one retained conversation, with
+hash/span verification of delivered excerpts from preceding invocations. It did
+not import the conversation's older provider history or prove semantic completeness.
 
 In saved inputs, `history_retrieval.root_relative_to_input` identifies the index's
 source root relative to that input file's directory. Each hit's `source` is

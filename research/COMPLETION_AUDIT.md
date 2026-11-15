@@ -1,5 +1,12 @@
 # Research scope and completion audit
 
+The [continued existing-agent run](CONTINUED_AGENT_RUN.md) completed useful index,
+build and note-correction work through one retained Grok conversation. It joins
+actual tool, host-content, exposure-label and shared-history evidence. It retains
+a prose-scope mistake and cleared alert rather than treating an unflagged run as
+universal correctness. No two-agent convention, private-thought visibility or
+context-saturation-induced behavior was established.
+
 The [identity-continuity run](IDENTITY_RUN.md) completed index/build/checksum work
 across MCP processes with inherited exposure labels in actual Jev inputs. A
 concurrent owner was refused; an operator stop persisted across another restart.

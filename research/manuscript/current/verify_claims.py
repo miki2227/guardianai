@@ -1,6 +1,7 @@
 """Verify pinned source bytes and selected descriptive paper facts, not security."""
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -9,9 +10,14 @@ def main():
     project = folder.parents[2]
     ledger = json.loads((folder / 'claims.json').read_text(encoding='utf-8'))
     documents = {}
+    revision_sources = 0
     for item in ledger['sources']:
         path = project / item['path']
-        raw = path.read_bytes()
+        if item['path'].startswith('research/'):
+            raw = path.read_bytes()
+        else:
+            raw = subprocess.check_output(['git', 'show', ledger['data_revision'] + ':' + item['path']], cwd=project)
+            revision_sources += 1
         assert hashlib.sha256(raw).hexdigest() == item['sha256'], item['path']
         if path.suffix == '.json':
             documents[item['path']] = json.loads(raw)
@@ -34,8 +40,9 @@ def main():
     for name, expected in documents['research/manuscript/draft-manifest.json'].items():
         assert hashlib.sha256((historical / name).read_bytes()).hexdigest() == expected, name
     result = {'source_files_verified': len(ledger['sources']), 'facts_verified': len(ledger['facts']),
+              'implementation_sources_from_pinned_git_revision': revision_sources,
               'historical_draft_unchanged': True, 'data_revision': ledger['data_revision'],
-              'scope': 'Hash and selected field/derivation consistency only. Not semantic claim validity, statistical replication, a formal proof or an automatic source refresh.'}
+              'scope': 'Retained evidence plus implementation bytes at the explicitly pinned Git revision. Not a check of current HEAD, semantic claim validity, statistical replication or a formal proof. Expected hashes are not refreshed.'}
     (folder / 'verification.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=2))
 

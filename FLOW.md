@@ -167,3 +167,23 @@ stop/active state and history counts, alongside current flow facts. A clean loca
 scope can therefore have `scope_stopped: true` while the persistent identity is
 resumable. Consumers must distinguish these two lifetimes. Old per-session mode
 continues to stop its local ledger at closure.
+
+## Verify the CLI before admitting commands
+
+For the existing Grok adapter, add `--expected-conversation ID` to the MCP server
+and `--resume ID --require-binding` to `run_grok_guarded.py`. The server creates a
+fresh challenge in its private evidence directory. The launcher reads matching
+CLI system-init metadata and atomically writes a scoped approval. Before creating
+a command worker, the server checks the ID and request nonce. Missing or invalid
+approval stops the scope after a bounded two-second wait. There is no Jev override.
+
+The first binding is retained in the identity ledger. A different expected ID is
+rejected, and omitting the flag cannot disable a stored binding. Each new server
+needs a new approval; the previous file cannot satisfy its nonce. The lease and
+existing exposure labels remain in force. Default public sessions without a
+binding remain explicitly unbound.
+
+This verifies trusted local CLI metadata, not a remote provider signature. The
+host must still choose the correct canonical ledger and protect its approval
+directory. Scheduling delays can cause a safe refusal. See the
+[actual continued build and rejected admissions](research/CLIENT_BINDING_RUN.md).

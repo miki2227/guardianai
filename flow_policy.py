@@ -46,6 +46,14 @@ class FlowPolicy:
         if stopped:
             self.on_stop()
 
+    def bind_conversation(self, conversation):
+        with self.lock:
+            previous = self.state.get('provider_conversation')
+            if previous is not None and previous != conversation:
+                raise PermissionError('Identity ledger belongs to another conversation')
+            self.state['provider_conversation'] = conversation
+            self._save()
+
     def end_session(self, identity_session):
         with self.lock:
             if self.state['stopped'] or self.state.get('active_session') != identity_session:

@@ -16,14 +16,17 @@ def main():
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--resume', help='Resume an existing Grok conversation under a new GuardianAI scope')
     parser.add_argument('--history-root', help='Trusted evidence root containing this and earlier launcher evidence; never an agent mount')
+    parser.add_argument('--require-binding', action='store_true', help='Verify resumed CLI identity before approving MCP commands')
     args = parser.parse_args()
+    if args.require_binding and not args.resume:
+        parser.error('--require-binding requires --resume')
     evidence = Path(args.evidence)
     evidence.mkdir(parents=True, exist_ok=False)
     report = Path(args.report)
     if report.exists():
         raise ValueError('Use a new coding session report')
     stop_result = None
-    def stop_scope():
+    def stop_scope(reason='host_content_observer_stop'):
         nonlocal stop_result
         if stop_result is not None:
             return stop_result
@@ -32,7 +35,7 @@ def main():
             request_id = str(uuid.uuid4())
             marker = report.parent / 'external-stop.json'
             temporary = report.parent / 'external-stop.tmp'
-            temporary.write_text(json.dumps({'request_id': request_id, 'reason': 'host_content_observer_stop'}) + '\n')
+            temporary.write_text(json.dumps({'request_id': request_id, 'reason': reason}) + '\n')
             temporary.replace(marker)
             stop_result.update(request_sent=True, request_id=request_id)
             started_wait = time.monotonic()
@@ -56,6 +59,7 @@ def main():
         return {'scope_stopped': state['scope_stopped'], 'closed': state['closed'],
                 'information_flow': state.get('information_flow', {'mode': 'untracked'}),
                 'identity_at_start': state.get('identity_at_start'),
+                'client_binding': state.get('client_binding'),
                 'recent_calls': [{key: call[key] for key in ('execution', 'verdict', 'returncode', 'reason') if key in call}
                                  for call in state['calls'][-4:]],
                 'earlier_calls_omitted': max(0, len(state['calls']) - 4)}
@@ -74,6 +78,21 @@ def main():
         command += ['--resume', args.resume]
     (evidence / 'command.json').write_text(json.dumps(command, indent=2) + '\n')
     stopped = False
+    initialized_session, binding_written = None, False
+    def publish_binding():
+        nonlocal binding_written
+        if not args.require_binding or binding_written or initialized_session is None or not report.exists():
+            return
+        binding = json.loads(report.read_text()).get('client_binding', {})
+        if binding.get('expected_conversation') != args.resume or binding.get('status') != 'pending':
+            raise ValueError('MCP binding does not match the resumed client')
+        approval = {'request_id': binding['request_id'], 'session_id': initialized_session,
+                    'source': 'grok_cli_system_init'}
+        temporary = report.parent / 'client-binding.tmp'
+        temporary.write_text(json.dumps(approval) + '\n')
+        temporary.replace(report.parent / 'client-binding.json')
+        (evidence / 'client-binding.json').write_text(json.dumps(approval, indent=2) + '\n')
+        binding_written = True
     started = time.monotonic()
     environment = dict(os.environ)
     environment.update(GROK_WORKFLOWS='0', GROK_MEMORY='0', GROK_DISABLE_EXPERIMENTS='1')
@@ -90,6 +109,12 @@ def main():
         terminal_result = None
         try:
             while True:
+                try:
+                    publish_binding()
+                except (ValueError, OSError):
+                    stop_scope('client_binding_failed')
+                    stopped = True
+                    break
                 exited = process.poll() is not None
                 incoming = captured.read(1024 * 1024)
                 pending += incoming
@@ -97,6 +122,14 @@ def main():
                     line, pending = pending.split(b'\n', 1)
                     try:
                         item = json.loads(line)
+                        if args.require_binding:
+                            if item.get('session_id') not in (None, args.resume):
+                                raise ValueError('CLI conversation changed')
+                            if item.get('type') == 'system' and item.get('subtype') == 'init':
+                                if item.get('session_id') != args.resume:
+                                    raise ValueError('Missing resumed CLI identity')
+                                initialized_session = item['session_id']
+                            publish_binding()
                         if item.get('type') == 'result':
                             terminal_result = item
                         blocks = item.get('message', {}).get('content', [])
@@ -135,6 +168,9 @@ def main():
                     raise TimeoutError('Coding-agent workflow deadline')
                 time.sleep(.2)
             process.wait(timeout=10)
+            if args.require_binding and not binding_written:
+                stop_scope('client_binding_missing')
+                stopped = True
         finally:
             if process.poll() is None:
                 stop_scope()
@@ -142,6 +178,7 @@ def main():
                 process.wait()
     result = {'returncode': process.returncode, 'terminated_on_scope_stop': stopped,
               'stop_control': stop_result,
+              'binding_required': args.require_binding, 'binding_approval_written': binding_written,
               'client_result_subtype': terminal_result.get('subtype') if terminal_result else None,
               'client_result_error': terminal_result.get('is_error') if terminal_result else None,
               'elapsed_seconds': time.monotonic() - started,

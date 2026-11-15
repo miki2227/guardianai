@@ -23,7 +23,11 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/continued-agent-runs/v1/build/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/binding-runs/v1/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+The [pre-execution CLI binding gate](research/CLIENT_BINDING_RUN.md) now checks
+trusted startup metadata before admitting commands. One existing conversation
+built the release with its retained exposure labels; three controlled invalid
+admissions executed no worker commands.
 The [continued existing-agent run](research/CONTINUED_AGENT_RUN.md) used one retained
 Grok conversation for source indexing, a release build and an operator-note
 correction. All eight guarded Linux commands completed. Host content checks now

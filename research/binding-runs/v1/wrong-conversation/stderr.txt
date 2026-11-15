@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "/home/pratz/guardianai-binding-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", line 367, in <module>
+    main()
+    ~~~~^^
+  File "/home/pratz/guardianai-binding-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", line 361, in main
+    serve(CodingSession(args.task, args.workspace, args.session, args.sensor, args.command_timeout,
+          ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        flow_manifest=args.flow_manifest, identity_ledger=ledger,
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        expected_conversation=args.expected_conversation))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pratz/guardianai-binding-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", line 121, in __init__
+    self.flow.bind_conversation(expected_conversation)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pratz/guardianai-binding-v1/bootstrap/guardianai-linux-x86_64/flow_policy.py", line 53, in bind_conversation
+    raise PermissionError('Identity ledger belongs to another conversation')
+PermissionError: Identity ledger belongs to another conversation

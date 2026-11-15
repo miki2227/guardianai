@@ -32,6 +32,9 @@ validation records. It excludes the runtime and full execution dataset. Extract
 it under the same `research/manuscript/current` layout in a checkout containing
 the pinned data to run the verifier. Public source links point to the data
 revision, not to a claim that the package independently reproduces hosted models.
-The verifier also pins runtime source bytes at that revision. A later checkout
-with changed runtime code is expected to fail; use the pinned revision rather
-than silently refreshing hashes to accept a different system.
+The verifier reads implementation bytes from the explicitly pinned Git revision
+and retained experiment files from the checkout. It does not verify current HEAD
+as though it were the older tested runtime, and never refreshes expected hashes.
+Git history must contain that revision. Later runtime updates can coexist with
+this frozen paper's evidence; the result records how many implementation sources
+were resolved from Git. The PDF's fixed front matter and data claims are unchanged.

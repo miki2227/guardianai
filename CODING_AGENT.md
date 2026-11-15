@@ -1,5 +1,12 @@
 # Existing coding agents through GuardianAI
 
+Bound Grok sessions can now require startup verification before executing any
+Linux command. Pair MCP `--expected-conversation ID` with launcher
+`--resume ID --require-binding`. Existing stored bindings remain required even
+when that MCP flag is later omitted. See [the binding contract](FLOW.md#verify-the-cli-before-admitting-commands)
+and [the real build/rejection report](research/CLIENT_BINDING_RUN.md). This trusts
+the host and CLI metadata; it does not authenticate remote model weights.
+
 `guardian_mcp.py` is a Linux MCP stdio server exposing one tool, `run`, whose
 `argv` commands execute through the existing Jev/native-stack supervisor and
 policy-3 kernel gate. The coding agent's model transport runs in its existing

@@ -1,0 +1,9 @@
+# Binding note
+
+step-001 ran build_release.py. Verdict no_observed_violation, return code 0, evidence recorded. The result includes client_binding status verified for expected conversation 01a1dc23-2d09-7ff1-a3ab-d862353d47eb, and accepted_monotonic 25.73472238. I do not treat that number as a measured duration.
+
+The build stdout is the only package measurement here: GuardianAI-linux-x86_64.zip, SHA-256 eab18c1f58e751fba5142988ed885c2c44df7f0b797546f95a8cdc561dc0e97b, 50654 bytes, native_policy 3, launch_guard_version 1, file_count 19. The zip was not rehashed and --abi was not run again.
+
+That verified binding is the admission record for this command. It does not show the host or transport being checked by the worker, and it does not expose private thoughts. Those remain outside the worker result.
+
+information_flow: sender coding-worker, recipient coding-client, both labelled internal-baseline, recipient clearance internal-baseline, permitted, delivered, stage committed. The scope text says this is confidentiality metadata, not proof of intent, and that sender output inherits possible exposure with no semantic declassification. No protected path was read in this phase.

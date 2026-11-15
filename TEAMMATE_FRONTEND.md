@@ -103,6 +103,12 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
     have an explicit definition; do not label them context occupancy or capacity.
     See `research/CONTINUED_AGENT_RUN.md`.
 
+`client_binding` in the coding-session record now distinguishes unbound, pending,
+verified and refused admission. In `research/binding-runs/v1`, join the host/native
+approval nonce with the server record; compare native `checked_monotonic` only
+against native call `accepted_monotonic`. Do not present this as remote-provider
+authentication. The invalid-admission scopes have no worker events by design.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

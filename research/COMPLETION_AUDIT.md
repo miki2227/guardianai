@@ -1,5 +1,10 @@
 # Research scope and completion audit
 
+The [CLI-binding run](CLIENT_BINDING_RUN.md) completed a real continued-agent
+build with verification preceding admission. Wrong-conversation startup, missing
+approval and stale replay were refused without workers. This reduces a feasible
+identity-check gap; host trust and global canonical-ledger selection remain.
+
 The [current systems manuscript](manuscript/current/paper.md) documents the newer
 integration with separate case scopes and a hash-pinned claim ledger. The older
 draft's manifest is unchanged. Producing a paper does not close the unmet

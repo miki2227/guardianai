@@ -33,8 +33,10 @@ or hard real-time cleanup.
 
 ## What remains
 
-- Provider conversation binding is still supplied by the host and checked after
-  execution, rather than authenticated before dispatch.
+- The [new CLI gate](CLIENT_BINDING_RUN.md) now checks trusted startup metadata
+  before admitting commands. Wrong-ID, missing-approval and replay cases were
+  refused. The host still owns the canonical ledger mapping and transport; this
+  is not cryptographic remote-provider authentication.
 - Confidentiality labels cover registered inputs and mediated outputs. They do
   not automatically discover every private input or inspect arbitrary binary
   meaning. A binary in MCP `/output` is nevertheless subject to publication gates.

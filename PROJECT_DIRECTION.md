@@ -1,5 +1,10 @@
 # GuardianAI: agent activity observer
 
+The [CLI binding gate](research/CLIENT_BINDING_RUN.md) reduces the former post-run
+identity-check limitation: a fresh trusted-launcher approval now precedes bound
+command admission. It retains the host/transport trust boundary and does not
+claim remote-provider attestation or private-thought access.
+
 The [current systems draft](research/manuscript/current/paper.md) brings the
 architecture and separately reported development cases together. Its claim ledger
 pins current evidence without rewriting the historical manuscript or claiming

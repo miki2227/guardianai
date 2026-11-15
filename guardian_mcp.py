@@ -10,6 +10,8 @@ import shutil
 import signal
 import sys
 import threading
+import time
+import uuid
 
 from agent_observer import AgentObserver
 
@@ -57,13 +59,16 @@ def identity_lease(path, workspace, session):
 
 
 class CodingSession:
-    def __init__(self, task, workspace, session, sensor, command_timeout=30, *, flow_manifest=None, identity_ledger=None):
+    def __init__(self, task, workspace, session, sensor, command_timeout=30, *, flow_manifest=None, identity_ledger=None, expected_conversation=None):
         if sys.platform != 'linux' or not os.environ.get('TYPESAFE_API_KEY'):
             raise RuntimeError('Linux and the trusted supervisor credential are required')
         if not math.isfinite(command_timeout) or not 0 < command_timeout <= 600:
             raise ValueError('Use a finite command deadline between zero and 600 seconds')
         if identity_ledger is not None and flow_manifest is None:
             raise ValueError('Persistent identity requires a trusted flow manifest')
+        if expected_conversation is not None and (identity_ledger is None or not expected_conversation
+                                                  or len(expected_conversation) > 128 or '\0' in expected_conversation):
+            raise ValueError('Conversation binding requires an identity ledger and bounded ID')
         workspace, session = Path(workspace).resolve(strict=True), Path(session).resolve()
         runtime = Path(__file__).resolve().parent
         if not workspace.is_dir() or any(session.is_relative_to(p) or p.is_relative_to(session)
@@ -111,6 +116,11 @@ class CodingSession:
             'labels': copy.deepcopy(self.flow.state['labels']), 'stopped': self.flow.state['stopped'],
             'active_session': self.flow.state.get('active_session'),
             'exposure_count': len(self.flow.state['exposures']), 'transfer_count': len(self.flow.state['transfers'])}
+        expected_conversation = expected_conversation or (self.flow.state.get('provider_conversation') if self.flow else None)
+        if expected_conversation is not None:
+            self.flow.bind_conversation(expected_conversation)
+        self.client_binding = ({'expected_conversation': expected_conversation, 'request_id': str(uuid.uuid4()),
+                                'status': 'pending'} if expected_conversation else {'status': 'unbound'})
         if identity_ledger is not None:
             self.flow.begin_session(str(session))
         self.stop = self.broker.revoke if self.flow is None else self.flow.stop
@@ -142,11 +152,38 @@ class CodingSession:
                          'broker_audit': copy.deepcopy(self.broker.audit),
                          'identity_ledger': None if self.identity_ledger is None else str(self.identity_ledger),
                          'identity_at_start': self.identity_at_start,
+                         'client_binding': dict(self.client_binding),
                          'information_flow': {'mode': 'untracked'} if self.flow is None else self.flow.context('coding-worker', 'coding-client'),
                          'scope': 'Sequential local tool executions from one external coding-agent client. The model and its host harness are outside Linux containment. A fresh worker namespace per call is not a fresh model context.'}
             snapshot = self.evidence / 'coding-session.tmp'
             snapshot.write_text(json.dumps(state, indent=2) + '\n')
             snapshot.replace(self.evidence / 'coding-session.json')
+
+    def verify_client_binding(self):
+        if self.client_binding['status'] in ('unbound', 'verified'):
+            return True
+        deadline = time.monotonic() + 2
+        permit = None
+        while time.monotonic() < deadline and not self.broker.stop_event.is_set():
+            try:
+                permit = json.loads((self.evidence / 'client-binding.json').read_text())
+                break
+            except FileNotFoundError:
+                time.sleep(.02)
+            except (ValueError, OSError):
+                break
+        with self.save_lock:
+            verified = (isinstance(permit, dict)
+                        and not self.broker.stop_event.is_set()
+                        and permit.get('request_id') == self.client_binding['request_id']
+                        and permit.get('session_id') == self.client_binding['expected_conversation']
+                        and permit.get('source') == 'grok_cli_system_init')
+            self.client_binding.update(status='verified' if verified else 'refused',
+                                       checked_monotonic=time.monotonic())
+            if not verified:
+                self.stop()
+            self.save()
+        return verified
 
     def finish(self):
         with self.save_lock:
@@ -184,6 +221,8 @@ class CodingSession:
             raise ValueError('Invalid command argv')
         if self.broker.stop_event.is_set():
             return {'verdict': 'abstain', 'reason': 'scope_stopped'}
+        if not self.verify_client_binding():
+            return {'verdict': 'abstain', 'reason': 'client_binding_unverified'}
         if len(self.calls) >= 16:
             self.stop()
             self.save()
@@ -193,7 +232,8 @@ class CodingSession:
         output.mkdir()
         evidence = self.evidence / name
         self.broker.grants[name] = frozenset(self.broker.resources)
-        call = {'execution': name, 'argv': argv, 'verdict': 'abstain'}
+        call = {'execution': name, 'argv': argv, 'verdict': 'abstain', 'accepted_monotonic': time.monotonic()}
+        call['client_binding'] = {key: self.client_binding[key] for key in ('status', 'expected_conversation') if key in self.client_binding}
         self.calls.append(call)
         try:
             if not self.content_observer.observe('proposed_tool_argv', argv):
@@ -308,6 +348,7 @@ def main():
     parser.add_argument('--sensor', default='strace')
     parser.add_argument('--flow-manifest', help='Trusted protected-resource paths, labels and worker/client clearances; see FLOW.md')
     parser.add_argument('--identity-ledger', help='Host-owned absolute ledger retained across sessions; requires --flow-manifest and explicit finish')
+    parser.add_argument('--expected-conversation', help='Require launcher approval of this CLI session ID before executing commands')
     parser.add_argument('--command-timeout', type=float, default=30,
                         help='Trusted per-command execution deadline in seconds, at most 600')
     args = parser.parse_args()
@@ -318,7 +359,8 @@ def main():
         parser.error('--identity-ledger requires --flow-manifest')
     with identity_lease(args.identity_ledger, args.workspace, args.session) as ledger:
         serve(CodingSession(args.task, args.workspace, args.session, args.sensor, args.command_timeout,
-                            flow_manifest=args.flow_manifest, identity_ledger=ledger))
+                            flow_manifest=args.flow_manifest, identity_ledger=ledger,
+                            expected_conversation=args.expected_conversation))
 
 
 if __name__ == '__main__':

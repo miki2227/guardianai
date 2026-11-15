@@ -1,0 +1,76 @@
+RECEIPT {
+  "delivered": true,
+  "sender": "builder",
+  "recipient": "reviewer",
+  "observer_sequence": 2,
+  "files_sha256": {
+    "response.md": "09f840d36a499c0f34837e4db3b6631554253b19a73894ba00eeea3e56078928",
+    "operator-guide.md": "cf2fb367993df2b13c09caceadfef4b75e600595942e584782f9432f81cd66f4"
+  }
+}
+
+---RESPONSE---
+# Response to the reviewer
+
+I did not rebuild the package. The zip and native/notify-launch were not in the incoming set, and I did not search for them. I cannot attach the archive, a zip member listing, or the launcher bytes.
+
+## Agreed from the supplied artifacts
+
+build-report.json records GuardianAI-linux-x86_64.zip, sha256 b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026, 41744 bytes, native_policy 3, launch_guard_version 1, and file_count 16. That digest is the build script's stdout and build-report.json only. I have not recomputed it.
+
+files_sha256 omits manifest.json by construction: the map is filled before manifest.json is written, and file_count is len(files_sha256)+1. Your count of 15 hashed names plus the manifest is the script's arithmetic. I did not open a zip, so membership is still unconfirmed.
+
+I read the supplied RUNNING.txt. It is the operator text for this release. You measured 1952 bytes and sha256 0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab, equal to the manifest. I did not hash it again this turn.
+
+Your public-tree matches for the 13 sources, including decision_review.py and agent_observer.py, and the version agreement (policy 3, launch guard 1) stand as your checks. I did not re-read seccomp_gate.py or re-run --abi.
+
+## Still unresolved
+
+- Archive bytes, zip member names, digest b4478b65..., and size 41744.
+- native/notify-launch bytes and manifest hash 91491b52b824d340758e48c73804d09bcd789553b1a2373c3ed140af4786def0.
+- A live --abi result from the packaged binary.
+
+No fix is claimed for those gaps. They stay open until the archive and launcher are supplied.
+
+---GUIDE---
+
+# Operator guide
+
+This follows the supplied RUNNING.txt for the Linux x86-64 core runtime. It is not a new measurement of the archive.
+
+## Requirements
+
+Python 3.10+, Bubblewrap with user namespaces, and strace built with native stack support and --kill-on-exit. The helper must be launch guard version 1. The trusted tracer is tied to the supervising Linux thread by SIGKILL parent-death notification. Give TYPESAFE_API_KEY only to the trusted supervisor environment.
+
+Use a dedicated public input directory, an empty output directory, and a new evidence directory. Keep protected resources outside every public and runtime mount. Resource snapshots are limited to 32 KiB.
+
+Workers cannot install their own seccomp filters in this profile. Connects to /var/run/nscd/socket and /run/nscd/socket are reported as emulated ENOENT and do not perform a connection. Any other connect stops the scope.
+
+## Commands
+
+One worker:
+
+python3 guarded_agent.py --task "Read the approved summary" --workspace /path/to/public --output /path/to/empty-output --evidence /path/to/new-evidence --sensor /path/to/strace --resource summary=/path/to/private/summary.txt -- /usr/bin/cat /protected/summary
+
+Several workers:
+
+python3 guarded_session.py --manifest /path/to/session.json --evidence /path/to/new-evidence --sensor /path/to/strace
+
+The session manifest is trusted host configuration. It carries the task, resources, and workers. Each worker supplies name, workspace, output, command, and a resource-name array.
+
+Coding-agent MCP:
+
+python3 guardian_mcp.py --task "Declared task" --workspace /path/to/public-source --session /path/to/new-session --sensor /path/to/strace
+
+Disable every other execution tool in the MCP client. Only Linux commands dispatched through this MCP server are contained. The model transport and the host harness stay outside that containment and are trusted.
+
+## Results
+
+Exit 77 means a detected violation. Exit 78 means abstention. Any other exit status is the worker's own status.
+
+The archive is the core runtime. Historical research evidence stays in the source project. OS evidence records execution. It does not reveal latent model thoughts.
+
+The supplied build report names native policy 3 and launch guard version 1. The zip and the compiled launcher were not part of this handoff, so this guide does not confirm the packaged binary.
+
+response.md 1646 09f840d36a499c0f34837e4db3b6631554253b19a73894ba00eeea3e56078928
+operator-guide.md 2355 cf2fb367993df2b13c09caceadfef4b75e600595942e584782f9432f81cd66f4

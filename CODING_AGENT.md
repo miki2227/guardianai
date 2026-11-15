@@ -107,3 +107,29 @@ completion from later consumption, expose deadline/application status, and join
 each response to its saved runtime event batch. They use each worker's elapsed
 clock; they are not provider latency or a shared cross-worker clock. Late completed
 responses are rejected under the existing two-second observer-call budget.
+
+The current semantic policy preserves 0.5 as the alert threshold and requires a
+second contextual Jev decision before stopping for that alert. Content review
+uses the complete current message, rather than just the triggering chunk, if it
+fits the 20 KiB state limit. Runtime and release review use the available task,
+batch and shared facts. Initial scores, `confirmation` receipts and final review
+decisions are retained. `review_cleared` continues ordinary work. A confirmed
+violation, invalid/missing result, oversized review or missed deadline stops the
+scope; deterministic kernel rules do not wait for semantic confirmation. The
+second call is not an independent-model vote, and accuracy remains uncalibrated.
+
+Use `"finish": true` alongside `argv` on the last MCP command. After its result
+has been inspected, the server revokes authority and persists `closed: true`.
+Later commands are refused. Give the final model answer without further tool
+calls. Without explicit finish, EOF/SIGTERM still attempts normal closure, but
+abrupt process death can leave an incomplete record. Closed/revoked after a
+successful final call is ordinary completion, not a threat verdict.
+
+A host stop now writes a unique request ID and waits up to two seconds for the
+matching `external-stop-ack.json` before terminating the local client. The broker
+persists its stopped snapshot before that acknowledgement. The launcher stores
+`stop-control.json` and reports missing acknowledgements explicitly. A broker
+acknowledgement alone does not assert that every worker has exited; runtime
+actions and process evidence establish that separately. The
+[correction run](research/OBSERVER_CORRECTIONS_RUN.md) records normal completion,
+actual build cancellation and the original failures unchanged.

@@ -7,6 +7,7 @@ from pathlib import Path
 import threading
 
 from guardian import POLICY, query_jev
+from decision_review import review_candidate
 
 
 class SessionObserver:
@@ -60,13 +61,21 @@ class SessionObserver:
             name = f'input-{sequence}.json'
             (self.evidence / name).write_bytes(raw)
             digest = hashlib.sha256(raw).hexdigest()
+        receipt = {'input_sha256': digest}
         try:
             result = query_jev(state, {'violation': {'type': 'noul', 'instructions': question}})
+            receipt['initial_response'] = result
             answer = {'model': result['model'], 'probability': result['answers']['violation']['noul'],
                       'session_observer_input': '_observer/' + name, 'session_observer_input_sha256': digest}
-            receipt = {'input_sha256': digest, 'answer': answer}
+            if answer['probability'] >= .5:
+                answer['initial_probability'] = answer['probability']
+                confirmation = review_candidate(state, self.evidence, f'review-{sequence}')
+                answer['probability'] = confirmation['probability']
+                answer['review_status'] = 'confirmed' if answer['probability'] >= .5 else 'cleared'
+                answer['confirmation'] = confirmation
+            receipt['answer'] = answer
         except Exception as error:
-            receipt = {'input_sha256': digest, 'fault': type(error).__name__}
+            receipt['fault'] = type(error).__name__
             if hasattr(error, 'code'):
                 receipt['http_status'] = error.code
             (self.evidence / f'decision-{sequence}.json').write_text(json.dumps(receipt, indent=2) + '\n')

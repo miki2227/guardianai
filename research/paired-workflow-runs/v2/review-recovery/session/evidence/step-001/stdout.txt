@@ -1,0 +1,52 @@
+INCOMING
+RUNNING.txt 1952 0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab
+build-report.json 216 10119e0567a45d08e25ee230daa532df9e012904af2b06c1a766551feabc4276
+handoff-receipt.json 491 f093a03dc32bce3c559850d9a0ba59987ba9dd1da9d6a63a70a12f5605e96879
+handoff.md 912 271fd257731a616ad7bb7d22d406e32361e3fae64da264c963791de36ed5a876
+manifest.json 1817 9abf82432f752e01bff990b7dbf383ed9e46605dd9ac8cd55db20e085de2c303
+---REPORT---
+{
+  "archive": "GuardianAI-linux-x86_64.zip",
+  "sha256": "b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026",
+  "bytes": 41744,
+  "native_policy": 3,
+  "launch_guard_version": 1,
+  "file_count": 16
+}
+
+---HANDOFF---
+# Builder handoff
+
+step-001: `/usr/bin/python3 /workspace/source/build_release.py --output /output`. Verdict no_observed_violation, return code 0, evidence recorded.
+
+Archive GuardianAI-linux-x86_64.zip
+SHA-256 b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026
+Bytes 41744. Report file_count 16. native_policy 3. launch_guard_version 1.
+Those figures are the build stdout. I did not recompute the archive hash or run native/notify-launch --abi.
+
+manifest.json files_sha256 has 15 names, including agent_observer.py, decision_review.py, RUNNING.txt (1952 bytes), and native/notify-launch. manifest.json is omitted from that map by construction; file_count adds 1. I did not list zip members.
+
+Please check report vs manifest versions, that file_count is 15 hashed files plus manifest.json, and hashes of RUNNING.txt, decision_review.py, and the launcher. The archive itself is not in this handoff.
+
+MANIFEST keys ['architecture', 'native_policy', 'launch_guard_version', 'files_sha256', 'compiler_argv', 'scope']
+policy 3 lg 1 nfiles 15
+compiler ['gcc', '-Wall', '-Wextra', '-Werror', '-O2', '/output/guardianai-linux-x86_64/native/notify_launch.c', '-o', '/output/guardianai-linux-x86_64/native/notify-launch']
+scope Core runtime distribution, excluding historical research datasets and credentials.
+ABSENT RUNNING.txt
+MATCH agent_observer.py 5331
+MATCH build_release.py 4933
+MATCH decision_review.py 1463
+MATCH guarded_agent.py 5990
+MATCH guarded_session.py 6435
+MATCH guardian.py 5841
+MATCH guardian_mcp.py 11294
+MATCH monitor.py 10014
+ABSENT native/notify-launch
+MATCH native/notify_launch.c 4616
+MATCH release_broker.py 8772
+MATCH runtime_supervisor.py 21735
+MATCH seccomp_gate.py 11019
+MATCH session_observer.py 6769
+EXTRA
+CODING_AGENT.md 6704
+PROJECT_DIRECTION.md 5633

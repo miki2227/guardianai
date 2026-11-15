@@ -1,5 +1,6 @@
 """Expose supervised Linux commands to an existing coding agent over MCP stdio."""
 import argparse
+import copy
 import json
 import math
 import os
@@ -21,7 +22,8 @@ TOOL = {
     'description': 'Run a Linux argv under GuardianAI/Jev. Read the project at /workspace/source and prior results at /workspace/results/step-NNN. Write new files only in /output; /tmp is private scratch. Each call has a fresh isolated process tree and empty /output. Results become read-only history for later calls. No network, host home or observer credentials are available to commands. A stopped scope cannot run further commands.',
     'inputSchema': {'type': 'object', 'properties': {
         'argv': {'type': 'array', 'minItems': 1, 'maxItems': 64,
-                 'items': {'type': 'string', 'maxLength': 4096}}},
+                 'items': {'type': 'string', 'maxLength': 4096}},
+        'finish': {'type': 'boolean', 'description': 'Set true on the final command to close this tool session after returning its result. No later commands can run.'}},
         'required': ['argv'], 'additionalProperties': False},
 }
 
@@ -57,6 +59,7 @@ class CodingSession:
         self.launcher = runtime / 'native/notify-launch'
         self.calls = []
         self.closed = False
+        self.save_lock = threading.RLock()
         self.content_observer = AgentObserver(task, self.evidence / '_content',
                                               context=self.content_context, stop=self.broker.revoke)
         self.save()
@@ -66,18 +69,42 @@ class CodingSession:
             return self.observer._context()
 
     def save(self):
-        snapshot = self.evidence / 'coding-session.tmp'
-        snapshot.write_text(json.dumps({
-            'task': self.task, 'calls': self.calls, 'scope_stopped': self.broker.stop_event.is_set(),
-            'closed': self.closed,
-            'command_timeout_seconds': self.command_timeout,
-            'broker_audit': self.broker.audit,
-            'scope': 'Sequential local tool executions from one external coding-agent client. The model and its host harness are outside Linux containment. A fresh worker namespace per call is not a fresh model context.'}, indent=2) + '\n')
-        snapshot.replace(self.evidence / 'coding-session.json')
+        with self.save_lock:
+            with self.broker.lock:
+                state = {'task': self.task, 'calls': [dict(call) for call in self.calls],
+                         'scope_stopped': self.broker.stop_event.is_set(), 'closed': self.closed,
+                         'command_timeout_seconds': self.command_timeout,
+                         'broker_audit': copy.deepcopy(self.broker.audit),
+                         'scope': 'Sequential local tool executions from one external coding-agent client. The model and its host harness are outside Linux containment. A fresh worker namespace per call is not a fresh model context.'}
+            snapshot = self.evidence / 'coding-session.tmp'
+            snapshot.write_text(json.dumps(state, indent=2) + '\n')
+            snapshot.replace(self.evidence / 'coding-session.json')
+
+    def finish(self):
+        with self.save_lock:
+            if not self.closed:
+                self.broker.revoke()
+                self.closed = True
+            self.save()
+
+    def acknowledge_stop(self):
+        with self.save_lock:
+            request = json.loads((self.evidence / 'external-stop.json').read_text())
+            acknowledgement = self.evidence / 'external-stop-ack.json'
+            if acknowledgement.exists() and json.loads(acknowledgement.read_text()).get('request_id') == request['request_id']:
+                return
+            self.broker.revoke()
+            self.save()
+            receipt = {'request_id': request['request_id'], 'scope_stopped': True,
+                       'epoch': self.broker.epoch, 'mcp_pid': os.getpid(),
+                       'scope': 'Broker revocation acknowledged; worker exit and client exit are separate observations.'}
+            temporary = self.evidence / 'external-stop-ack.tmp'
+            temporary.write_text(json.dumps(receipt, indent=2) + '\n')
+            temporary.replace(acknowledgement)
 
     def execute(self, arguments):
-        if not isinstance(arguments, dict) or set(arguments) != {'argv'}:
-            raise ValueError('Expected argv only')
+        if not isinstance(arguments, dict) or 'argv' not in arguments or set(arguments) - {'argv', 'finish'} or type(arguments.get('finish', False)) is not bool:
+            raise ValueError('Expected argv and an optional boolean finish')
         argv = arguments['argv']
         if (not isinstance(argv, list) or not 1 <= len(argv) <= 64
                 or any(type(a) is not str or len(a) > 4096 or '\0' in a for a in argv)):
@@ -119,7 +146,11 @@ class CodingSession:
             self.broker.lose_evidence()
             call['reason'] = type(error).__name__
             result = dict(call)
-        self.save()
+        if arguments.get('finish'):
+            self.finish()
+            result['session_closed'] = True
+        else:
+            self.save()
         return result
 
 
@@ -128,7 +159,7 @@ def serve(session):
     def watch_stop():
         while not finished.wait(.1):
             if (session.evidence / 'external-stop.json').exists():
-                session.broker.revoke()
+                session.acknowledge_stop()
                 return
     watcher = threading.Thread(target=watch_stop, daemon=True)
     watcher.start()
@@ -159,7 +190,7 @@ def serve(session):
             elif method == 'tools/call' and params.get('name') == 'run':
                 try:
                     if (session.evidence / 'external-stop.json').exists():
-                        session.broker.revoke()
+                        session.acknowledge_stop()
                     result = session.execute(params.get('arguments', {}))
                     response['result'] = {'content': [{'type': 'text', 'text': json.dumps(result)}],
                                           'isError': result['verdict'] != 'no_observed_violation' or result.get('returncode') != 0}
@@ -171,9 +202,7 @@ def serve(session):
     finally:
         finished.set()
         watcher.join()
-        session.broker.revoke()
-        session.closed = True
-        session.save()
+        session.finish()
 
 
 def main():

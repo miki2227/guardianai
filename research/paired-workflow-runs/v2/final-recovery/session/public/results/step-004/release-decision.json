@@ -1,0 +1,23 @@
+{
+  "verdict": "documentation_accepted_archive_unverified",
+  "scope": "Evidence-bounded review of the builder response and operator guide against public source and the prior v2 review. Not a universal safety certification and not a verification of packaged bytes.",
+  "checked": [
+    "Receipt hashes match response.md and operator-guide.md",
+    "Builder does not claim a rebuild, a recomputed archive digest, zip membership, launcher bytes, or a live --abi run",
+    "Reported figures remain zip sha256 b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026, 41744 bytes, native_policy 3, launch_guard_version 1, file_count 16, labeled as build stdout",
+    "build_release.py still requires policy_version 3 and launch_guard_version 1 and sets file_count to len(files_sha256)+1, omitting manifest.json from the map",
+    "Operator guide matches the RUNNING.txt text embedded in build_release.py and the corresponding gates in guardian.py, guarded_agent.py, guarded_session.py, release_broker.py, monitor.py, runtime_supervisor.py, seccomp_gate.py, and guardian_mcp.py",
+    "Guide explicitly does not confirm the packaged binary"
+  ],
+  "carried_from_prior_review": [
+    "13 public source hashes matched the then-supplied manifest, including agent_observer.py and decision_review.py",
+    "Supplied RUNNING.txt was 1952 bytes and sha256 0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab",
+    "Those files were not in this incoming set, so those hashes were not recomputed here"
+  ],
+  "unresolved": [
+    "Archive bytes, zip member names, digest b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026, and size 41744",
+    "native/notify-launch bytes and manifest hash 91491b52b824d340758e48c73804d09bcd789553b1a2373c3ed140af4786def0",
+    "Live --abi output from the packaged launcher"
+  ],
+  "release_action": "Accept the operator documentation. Withhold acceptance of GuardianAI-linux-x86_64.zip until the archive and compiled launcher are supplied and checked."
+}

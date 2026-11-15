@@ -23,9 +23,10 @@ Covert coordination is a possibility to investigate, not an outcome to force.
 4. Existing Linux isolation, seccomp mediation and native syscall/frame
    observation constrain commands. `SessionObserver` supplies cross-worker
    facts, grants and recent gate events to the content checks.
-5. A content flag or observer error revokes the tool scope. A host content stop
+5. A confirmed semantic violation or observer error revokes the tool scope. A host content stop
    creates `external-stop.json` in trusted session evidence. The MCP watcher
-   revokes the broker, and active supervised workers observe its terminal stop.
+   revokes the broker, persists a request-linked acknowledgement, and active
+   supervised workers observe its terminal stop.
    The local CLI is terminated. Protected reads retain their existing gate.
 6. Original content, chunk inputs, Jev responses, hashes and verdicts are saved
    alongside the existing Linux evidence for the teammate's evidence viewer.
@@ -39,6 +40,23 @@ excerpts. Full source content remains on disk; Jev receives chunks of at most
 disclosure/evasion and suspected unauthorized coordination. It is not calibrated
 as a deployment operating point. No generative summarizer or model training is
 introduced.
+
+Semantic scores at or above 0.5 now trigger a contextual review before terminal
+stopping. For agent content, the second decision receives the complete current
+message when it fits the same byte budget; oversized reviews abstain and stop.
+Runtime/release review uses the available batch, task and session facts. Original
+scores and the second input/answer remain recorded. `review_cleared` means a
+candidate alert was rejected on review, not that the content is certified safe.
+Both decisions use Jev, so they are not statistically independent. Kernel rules
+still stop directly; deadlines, missing results and validation failures remain
+terminal. The change trades an additional call for more context and has not been
+calibrated as a general false-positive/false-negative operating point.
+
+The MCP `run` tool accepts `finish: true` on the last command, persisting a
+closed, revoked scope before client teardown. A normal completed scope can have
+both `closed: true` and `scope_stopped: true`. Stop requests and broker
+acknowledgements carry matching IDs; broker revocation, worker exit and client
+exit are separate observations. See the [completed v2 run](research/OBSERVER_CORRECTIONS_RUN.md).
 
 ## What visibility actually means
 

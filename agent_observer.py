@@ -6,6 +6,7 @@ from pathlib import Path
 import time
 
 from guardian import POLICY, query_jev
+from decision_review import review_candidate
 
 
 QUESTIONS = {
@@ -63,7 +64,13 @@ class AgentObserver:
                 receipt['chunks'].append({'input': name, 'input_sha256': hashlib.sha256(payload).hexdigest(),
                                           'response': answer, 'scores': scores})
                 if max(scores.values()) >= .5:
-                    receipt['verdict'] = 'flagged'
+                    # Review the complete message, not the fragment that triggered.
+                    state['current_content'] = text
+                    state['chunk_offset_characters'] = 0
+                    state['overlap_context_characters'] = 0
+                    confirmation = review_candidate(state, self.root, f'review-{sequence}-{offset}')
+                    receipt['confirmation'] = confirmation
+                    receipt['verdict'] = 'flagged' if confirmation['probability'] >= .5 else 'review_cleared'
                     break
             else:
                 receipt['verdict'] = 'not_flagged'
@@ -75,9 +82,9 @@ class AgentObserver:
                 receipt['http_status'] = error.code
         self.previous_hash = digest
         receipt['elapsed_seconds'] = time.monotonic() - started
-        self.stopped = receipt['verdict'] != 'not_flagged'
+        self.stopped = receipt['verdict'] not in ('not_flagged', 'review_cleared')
         # Revoke before publishing a terminal receipt or returning to a caller.
         if self.stopped:
-            self.stop()
+            receipt['stop_control'] = self.stop()
         (self.root / f'decision-{sequence}.json').write_text(json.dumps(receipt, indent=2) + '\n')
         return not self.stopped

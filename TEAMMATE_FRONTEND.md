@@ -53,6 +53,12 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
    and unmonitored developer build are distinct cases; see
    `research/PAIRED_WORKFLOW_RUN.md`. A stop-request file is not a broker
    acknowledgement, and an exit-zero client can still have an error result.
+6. `research/paired-workflow-runs/v2/summary.json` and its cancellation folders:
+   completed four-phase work, explicit final-command closure, `review_cleared`
+   decisions and request-linked stop acknowledgements. Preserve initial and
+   confirmation scores separately. A successful finish has `scope_stopped: true`
+   and `closed: true`; that is not automatically a threat. Broker acknowledgement,
+   namespace kill, worker exit and client exit remain distinct observations.
 
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,

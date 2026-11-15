@@ -19,7 +19,13 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [built Linux core runtime](dist/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/paired-workflow-runs/v2/build/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+The [corrected two-agent workflow](research/OBSERVER_CORRECTIONS_RUN.md) completed
+all four phases, with 15 successful commands, three verified handoffs and four
+closed tool sessions. It adds contextual alert review and acknowledged stopping;
+the historical failed run remains intact. A separate real build cancellation
+confirmed revocation, worker termination, command refusal and closure.
+The earlier [core runtime](dist/GuardianAI-linux-x86_64.zip) is retained.
 The newer [content-observer build](research/content-observer-runs/v1/session/public/results/step-001/GuardianAI-linux-x86_64.zip)
 includes the combined observer module; its full run and receipts are retained.
 An [existing coding agent can use GuardianAI through MCP](CODING_AGENT.md).

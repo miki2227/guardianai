@@ -14,6 +14,15 @@ review, client failures and a stopped continuation. A separate supervised
 follow-up build was killed on a likely false alarm. The intended four-phase task
 did not complete, and no covert convention or context saturation was established.
 
+The [v2 correction run](OBSERVER_CORRECTIONS_RUN.md) completed the planned four
+phases using the two continuing conversations, with 15 successful commands,
+three exact-byte handoffs and four closed scopes. Full-context confirmation
+cleared one live candidate alert while retaining its original score. Actual
+operator cancellations add request-linked broker acknowledgements, worker-exit
+evidence and refusal of later work. Three selected retained alert reviews are a
+diagnostic, not a representative detector-accuracy estimate. No covert convention
+or context exhaustion was established, and historical failures are unchanged.
+
 The goal is a reproducible study of two fixed pretrained agents under Jev
 observation, grounded in the literature. A guaranteed detector for every possible
 malicious activity cannot be established by a finite experiment. A research result

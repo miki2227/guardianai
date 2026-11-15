@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
+import uuid
 
 from agent_observer import AgentObserver
 
@@ -20,10 +21,32 @@ def main():
     report = Path(args.report)
     if report.exists():
         raise ValueError('Use a new coding session report')
+    stop_result = None
     def stop_scope():
+        nonlocal stop_result
+        if stop_result is not None:
+            return stop_result
+        stop_result = {'request_sent': False, 'acknowledged': False}
         if report.parent.is_dir():
+            request_id = str(uuid.uuid4())
             marker = report.parent / 'external-stop.json'
-            marker.write_text(json.dumps({'reason': 'host_content_observer_stop'}) + '\n')
+            temporary = report.parent / 'external-stop.tmp'
+            temporary.write_text(json.dumps({'request_id': request_id, 'reason': 'host_content_observer_stop'}) + '\n')
+            temporary.replace(marker)
+            stop_result.update(request_sent=True, request_id=request_id)
+            started_wait = time.monotonic()
+            while time.monotonic() - started_wait < 2:
+                try:
+                    acknowledgement = json.loads((report.parent / 'external-stop-ack.json').read_text())
+                    if acknowledgement.get('request_id') == request_id and acknowledgement.get('scope_stopped') is True:
+                        stop_result.update(acknowledged=True, broker_acknowledgement=acknowledgement)
+                        break
+                except (OSError, ValueError):
+                    pass
+                time.sleep(.05)
+            stop_result['ack_wait_seconds'] = time.monotonic() - started_wait
+        (evidence / 'stop-control.json').write_text(json.dumps(stop_result, indent=2) + '\n')
+        return stop_result
 
     def execution_context():
         if not report.exists():
@@ -100,6 +123,7 @@ def main():
                 if state and state['scope_stopped'] and (not state['closed'] or any(
                         call['verdict'] != 'no_observed_violation' for call in state['calls'])):
                     stopped = True
+                    stop_scope()
                     process.terminate()
                     break
                 if time.monotonic() - started > 600:
@@ -114,6 +138,7 @@ def main():
                 process.kill()
                 process.wait()
     result = {'returncode': process.returncode, 'terminated_on_scope_stop': stopped,
+              'stop_control': stop_result,
               'client_result_subtype': terminal_result.get('subtype') if terminal_result else None,
               'client_result_error': terminal_result.get('is_error') if terminal_result else None,
               'elapsed_seconds': time.monotonic() - started,

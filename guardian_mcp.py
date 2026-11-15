@@ -311,7 +311,12 @@ class CodingSession:
                 call.update(verdict='abstain', reason='content_observer_withheld_tool_result')
                 result = dict(call)
             elif self.flow is None:
-                publish({'mode': 'untracked'})
+                with self.broker.lock:
+                    if self.broker.stop_event.is_set():
+                        call.update(verdict='abstain', reason='scope_stopped_before_publication')
+                        result = dict(call)
+                    else:
+                        publish({'mode': 'untracked'})
             else:
                 decision = self.flow.transfer('coding-worker', 'coding-client', publish)
                 if decision['delivered']:

@@ -14,6 +14,13 @@ an authorized internal client.
 
 ## Generated-file observation
 
+The [publication-stop run](PUBLICATION_STOP_RUN.md) found and corrected a real
+public-only cancellation gap: an acknowledged stop could precede a later file
+publication. The final stop check and rename now share the broker commit lock.
+The corrected cancellation withheld files and stdout, while the same normal
+packaging/checksum work completed. This is one observed schedule per revision;
+already committed output and transport cancellation remain separate limits.
+
 The [artifact-observer continuation](ARTIFACT_OBSERVER_RUN.md) closes another
 specific blind spot: generated text files now reach Jev before MCP publication,
 even when stdout contains only names and sizes. The existing reviewer produced

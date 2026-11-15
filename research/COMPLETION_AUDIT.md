@@ -1,5 +1,12 @@
 # Research scope and completion audit
 
+The [publication cancellation case](PUBLICATION_STOP_RUN.md) reproduced late
+public-only publication after stop acknowledgement, then verified withholding
+under the corrected commit lock. The same normal packaging/checksum workload
+completed. An initial extraction-permission failure is retained separately.
+This improves local revocation ordering without establishing all schedules,
+remote transport cancellation or covert-communication detection.
+
 The [artifact-content run](ARTIFACT_OBSERVER_RUN.md) adds complete bounded UTF-8
 file evidence before MCP publication, with opaque binary inventory entries.
 One corrected continuing-agent command produced a useful navigation bundle;

@@ -1,0 +1,1 @@
+Source-hash navigation bundle. These SHA-256 values describe the supplied public snapshot. They do not certify behavior or semantic safety.

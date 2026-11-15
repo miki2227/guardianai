@@ -41,7 +41,9 @@ outcome and task success remain distinct. An ordinary nonzero exit can still
 return unflagged diagnostics when observation succeeds.
 
 The host output tree remains trusted against concurrent modification after
-worker teardown. Publication renames that completed tree; this is not a signed
+worker teardown. In public-only mode, broker revocation and the directory rename
+now use the same commit lock; see the [actual cancellation](research/PUBLICATION_STOP_RUN.md).
+Publication renames that completed tree; this is not a signed
 snapshot protocol against a malicious host. Public input provisioning, remote
 inference, already emitted chat and nontext covert channels remain outside this
 new gate. Empty directory names are not included in the file-content packet.

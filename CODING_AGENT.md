@@ -26,7 +26,11 @@ python3 /path/to/guardian_mcp.py \
 ```
 
 On Windows, that MCP command can be `wsl.exe -d kali-linux -- python3 ...` with
-Linux paths for the arguments. Forward the supervisor credential through the
+Linux paths for the arguments. Install the trusted runtime with Unix execute
+permissions preserved. Python `ZipFile.extractall` does not restore the native
+helper's execute bit; restore `native/notify-launch` to executable if using that
+extraction method.
+Forward the supervisor credential through the
 trusted launcher environment, never in a prompt or literal committed config.
 The contained commands receive the existing cleared environment.
 
@@ -79,6 +83,11 @@ Generated text files now pass through a separate
 inventories link file hashes to the actual Jev content decision. Nontext files
 are inventoried as opaque binaries; their meaning is not classified. Unsupported
 file types or exceeded snapshot budgets abstain and stop publication.
+
+Public-only publication rechecks broker revocation under the commit lock. An
+acknowledged stop that wins before the directory rename withholds the result.
+The [real cancellation and normal run](research/PUBLICATION_STOP_RUN.md) retain
+both the former late-publication failure and corrected behavior.
 
 One broker stop state and bounded session observer span the calls. A violation or
 monitoring failure closes that authority for later commands. Restarting the MCP

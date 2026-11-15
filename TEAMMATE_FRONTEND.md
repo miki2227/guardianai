@@ -132,6 +132,15 @@ In `publication-refusal/run`, execution exited 0 but artifact publication
 abstained with MCP `isError: true`; the next command had no worker. See
 `research/ARTIFACT_OBSERVER_RUN.md` and `ARTIFACTS.md` for fixed budget meanings.
 
+The cancellation-order dataset is `research/publication-stop-runs/audit.json`.
+Join controller `observations.json` to stop request/acknowledgement IDs. In v2,
+the destination was absent at acknowledgement and present afterward: retain
+this failed contract even though the next command was refused. In v3, the worker
+exited 0 but publication abstained with `scope_stopped_before_publication`; normal
+work completed separately. Keep the initial extraction failure distinct. Compare
+controller monotonic times only within a case. A directory commit and later MCP
+stdio delivery are separate boundaries; see `research/PUBLICATION_STOP_RUN.md`.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

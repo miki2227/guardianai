@@ -23,7 +23,11 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/artifact-observer-runs/publication-refusal/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/publication-stop-runs/v3/run/bootstrap/GuardianAI-linux-x86_64.zip) is available.
+Public-only result publication now serializes its final stop check and directory
+rename with broker revocation. A [real cancelled packaging run](research/PUBLICATION_STOP_RUN.md)
+reproduced late publication in the previous release; the corrected run withheld
+output and normal packaging still completed. Both outcomes are retained.
 Generated UTF-8 output files now pass through an
 [artifact-content gate](ARTIFACTS.md) before publication. The
 [actual continuing-reviewer run](research/ARTIFACT_OBSERVER_RUN.md) delivered two

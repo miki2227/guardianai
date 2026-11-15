@@ -3,8 +3,8 @@
 The [persistent exposure policy](FLOW.md) now complements Jev with deterministic
 recipient clearance at mediated artifact handoffs. The
 [actual build/index run](research/FLOW_POLICY_RUN.md) exercised label persistence,
-propagation and stop-on-denial. This optional coordinator API is not automatically
-enabled for every existing hosted-agent path.
+propagation and stop-on-denial. The coding-agent MCP entry point can also enable
+the policy with an explicit trusted flow manifest; it remains opt-in.
 
 The current objective is an undergraduate systems project that combines and
 attributes recent research. A globally new algorithm or Q1 submission is not a

@@ -1,5 +1,11 @@
 # Research scope and completion audit
 
+The [actual MCP flow integration](MCP_FLOW_RUN.md) completed release/index work
+through stdio and withheld both the denied tool response and its result history.
+The same index reached an authorized internal client. This validates an opt-in
+coding-session boundary; persistent identity across separate sessions and actual
+model-agent behavior under that configuration remain unmeasured.
+
 The [persistent-flow run](FLOW_POLICY_RUN.md) completed real Linux build/index
 work, two permitted publications and two policy refusals. It adds kernel-commit
 exposure checkpoints and persistent handoff labels through an optional coordinator

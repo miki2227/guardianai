@@ -23,6 +23,13 @@ Linux paths for the arguments. Forward the supervisor credential through the
 trusted launcher environment, never in a prompt or literal committed config.
 The contained commands receive the existing cleared environment.
 
+For declared protected inputs, add `--flow-manifest /absolute/host/flow.json`.
+[FLOW.md](FLOW.md) defines its resource paths, labels and worker/client clearances.
+One persistent worker label covers every fresh command in the session. Resource
+exposure can therefore withhold stdout/stderr and result-history publication from
+a client without clearance, then stop subsequent commands. This option is trusted
+host configuration; existing callers without it retain public-only inputs.
+
 Disable the client's other execution, filesystem, web and delegation tools.
 Otherwise they can bypass this adapter. The installed Grok CLI supports
 `--tools search_tool,use_tool --no-subagents --disable-web-search`; its observed
@@ -39,7 +46,7 @@ The MCP tool accepts, for example:
 ```
 
 Every command has a fresh worker namespace and empty `/output`. The public source
-snapshot is at `/workspace/source`. After completion, its output directory moves
+snapshot is at `/workspace/source`. After runtime and delivery checks, its output directory moves
 into `/workspace/results/step-NNN`, read-only for subsequent commands. Copying or
 editing an input source in place is unsupported; write proposed files or patches
 to `/output`. This preserves useful state between tool calls without changing the

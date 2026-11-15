@@ -75,6 +75,14 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
    use `mode: untracked`. Retain failed v1/v2 runs separately; see `FLOW.md`
    and `research/FLOW_POLICY_RUN.md`.
 
+9. `research/mcp-flow-runs/v1/audit.json` and both clients' `responses.jsonl`:
+   actual MCP delivery checks, a withheld public index, queued-command refusal
+   and authorized internal delivery. Keep runtime and delivery verdicts separate:
+   the denied index exited zero with an unflagged runtime, but its delivery
+   abstained. Join `step-NNN` kernel commits to the ledger's `coding-worker` using
+   resource IDs/hashes. This is an explicit mapping within one session, not proof
+   of identity continuity across sessions. See `research/MCP_FLOW_RUN.md`.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

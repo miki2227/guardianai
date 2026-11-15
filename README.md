@@ -19,7 +19,12 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/flow-runs/v3/builder-output/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/mcp-flow-runs/v1/public-client/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+The coding-agent MCP server now accepts a trusted flow manifest and gates both
+stdout/stderr and result-history publication. The
+[actual MCP release/index workflow](research/MCP_FLOW_RUN.md) completed three Linux
+commands, withheld an internal index from a public client, refused its next
+command and delivered the same index to an authorized internal client.
 The optional [persistent confidentiality policy](FLOW.md) checkpoints protected
 exposure and enforces recipient clearance before mediated handoffs. Its
 [actual build/index run](research/FLOW_POLICY_RUN.md) completed both jobs, delivered

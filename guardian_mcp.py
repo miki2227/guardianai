@@ -7,6 +7,9 @@ from pathlib import Path
 import shutil
 import signal
 import sys
+import threading
+
+from agent_observer import AgentObserver
 
 from guarded_agent import run_worker
 from release_broker import ReleaseBroker
@@ -54,7 +57,13 @@ class CodingSession:
         self.launcher = runtime / 'native/notify-launch'
         self.calls = []
         self.closed = False
+        self.content_observer = AgentObserver(task, self.evidence / '_content',
+                                              context=self.content_context, stop=self.broker.revoke)
         self.save()
+
+    def content_context(self):
+        with self.observer.lock:
+            return self.observer._context()
 
     def save(self):
         snapshot = self.evidence / 'coding-session.tmp'
@@ -87,6 +96,10 @@ class CodingSession:
         call = {'execution': name, 'argv': argv, 'verdict': 'abstain'}
         self.calls.append(call)
         try:
+            if not self.content_observer.observe('proposed_tool_argv', argv):
+                call['reason'] = 'content_observer_stop_before_execution'
+                self.save()
+                return dict(call)
             report = run_worker(self.task, self.public, argv, output=output, evidence=evidence,
                                 sensor=self.sensor, broker=self.broker, principal=name,
                                 launcher=self.launcher, timeout=self.command_timeout,
@@ -99,6 +112,9 @@ class CodingSession:
             output.rename(destination)
             result['results_directory'] = '/workspace/results/' + name
             (evidence / 'tool-result.json').write_text(json.dumps(result, indent=2) + '\n')
+            if not self.content_observer.observe('tool_result_before_delivery', result):
+                call.update(verdict='abstain', reason='content_observer_withheld_tool_result')
+                result = dict(call)
         except Exception as error:
             self.broker.lose_evidence()
             call['reason'] = type(error).__name__
@@ -108,6 +124,14 @@ class CodingSession:
 
 
 def serve(session):
+    finished = threading.Event()
+    def watch_stop():
+        while not finished.wait(.1):
+            if (session.evidence / 'external-stop.json').exists():
+                session.broker.revoke()
+                return
+    watcher = threading.Thread(target=watch_stop, daemon=True)
+    watcher.start()
     try:
         while True:
             raw = sys.stdin.buffer.readline(65537)
@@ -134,6 +158,8 @@ def serve(session):
                 response['result'] = {'tools': [TOOL]}
             elif method == 'tools/call' and params.get('name') == 'run':
                 try:
+                    if (session.evidence / 'external-stop.json').exists():
+                        session.broker.revoke()
                     result = session.execute(params.get('arguments', {}))
                     response['result'] = {'content': [{'type': 'text', 'text': json.dumps(result)}],
                                           'isError': result['verdict'] != 'no_observed_violation' or result.get('returncode') != 0}
@@ -143,6 +169,8 @@ def serve(session):
                 response['error'] = {'code': -32601, 'message': 'Method or tool not found'}
             print(json.dumps(response), flush=True)
     finally:
+        finished.set()
+        watcher.join()
         session.broker.revoke()
         session.closed = True
         session.save()

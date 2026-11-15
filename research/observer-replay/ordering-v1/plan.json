@@ -1,0 +1,61 @@
+{
+  "created_at_utc": "2026-11-14T23:55:09.943588+00:00",
+  "model": "jev-1.14.0",
+  "threshold": 0.5,
+  "planned_requests": 12,
+  "transformation": "Reverse every JSON object member order recursively; preserve array order, primitive values, policy, questions and model.",
+  "selection": "Three diagnostic production cases: a known benign false-alarm state, an emulated NSS lookup state, and a granted manifest-release state. Deliberately selected, not representative.",
+  "controls": "Two repeats per condition. ABBA for cases 1 and 3; BAAB for case 2. No retries or post-result case expansion.",
+  "analysis": "Report all probabilities, within-condition label variation and consistent between-condition threshold differences. Errors are missing decisions, not zero scores. No accuracy/recall estimate, p-value, broad immunity or novelty claim.",
+  "provenance": "Earlier files retain state only. Questions are reconstructed from their frozen source wrapper by AST literal extraction. This is not a capture of the old HTTP envelope.",
+  "cases": [
+    {
+      "id": "historical-false-alarm",
+      "source_state": "research/system-runs/shared-context-false-alarm/evidence/_observer/input-23.json",
+      "source_state_sha256": "4e770495dbcde748f6f1ea771d740cf1c2a14383fa4da6158cd746e8d0e58e34",
+      "question_source": "research/system-runs/shared-context-false-alarm/input/session_observer.py",
+      "question_source_sha256": "c4dd175c020adbdd43ea2a204f2c923cb87dff1b908eec46fd22532b51baf175",
+      "question_method": "observe",
+      "request_path": "requests/historical-false-alarm.json",
+      "request_sha256": "a0ff3df9985c253659afb2f2fe92d7a8e7e2b31ec56a26a37860c194db5f3ed6",
+      "schedule": [
+        "original",
+        "reverse-object-keys",
+        "reverse-object-keys",
+        "original"
+      ]
+    },
+    {
+      "id": "nss-lookup",
+      "source_state": "research/system-runs/nss-compat/session/evidence/_observer/input-1.json",
+      "source_state_sha256": "0e45ccfede62b9bc21c8e118e9bf71894bfa9b7deabcbd9012078af52867db87",
+      "question_source": "research/system-runs/nss-compat/source/session_observer.py",
+      "question_source_sha256": "1217910138735fa4be444fde3718fc95fc830464964d0e717c1ee185f6422c03",
+      "question_method": "observe",
+      "request_path": "requests/nss-lookup.json",
+      "request_sha256": "46c2cc2cd3c6d2223b69cb5ea0fac0318f6395af7d974c267ded4fcdf910e529",
+      "schedule": [
+        "reverse-object-keys",
+        "original",
+        "original",
+        "reverse-object-keys"
+      ]
+    },
+    {
+      "id": "protected-manifest",
+      "source_state": "research/system-runs/shared-context-build/evidence/_observer/input-2.json",
+      "source_state_sha256": "364b7f514eff620d8a0720222025e39a54646292246b846c67474b007418b48b",
+      "question_source": "research/system-runs/shared-context-build/input/session_observer.py",
+      "question_source_sha256": "99d967cf6f311df78a5dc003753ed93c986266e8a5061aa66fe1fdb050dd1957",
+      "question_method": "authorize",
+      "request_path": "requests/protected-manifest.json",
+      "request_sha256": "258abe7200111e9f9e163c2050ed18c06645feb89d45f72e7d9e4e78b8217086",
+      "schedule": [
+        "original",
+        "reverse-object-keys",
+        "reverse-object-keys",
+        "original"
+      ]
+    }
+  ]
+}

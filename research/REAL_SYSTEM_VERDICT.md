@@ -4,6 +4,13 @@
 information-flow policy. It is not yet a validated detector of emergent hidden
 signalling, and it cannot inspect private model thoughts.**
 
+The [latest feedback-cycle attempt](FEEDBACK_LOOP_RUN.md) did **not** complete.
+The builder made an invalid child-path read of a virtual resource and was
+revoked before building. The denial and stop acknowledgement worked; a clean
+scope-closure record is missing. The builder remains quarantined. Return-slot
+preparation and a separate authorized host direct-read diagnostic succeeded,
+but those are not credited as a completed agent cycle or recovery.
+
 The evidence comes from separate development cases and source snapshots; it is
 not a pooled accuracy benchmark. Existing-agent continuation completed eight
 actual Linux commands across indexing, release building and correction work,

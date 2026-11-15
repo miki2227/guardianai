@@ -23,7 +23,13 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/publication-stop-runs/v3/run/bootstrap/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/feedback-loop-runs/v1/contract/bootstrap/GuardianAI-linux-x86_64.zip) is available.
+The [return-feedback attempt](research/FEEDBACK_LOOP_RUN.md) added trusted
+selection of an existing recipient resource slot without changing saved policy.
+The actual builder then inferred an invalid child path and was stopped before
+building. That identity remains revoked; the new reviewer phase was unrun.
+A separate host diagnostic verified direct snapshot reads. The MCP tool contract
+now explicitly distinguishes virtual byte snapshots from ordinary files.
 Public-only result publication now serializes its final stop check and directory
 rename with broker revocation. A [real cancelled packaging run](research/PUBLICATION_STOP_RUN.md)
 reproduced late publication in the previous release; the corrected run withheld

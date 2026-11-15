@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/pratz/guardianai-publication-stop-v3/bootstrap/guardianai-linux-x86_64/peer_handoff.py", line 102, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/pratz/guardianai-publication-stop-v3/bootstrap/guardianai-linux-x86_64/peer_handoff.py", line 96, in main
+    result = prepare(json.loads(Path(args.plan).read_text()), args.evidence)
+  File "/home/pratz/guardianai-publication-stop-v3/bootstrap/guardianai-linux-x86_64/peer_handoff.py", line 67, in prepare
+    target_flow = FlowPolicy(target,
+        {'coding-worker': clearance, 'coding-client': clearance}, {'peer_handoff': labels}, on_stop=lambda: None)
+  File "/home/pratz/guardianai-publication-stop-v3/bootstrap/guardianai-linux-x86_64/flow_policy.py", line 21, in __init__
+    raise ValueError('An existing label ledger cannot silently change policy')
+ValueError: An existing label ledger cannot silently change policy

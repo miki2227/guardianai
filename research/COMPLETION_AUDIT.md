@@ -1,5 +1,13 @@
 # Research scope and completion audit
 
+The [feedback-cycle attempt](FEEDBACK_LOOP_RUN.md) remains incomplete. Trusted
+selection of the builder's existing resource slot preserved both policies, but
+its first command inferred an unapproved child path and triggered revocation.
+No build or new reviewer phase ran. Correct direct reads were verified only in
+a separate cleared host diagnostic; the revoked builder still refuses commands.
+Its labels/history were retained. Recovery policy awaits the user's decision;
+no automatic reauthorization or replacement model was introduced.
+
 The [publication cancellation case](PUBLICATION_STOP_RUN.md) reproduced late
 public-only publication after stop acknowledgement, then verified withholding
 under the corrected commit lock. The same normal packaging/checksum workload

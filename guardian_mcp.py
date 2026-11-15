@@ -25,7 +25,7 @@ from session_observer import SessionObserver
 
 TOOL = {
     'name': 'run',
-    'description': 'Run a Linux argv under GuardianAI/Jev. Read the project at /workspace/source and prior results at /workspace/results/step-NNN. Write new files only in /output; /tmp is private scratch. Each call has a fresh isolated process tree and empty /output. Results become read-only history for later calls. No network, host home or observer credentials are available to commands. A stopped scope cannot run further commands.',
+    'description': 'Run a Linux argv under GuardianAI/Jev. Read the project at /workspace/source and prior results at /workspace/results/step-NNN. Read task-approved /protected/NAME directly as a byte snapshot: these paths are virtual, so stat, exists, is_file and directory probes do not establish availability. Do not infer child paths. Write new files only in /output; /tmp is private scratch. Each call has a fresh isolated process tree and empty /output. Results become read-only history for later calls. No network, host home or observer credentials are available to commands. A stopped scope cannot run further commands.',
     'inputSchema': {'type': 'object', 'properties': {
         'argv': {'type': 'array', 'minItems': 1, 'maxItems': 64,
                  'items': {'type': 'string', 'maxLength': 4096}},

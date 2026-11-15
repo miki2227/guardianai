@@ -4,6 +4,7 @@ from contextlib import ExitStack
 import hashlib
 import json
 from pathlib import Path
+import re
 
 from agent_observer import AgentObserver
 from flow_policy import FlowPolicy
@@ -16,8 +17,11 @@ def prepare(plan, evidence):
     required = {'task', 'producer_ledger', 'producer_session', 'producer_conversation',
                 'recipient_ledger', 'recipient_conversation', 'recipient_clearance',
                 'workspace', 'session', 'artifacts'}
-    if set(plan) != required:
+    if set(plan) not in (required, required | {'recipient_resource'}):
         raise ValueError('Use the documented trusted peer-handoff plan')
+    resource_id = plan.get('recipient_resource', 'peer_handoff')
+    if not isinstance(resource_id, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}', resource_id):
+        raise ValueError('Use a single-component recipient resource identifier')
     evidence = Path(evidence).resolve()
     source, target = [Path(plan[key]).resolve() for key in ('producer_ledger', 'recipient_ledger')]
     workspace, session = Path(plan['workspace']).resolve(), Path(plan['session']).resolve()
@@ -46,6 +50,7 @@ def prepare(plan, evidence):
             raise PermissionError('Use a verified completed producer session')
         labels = sorted(set(state['labels']['coding-worker']) | set(state['labels']['coding-client']))
         receipt = {'producer': plan['producer_conversation'], 'recipient': plan['recipient_conversation'],
+                   'recipient_resource': resource_id,
                    'source_labels': labels, 'recipient_clearance': clearance,
                    'producer_ledger_sha256': hashlib.sha256(source_bytes).hexdigest(),
                    'prepared': False, 'scope': 'Private resource preparation is not receiver exposure or model consumption.'}
@@ -65,7 +70,7 @@ def prepare(plan, evidence):
                 raise ValueError('Combined peer resource exceeds the broker snapshot bound')
             source_flow = FlowPolicy(source, state['policy']['clearances'], state['policy']['resources'], on_stop=lambda: None)
             target_flow = FlowPolicy(target,
-                {'coding-worker': clearance, 'coding-client': clearance}, {'peer_handoff': labels}, on_stop=lambda: None)
+                {'coding-worker': clearance, 'coding-client': clearance}, {resource_id: labels}, on_stop=lambda: None)
             if target_flow.state['stopped'] or target_flow.state.get('active_session') is not None:
                 raise PermissionError('Recipient identity is stopped or not cleanly closed')
             target_flow.bind_conversation(plan['recipient_conversation'])
@@ -77,7 +82,7 @@ def prepare(plan, evidence):
                 resource = evidence / 'peer-resource.json'
                 resource.write_bytes(raw)
                 digest = hashlib.sha256(raw).hexdigest()
-                manifest = {'resources': {'peer_handoff': {'path': str(resource), 'labels': labels, 'sha256': digest}},
+                manifest = {'resources': {resource_id: {'path': str(resource), 'labels': labels, 'sha256': digest}},
                             'worker_clearance': clearance, 'client_clearance': clearance}
                 (evidence / 'flow-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
                 receipt.update(prepared=True, resource_sha256=digest,

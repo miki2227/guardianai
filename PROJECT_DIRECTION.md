@@ -1,5 +1,11 @@
 # GuardianAI: agent activity observer
 
+The [latest feedback attempt](research/FEEDBACK_LOOP_RUN.md) prepared a return
+handoff in the builder's existing policy slot, then stopped on its invalid
+child-path read. The cycle is incomplete and that identity remains revoked.
+The virtual snapshot contract is now explicit in the tool description; direct
+reads were verified in a separate host diagnostic, not a resumed builder.
+
 The [CLI binding gate](research/CLIENT_BINDING_RUN.md) reduces the former post-run
 identity-check limitation: a fresh trusted-launcher approval now precedes bound
 command admission. It retains the host/transport trust boundary and does not

@@ -141,6 +141,17 @@ work completed separately. Keep the initial extraction failure distinct. Compare
 controller monotonic times only within a case. A directory commit and later MCP
 stdio delivery are separate boundaries; see `research/PUBLICATION_STOP_RUN.md`.
 
+The feedback-cycle dataset is `research/feedback-loop-runs/v1/audit.json`.
+Show `recipient_resource` on the preparation receipt and retain the initial
+policy-mismatch attempt. The builder's ENOENT metadata probe is not a permission
+violation; the later unapproved child-path open caused the native denial.
+The cycle is incomplete: one existing model was invoked, no new reviewer phase
+ran, and `closed: false` must stay visible alongside acknowledged revocation.
+`contract/cleared-host-diagnostic` is a separate local host scope, not builder
+delivery or recovery. `contract/revoked-identity` executed zero commands. The
+builder's exposure history stayed unchanged and its canonical stop persists.
+See `research/FEEDBACK_LOOP_RUN.md`; do not label this hidden coordination.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

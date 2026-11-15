@@ -36,8 +36,16 @@ The contained commands receive the existing cleared environment.
 
 For declared protected inputs, add `--flow-manifest /absolute/host/flow.json`.
 [FLOW.md](FLOW.md) defines its resource paths, labels and worker/client clearances.
+Approved `/protected/NAME` inputs are virtual snapshots. Open the approved path
+directly with a read operation; `stat`, `exists`, `is_file` and directory probes
+cannot establish availability. An inferred child such as
+`/protected/NAME/manifest.json` names a different, unapproved resource and stops
+the scope. The [actual feedback attempt](research/FEEDBACK_LOOP_RUN.md) retains
+this agent error and persistent revocation rather than calling it malicious intent.
 For a continuing peer's published text, [PEER_HANDOFF.md](PEER_HANDOFF.md) prepares
 a resource with the producer's accumulated labels and a pinned byte digest.
+Its trusted optional `recipient_resource` chooses an existing recipient slot;
+the saved policy must still match exactly and a stopped identity cannot resume.
 An optional resource `sha256` is checked against the loaded snapshot before a
 worker or identity session starts. The [paired run](research/PEER_HANDOFF_RUN.md)
 records actual delivery to the second bound conversation.

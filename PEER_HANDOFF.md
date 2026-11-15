@@ -32,6 +32,14 @@ a new recipient session. For example:
 }
 ```
 
+An optional `recipient_resource` selects the recipient's existing resource ID.
+It defaults to `peer_handoff`. For example, a continuing builder whose saved
+policy has only `previous_release` can receive a peer snapshot in that slot by
+setting `"recipient_resource": "previous_release"`. The receipt records this ID.
+The full saved policy must still match; this does not add resources, expand
+clearance or reset labels. Existing multi-resource policies are not migrated by
+this helper. A stopped identity remains stopped.
+
 Run from the trusted host, with the existing Jev environment credential:
 
 ```sh
@@ -59,7 +67,10 @@ IDs, inherited labels and the source-ledger hash. The generated flow manifest
 pins the complete payload SHA-256. Use that manifest with the normal MCP
 `--identity-ledger` and `--expected-conversation` options, plus launcher
 `--resume ... --require-binding`. Tell the recipient only the approved resource
-path `/protected/peer_handoff`; do not paste its contents into the prompt.
+path `/protected/RESOURCE_ID` (`/protected/peer_handoff` by default); do not paste
+its contents into the prompt. These paths are virtual brokered snapshots. Read
+the explicitly approved path directly; `stat`, `exists` or `is_file` cannot
+establish availability, and the resource is not a directory to probe for children.
 
 Preparing the resource does not mark the recipient exposed. The existing
 broker checkpoints exposure before a committed read; tool-result delivery
@@ -80,5 +91,9 @@ they do not authenticate a remote provider or prove the truth of an agent's
 report. Labels are conservative metadata, not inferred intent. The host must
 classify earlier private inputs and route later outputs through the same gates.
 The two endpoint providers and Jev receive authorized content outside the Linux
-namespace. This is one-way text preparation, not a general multi-agent message
-bus or coverage of timing, termination and other covert channels.
+namespace. Each invocation prepares one directed transfer; the selected slot
+permits return feedback while preserving an existing policy. The
+[first feedback-cycle attempt](research/FEEDBACK_LOOP_RUN.md) remains incomplete
+after an agent's invalid child-path read triggered persistent revocation. This
+is not a general message bus or coverage of timing, termination and other covert
+channels.

@@ -99,6 +99,8 @@ clear it. Successful delivery propagates the label to the client. To authorize a
 internal client, explicitly include `internal` in its clearance. That authorizes
 the external model provider to receive the data; it does not contain its later
 chat or remote inference.
+Jev's hosted endpoint remains a trusted recipient of submitted observer evidence;
+the client-clearance gate does not restrict what the trusted observer is shown.
 
 Both stdout/stderr delivery and publishing `/output` into later commands' result
 history wait for the runtime outcome, recipient clearance and content check.
@@ -112,7 +114,47 @@ can still return diagnostics.
 The final ledger is `session/evidence/flow-policy.json`. Kernel principals remain
 `step-NNN`; their exposure callbacks map to `coding-worker`, with resource hashes
 retained on both sides. Labels persist within this MCP session, not across newly
-created sessions or arbitrary resumed model conversations. Existing public source
+created sessions unless the persistent identity option below is used. Existing public source
 and copied inputs are assumed public; private data placed there bypasses this
 declared-resource registration contract. This is a trusted-host boundary, not
 automatic classification of every byte an agent may encounter.
+
+## Continuing one identity across MCP processes
+
+For the same continuing client, add
+`--identity-ledger /private/agent-identity/flow.json` alongside `--flow-manifest`.
+Create its private parent directory first. The ledger must be outside every
+worker/session/runtime mount. Use native Linux storage and one canonical path.
+The CLI holds an exclusive nonblocking Linux `flock` on a stable `.lock` sidecar
+for its entire server lifetime. Locking the JSON file itself would be insufficient
+because saves replace that file. A concurrent server using the same identity is
+refused before it creates its session. The sidecar's mere existence is not proof
+that an owner is running. Never unlink it while an owner may be active.
+
+The trusted host must bind this path to the actual continuing conversation and
+reuse it consistently. It is not authentication of a provider conversation ID.
+Changing the path, deleting the ledger, copying it under another lock path or
+mixing unrelated clients can defeat that binding. Direct Python callers must hold
+`identity_lease` around the entire `CodingSession` lifetime; the CLI does this.
+Labels and clearances must match the existing policy exactly on reopening. The
+feature provides no policy migration, automatic reset or declassification.
+
+With this option, an explicit successful `finish: true` closes the local broker
+but keeps the identity resumable with its labels. No later command can run in
+that closed local scope. A semantic/runtime/flow stop or external operator stop
+revokes the persistent identity. A subsequent server inherits that stop and
+refuses work; a new process is not a reset.
+
+The ledger records an active session before commands are accepted and clears it
+only on clean explicit completion. EOF or an exception before explicit completion
+revokes it. An abrupt process death leaves its marker: the next opener stops the
+identity conservatively. Atomic replacement is still not an fsync/power-loss
+durability guarantee, and the advisory lock assumes cooperating trusted local
+processes. Uncooperative host writers and remote filesystems are outside the
+contract. Ledger history can grow; no retention policy silently drops labels.
+
+`coding-session.json` records the ledger path and `identity_at_start` labels,
+stop/active state and history counts, alongside current flow facts. A clean local
+scope can therefore have `scope_stopped: true` while the persistent identity is
+resumable. Consumers must distinguish these two lifetimes. Old per-session mode
+continues to stop its local ledger at closure.

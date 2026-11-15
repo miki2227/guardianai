@@ -5,6 +5,9 @@ recipient clearance at mediated artifact handoffs. The
 [actual build/index run](research/FLOW_POLICY_RUN.md) exercised label persistence,
 propagation and stop-on-denial. The coding-agent MCP entry point can also enable
 the policy with an explicit trusted flow manifest; it remains opt-in.
+The optional [persistent identity ledger](research/IDENTITY_RUN.md) also carries
+those labels and revocation across server processes under an exclusive host
+lease. Actual index/build work verified continuity under a declared host binding.
 
 The current objective is an undergraduate systems project that combines and
 attributes recent research. A globally new algorithm or Q1 submission is not a

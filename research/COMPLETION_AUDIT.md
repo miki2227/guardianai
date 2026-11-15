@@ -1,5 +1,12 @@
 # Research scope and completion audit
 
+The [identity-continuity run](IDENTITY_RUN.md) completed index/build/checksum work
+across MCP processes with inherited exposure labels in actual Jev inputs. A
+concurrent owner was refused; an operator stop persisted across another restart.
+The host supplies the identity binding. Hosted conversation authentication,
+abrupt-death recovery behavior and natural long-context misalignment remain
+unmeasured, and private model thoughts remain outside observable OS evidence.
+
 The [actual MCP flow integration](MCP_FLOW_RUN.md) completed release/index work
 through stdio and withheld both the denied tool response and its result history.
 The same index reached an authorized internal client. This validates an opt-in

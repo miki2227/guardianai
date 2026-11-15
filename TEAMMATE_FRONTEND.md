@@ -83,6 +83,16 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
    resource IDs/hashes. This is an explicit mapping within one session, not proof
    of identity continuity across sessions. See `research/MCP_FLOW_RUN.md`.
 
+10. `research/identity-runs/v1/audit.json` and each phase's `identity-after.json`:
+    continued host-bound identity across actual MCP processes, inherited labels,
+    an exclusive-lease refusal and persisted operator revocation. Distinguish
+    local `scope_stopped`/`closed` from the persistent ledger's `stopped` and
+    `active_session`. A normal explicit finish closes a local broker while its
+    identity remains resumable. Show `identity_at_start` and join the retained
+    snapshots; do not try to open the original absolute host ledger path in a
+    browser. A lock file's presence alone is not evidence of an active owner.
+    See `research/IDENTITY_RUN.md`; no hosted conversation identity was verified.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

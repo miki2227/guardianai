@@ -30,9 +30,28 @@ class FlowPolicy:
             self.on_stop()
 
     def _save(self):
-        temporary = self.path.with_suffix('.tmp')
+        temporary = self.path.with_name(self.path.name + '.tmp')
         temporary.write_text(json.dumps(self.state, indent=2) + '\n')
         temporary.replace(self.path)
+
+    def begin_session(self, identity_session):
+        """An uncleared predecessor marker makes resumption fail closed."""
+        with self.lock:
+            if self.state.get('active_session') is not None:
+                self.state['stopped'] = True
+            if not self.state['stopped']:
+                self.state['active_session'] = identity_session
+            self._save()
+            stopped = self.state['stopped']
+        if stopped:
+            self.on_stop()
+
+    def end_session(self, identity_session):
+        with self.lock:
+            if self.state['stopped'] or self.state.get('active_session') != identity_session:
+                raise PermissionError('Identity session cannot close cleanly')
+            self.state['active_session'] = None
+            self._save()
 
     def expose(self, subject, resource, digest):
         """Persist possible exposure BEFORE the broker commits bytes.

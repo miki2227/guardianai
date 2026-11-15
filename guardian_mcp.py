@@ -1,6 +1,7 @@
 """Expose supervised Linux commands to an existing coding agent over MCP stdio."""
 import argparse
 import copy
+from contextlib import contextmanager
 import json
 import math
 import os
@@ -35,12 +36,34 @@ def bounded_output(path):
     return {'text': raw[:8192].decode('utf-8', errors='replace'), 'truncated': len(raw) > 8192}
 
 
+@contextmanager
+def identity_lease(path, workspace, session):
+    if path is None:
+        yield None
+        return
+    import fcntl
+    if not Path(path).is_absolute():
+        raise ValueError('Identity ledger must be an absolute host path')
+    ledger = Path(path).resolve()
+    roots = [Path(workspace).resolve(), Path(session).resolve(), Path(__file__).resolve().parent,
+             *[Path(p).resolve() for p in ('/usr', '/bin', '/lib', '/lib64') if Path(p).exists()]]
+    if any(ledger.is_relative_to(root) for root in roots):
+        raise ValueError('Identity ledger must stay outside worker/session/runtime mounts')
+    # Lock a stable sidecar: the ledger itself is atomically replaced on save.
+    descriptor = os.open(str(ledger) + '.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, 'a+b') as lease:
+        fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield ledger
+
+
 class CodingSession:
-    def __init__(self, task, workspace, session, sensor, command_timeout=30, *, flow_manifest=None):
+    def __init__(self, task, workspace, session, sensor, command_timeout=30, *, flow_manifest=None, identity_ledger=None):
         if sys.platform != 'linux' or not os.environ.get('TYPESAFE_API_KEY'):
             raise RuntimeError('Linux and the trusted supervisor credential are required')
         if not math.isfinite(command_timeout) or not 0 < command_timeout <= 600:
             raise ValueError('Use a finite command deadline between zero and 600 seconds')
+        if identity_ledger is not None and flow_manifest is None:
+            raise ValueError('Persistent identity requires a trusted flow manifest')
         workspace, session = Path(workspace).resolve(strict=True), Path(session).resolve()
         runtime = Path(__file__).resolve().parent
         if not workspace.is_dir() or any(session.is_relative_to(p) or p.is_relative_to(session)
@@ -76,10 +99,20 @@ class CodingSession:
             resources = load_resources({name: item['path'] for name, item in config['resources'].items()},
                                        roots, self.launcher)
         self.broker = ReleaseBroker(task, resources, {})
+        self.identity_ledger = identity_ledger
+        if identity_ledger is not None and any(identity_ledger == Path(item['path']).resolve()
+                                               for item in config['resources'].values()):
+            raise ValueError('Identity ledger cannot also be a protected input')
         self.flow = None if config is None else FlowPolicy(
-            self.evidence / 'flow-policy.json',
+            self.evidence / 'flow-policy.json' if identity_ledger is None else identity_ledger,
             {'coding-worker': config['worker_clearance'], 'coding-client': config['client_clearance']},
             {name: item['labels'] for name, item in config['resources'].items()}, on_stop=self.broker.revoke)
+        self.identity_at_start = None if self.flow is None else {
+            'labels': copy.deepcopy(self.flow.state['labels']), 'stopped': self.flow.state['stopped'],
+            'active_session': self.flow.state.get('active_session'),
+            'exposure_count': len(self.flow.state['exposures']), 'transfer_count': len(self.flow.state['transfers'])}
+        if identity_ledger is not None:
+            self.flow.begin_session(str(session))
         self.stop = self.broker.revoke if self.flow is None else self.flow.stop
         if self.flow is not None:
             self.broker.exposure = lambda principal, resource, digest: self.flow.expose('coding-worker', resource, digest)
@@ -107,6 +140,8 @@ class CodingSession:
                          'scope_stopped': self.broker.stop_event.is_set(), 'closed': self.closed,
                          'command_timeout_seconds': self.command_timeout,
                          'broker_audit': copy.deepcopy(self.broker.audit),
+                         'identity_ledger': None if self.identity_ledger is None else str(self.identity_ledger),
+                         'identity_at_start': self.identity_at_start,
                          'information_flow': {'mode': 'untracked'} if self.flow is None else self.flow.context('coding-worker', 'coding-client'),
                          'scope': 'Sequential local tool executions from one external coding-agent client. The model and its host harness are outside Linux containment. A fresh worker namespace per call is not a fresh model context.'}
             snapshot = self.evidence / 'coding-session.tmp'
@@ -116,7 +151,12 @@ class CodingSession:
     def finish(self):
         with self.save_lock:
             if not self.closed:
-                self.stop()
+                if self.identity_ledger is None:
+                    self.stop()
+                else:
+                    if not self.broker.stop_event.is_set():
+                        self.flow.end_session(str(self.root))
+                    self.broker.revoke()
                 self.closed = True
             self.save()
 
@@ -256,6 +296,8 @@ def serve(session):
     finally:
         finished.set()
         watcher.join()
+        if session.identity_ledger is not None and not session.closed:
+            session.stop()  # Only an explicit successful finish can resume an identity.
         session.finish()
 
 
@@ -265,14 +307,18 @@ def main():
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--sensor', default='strace')
     parser.add_argument('--flow-manifest', help='Trusted protected-resource paths, labels and worker/client clearances; see FLOW.md')
+    parser.add_argument('--identity-ledger', help='Host-owned absolute ledger retained across sessions; requires --flow-manifest and explicit finish')
     parser.add_argument('--command-timeout', type=float, default=30,
                         help='Trusted per-command execution deadline in seconds, at most 600')
     args = parser.parse_args()
     def terminate(signum, frame):
         raise SystemExit(0)
     signal.signal(signal.SIGTERM, terminate)
-    serve(CodingSession(args.task, args.workspace, args.session, args.sensor, args.command_timeout,
-                        flow_manifest=args.flow_manifest))
+    if args.identity_ledger is not None and args.flow_manifest is None:
+        parser.error('--identity-ledger requires --flow-manifest')
+    with identity_lease(args.identity_ledger, args.workspace, args.session) as ledger:
+        serve(CodingSession(args.task, args.workspace, args.session, args.sensor, args.command_timeout,
+                            flow_manifest=args.flow_manifest, identity_ledger=ledger))
 
 
 if __name__ == '__main__':

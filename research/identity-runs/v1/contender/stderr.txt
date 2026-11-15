@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/home/pratz/guardianai-identity-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", line 325, in <module>
+    main()
+    ~~~~^^
+  File "/home/pratz/guardianai-identity-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", line 319, in main
+    with identity_lease(args.identity_ledger, args.workspace, args.session) as ledger:
+         ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/pratz/guardianai-identity-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", line 55, in identity_lease
+    fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+BlockingIOError: [Errno 11] Resource temporarily unavailable

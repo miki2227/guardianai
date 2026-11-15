@@ -29,6 +29,11 @@ One persistent worker label covers every fresh command in the session. Resource
 exposure can therefore withhold stdout/stderr and result-history publication from
 a client without clearance, then stop subsequent commands. This option is trusted
 host configuration; existing callers without it retain public-only inputs.
+For a continuing client crossing MCP processes, the optional `--identity-ledger`
+retains labels and revocation under an exclusive host lease. Explicit `finish`
+closes a local scope while retaining a resumable identity; unclean closure or a
+security/operator stop revokes it. The host must bind the same path to the same
+conversation. See [the identity contract](FLOW.md#continuing-one-identity-across-mcp-processes).
 
 Disable the client's other execution, filesystem, web and delegation tools.
 Otherwise they can bypass this adapter. The installed Grok CLI supports

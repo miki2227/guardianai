@@ -44,6 +44,7 @@ def main():
         'Session manifests are trusted host configuration with task, resources, and workers. Each worker supplies name, workspace, output, command, and resource-name array resources.\n'
         'For coding-agent MCP tools: python3 guardian_mcp.py --task "Declared task" --workspace /path/to/public-source --session /path/to/new-session --sensor /path/to/strace\n'
         'Optional --flow-manifest /path/to/trusted.json supplies resources {name: {path: absolute-host-file, labels: [label]}}, worker_clearance and client_clearance arrays. Labels persist across commands in one session; delivery exceeding client clearance is withheld and stops the session.\n'
+        'Optional --identity-ledger /private/identity/flow.json preserves labels/revocation across MCP server processes under an exclusive sidecar lock. Its parent must exist outside worker mounts. Reuse only for the same host-bound conversation with identical policy. Explicit finish:true permits clean resumption; unexpected closure revokes the identity.\n'
         'MCP clients must disable other execution tools. Only MCP-dispatched Linux commands are contained; the model transport and host harness remain trusted and external.\n'
         'Exit 77: detected violation. Exit 78: abstention. Otherwise the worker exit status is preserved.\n'
         'This archive contains the core runtime; historical research evidence is retained in the source project.\n'

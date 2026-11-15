@@ -19,7 +19,12 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/mcp-flow-runs/v1/public-client/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/identity-runs/v1/build/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+An optional host-owned identity ledger now preserves labels and revocation across
+MCP processes. The [continued index/build workflow](research/IDENTITY_RUN.md)
+verified inherited Jev inputs, exclusive ownership and stop persistence after
+restart. Binding that ledger to the actual continuing client remains the host's
+responsibility; this does not authenticate a provider conversation automatically.
 The coding-agent MCP server now accepts a trusted flow manifest and gates both
 stdout/stderr and result-history publication. The
 [actual MCP release/index workflow](research/MCP_FLOW_RUN.md) completed three Linux

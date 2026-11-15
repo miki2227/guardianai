@@ -1,5 +1,14 @@
 # Research scope and completion audit
 
+The [artifact-content run](ARTIFACT_OBSERVER_RUN.md) adds complete bounded UTF-8
+file evidence before MCP publication, with opaque binary inventory entries.
+One corrected continuing-agent command produced a useful navigation bundle;
+the prior two-command generation failure is retained. A real source export
+exercised output-budget refusal after a successful worker exit and verified
+`abstain`, MCP error status, withheld publication and next-command refusal.
+The evidence does not establish semantic rejection accuracy or cover all file
+types, encodings and stop timings. The full research goal remains active.
+
 The [protected peer run](PEER_HANDOFF_RUN.md) completed actual build/review work
 through the two existing bound conversations: four Linux commands, 17 checked
 source hashes and two kernel commits of the digest-pinned peer resource.

@@ -12,6 +12,17 @@ three verified handoffs. The public/internal MCP case withheld the prohibited
 index and refused the next command while delivering identical index bytes to
 an authorized internal client.
 
+## Generated-file observation
+
+The [artifact-observer continuation](ARTIFACT_OBSERVER_RUN.md) closes another
+specific blind spot: generated text files now reach Jev before MCP publication,
+even when stdout contains only names and sizes. The existing reviewer produced
+two files totaling 4,967 text bytes plus an opaque ZIP in one corrected command;
+its earlier size-assertion failure is retained. A real source export then exited
+zero but exceeded the observation budget: publication abstained, returned an
+error, withheld output and refused the next command. This is a coverage and
+error-reporting improvement, not a malicious-agent detection benchmark.
+
 ## Protected handoff between the existing pair
 
 The [latest paired run](PEER_HANDOFF_RUN.md) completed four Linux commands across

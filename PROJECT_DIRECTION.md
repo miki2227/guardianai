@@ -93,7 +93,9 @@ is not automatically replayed into the observer's new journal.
 
 Tool outputs are inspected before MCP delivery, but an agent can still read
 allowed files through later commands. Content checks cannot recall bytes already
-delivered. Artifacts not emitted as tool results are not automatically scanned.
+delivered. The MCP [artifact-content gate](ARTIFACTS.md) now also observes generated
+UTF-8 text before result-history publication, with file hashes and explicit opaque
+binary entries. This does not unpack archives or classify binary meaning.
 The full raw tool output remains evidence; the delivered bounded result is the
 content check's input. Chunking and bounded history can miss relationships.
 The host harness, its configuration, observer credentials and evidence directory

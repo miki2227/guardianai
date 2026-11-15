@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import signal
+import stat
 import sys
 import threading
 import time
@@ -37,6 +38,44 @@ def bounded_output(path):
     with path.open('rb') as stream:
         raw = stream.read(8193)
     return {'text': raw[:8192].decode('utf-8', errors='replace'), 'truncated': len(raw) > 8192}
+
+
+def snapshot_artifacts(output):
+    """Read completed private output without following links or special files."""
+    files, pending, entries, total = [], [output], 0, 0
+    while pending:
+        directory = pending.pop()
+        for path in sorted(directory.iterdir()):
+            entries += 1
+            if entries > 128:
+                raise ValueError('Artifact publication exceeds 128 filesystem entries')
+            info = path.lstat()
+            if stat.S_ISDIR(info.st_mode):
+                pending.append(path)
+                continue
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise ValueError('Artifact publication requires ordinary files without links')
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(descriptor, 'rb') as stream:
+                current = os.fstat(stream.fileno())
+                if not stat.S_ISREG(current.st_mode) or current.st_nlink != 1:
+                    raise ValueError('Artifact changed during snapshot')
+                raw = stream.read(16 * 1024 * 1024 - total + 1)
+            total += len(raw)
+            if total > 16 * 1024 * 1024:
+                raise ValueError('Artifact publication exceeds 16 MiB')
+            item = {'path': path.relative_to(output).as_posix(), 'bytes': len(raw),
+                    'sha256': hashlib.sha256(raw).hexdigest(), 'kind': 'opaque_binary'}
+            try:
+                text = raw.decode('utf-8')
+                if '\0' not in text:
+                    item.update(kind='utf8_text', text=text)
+            except UnicodeDecodeError:
+                pass
+            files.append(item)
+            if len(json.dumps(files, ensure_ascii=False).encode()) > 192 * 1024:
+                raise ValueError('Artifact content exceeds the serialized observation budget')
+    return {'files': files, 'visibility': 'Complete UTF-8 files without NUL are text evidence. Other file contents are opaque; only paths, sizes and SHA-256 are observed. Encodings, archives and binary meaning are not decoded.'}
 
 
 @contextmanager
@@ -265,6 +304,9 @@ class CodingSession:
                 decision = self.flow.transfer('coding-worker', 'coding-client', publish)
                 call.update(verdict='abstain', reason='information_flow_withheld_tool_result', information_flow=decision)
                 result = dict(call)
+            elif not self.observe_artifacts(output, evidence, call):
+                call.update(verdict='abstain', reason='content_observer_withheld_artifacts')
+                result = dict(call)
             elif not self.content_observer.observe('tool_result_before_delivery', result):
                 call.update(verdict='abstain', reason='content_observer_withheld_tool_result')
                 result = dict(call)
@@ -278,11 +320,13 @@ class CodingSession:
                 else:
                     call.update(verdict='abstain', reason='information_flow_withheld_tool_result', information_flow=decision)
                     result = dict(call)
+            if 'artifact_observation' in call:
+                result['artifact_observation'] = call['artifact_observation']
             (evidence / 'tool-result.json').write_text(json.dumps(result, indent=2) + '\n')
         except Exception as error:
             self.broker.lose_evidence()
             self.stop()
-            call['reason'] = type(error).__name__
+            call.update(verdict='abstain', reason=type(error).__name__)
             result = dict(call)
         if arguments.get('finish'):
             self.finish()
@@ -290,6 +334,27 @@ class CodingSession:
         else:
             self.save()
         return result
+
+    def observe_artifacts(self, output, evidence, call):
+        try:
+            packet = snapshot_artifacts(output)
+        except (OSError, ValueError) as error:
+            receipt = {'allowed': False, 'fault': type(error).__name__, 'detail': str(error),
+                       'observer_sequence': None, 'stage': 'artifact_snapshot'}
+            (evidence / 'artifact-inventory.json').write_text(json.dumps(receipt, indent=2) + '\n')
+            call['artifact_observation'] = receipt
+            raise
+        receipt = {'files': [{key: value for key, value in item.items() if key != 'text'}
+                             for item in packet['files']],
+                   'observer_sequence': self.content_observer.sequence if packet['files'] else None,
+                   'visibility': packet['visibility']}
+        # The raw content journal retains the exact text given to Jev; the tool
+        # response needs only coverage metadata, not a second copy of each file.
+        allowed = not packet['files'] or self.content_observer.observe('artifact_contents_before_publication', packet)
+        receipt['allowed'] = allowed
+        (evidence / 'artifact-inventory.json').write_text(json.dumps(receipt, indent=2) + '\n')
+        call['artifact_observation'] = receipt
+        return allowed
 
 
 def serve(session):

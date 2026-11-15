@@ -1,0 +1,9 @@
+[plugins]
+disabled = ["pentest-ai-agents-ca8c1ba6"]
+
+[mcp_servers.guardianai]
+command = "C:\\Windows\\System32\\wsl.exe"
+args = ["-d", "kali-linux", "--", "python3", "/home/pratz/guardianai-artifact-observer-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", "--task", "Continue useful GuardianAI source review with the current source snapshot, not earlier case clues. Create a compact source-navigation bundle for the runtime owner: /output/entrypoints.json with actual Python module entrypoints, key observer/publication/stop function locations and source SHA-256 values; /output/README.md explaining those boundaries with current line references; and /output/source-navigation.zip containing those two files. Keep their combined text below 6000 characters. Parse source with Python AST where useful; do not invent results or security guarantees. This is documentation generation, not a release rebuild. Only print filenames and byte counts, leaving full artifact text for the separate host observation gate. No tests, source modifications, protected reads, network or additional agents are needed. Use only GuardianAI MCP run, prefer two concise commands and set finish=true on the last write. Your earlier internal-baseline exposure remains; output is for the cleared internal runtime owner. Then answer without more tools.", "--workspace", "/home/pratz/guardianai-artifact-observer-v1/source", "--session", "/home/pratz/guardianai-artifact-observer-v1/session", "--command-timeout", "90", "--sensor", "/home/pratz/guardianai-tools/unpacked/usr/bin/strace", "--flow-manifest", "/home/pratz/guardianai-peer-handoff-v1/peer-internal/flow-manifest.json", "--identity-ledger", "/home/pratz/guardianai-peer-handoff-v1/identity/reviewer.json", "--expected-conversation", "01a1de3e-92fe-7b21-99dc-077973f0d60a"]
+startup_timeout_sec = 30
+tool_timeout_sec = 240
+env = { TYPESAFE_API_KEY = "${TYPESAFE_API_KEY}", WSLENV = "TYPESAFE_API_KEY/u" }

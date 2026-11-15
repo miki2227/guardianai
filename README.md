@@ -23,7 +23,14 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/peer-handoff-runs/v1/build/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/artifact-observer-runs/publication-refusal/GuardianAI-linux-x86_64.zip) is available.
+Generated UTF-8 output files now pass through an
+[artifact-content gate](ARTIFACTS.md) before publication. The
+[actual continuing-reviewer run](research/ARTIFACT_OBSERVER_RUN.md) delivered two
+observed text files and an opaque ZIP after a retained generation failure.
+A real oversized source export was withheld despite successful execution, and
+its next command was refused. The package was built by the trusted bootstrap
+and used in those guarded runs; its build itself was not live-supervised.
 The [protected peer handoff](PEER_HANDOFF.md) carries producer exposure labels
 into a digest-pinned resource for an explicitly cleared recipient. In the
 [real paired build/review run](research/PEER_HANDOFF_RUN.md), the two existing

@@ -74,6 +74,12 @@ to `/output`. This preserves useful state between tool calls without changing th
 public-input policy. Each stdout/stderr response contains at most 8 KiB and an
 explicit truncation flag; full output remains in supervisor evidence.
 
+Generated text files now pass through a separate
+[artifact-content gate](ARTIFACTS.md) before result-history publication. Saved
+inventories link file hashes to the actual Jev content decision. Nontext files
+are inventoried as opaque binaries; their meaning is not classified. Unsupported
+file types or exceeded snapshot budgets abstain and stop publication.
+
 One broker stop state and bounded session observer span the calls. A violation or
 monitoring failure closes that authority for later commands. Restarting the MCP
 server with the same session path fails; provisioning a new scope is a trusted

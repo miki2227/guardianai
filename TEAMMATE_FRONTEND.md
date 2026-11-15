@@ -122,6 +122,16 @@ the completed build/review phases, not the failed controller as a passing run.
 See `research/PEER_HANDOFF_RUN.md`; do not infer a covert convention from this
 ordinary handoff or merge native and Windows clocks as one causal timeline.
 
+The generated-artifact dataset is `research/artifact-observer-runs/audit.json`.
+In v2, `artifact_observation` joins `step-001/artifact-inventory.json` to the
+`_content` content/decision sequence. Show full-text coverage separately from
+`opaque_binary` entries; hashes do not certify binary meaning. Empty outputs
+have a null observer sequence and no content decision. Retain the v1 task
+failure (ordinary exit 1, no files) separately from the completed v2 bundle.
+In `publication-refusal/run`, execution exited 0 but artifact publication
+abstained with MCP `isError: true`; the next command had no worker. See
+`research/ARTIFACT_OBSERVER_RUN.md` and `ARTIFACTS.md` for fixed budget meanings.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

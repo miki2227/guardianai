@@ -1,0 +1,49 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "python3",
+    "-c",
+    "import ast,hashlib,pathlib\nroot=pathlib.Path('/workspace/source')\nkeys=('observe','stop','publish','handoff','release','main','review')\nfor p in sorted(root.rglob('*')):\n if p.suffix not in {'.py','.c'} or 'incoming' in p.parts: continue\n b=p.read_bytes(); rel=p.relative_to(root).as_posix()\n print(rel, len(b), hashlib.sha256(b).hexdigest()[:16])\n if p.suffix!='.py':\n  continue\n t=ast.parse(b.decode())\n for n in t.body:\n  if isinstance(n, ast.If):\n   te=n.test\n   if isinstance(te, ast.Compare) and any(isinstance(x, ast.Constant) and x.value=='__main__' for x in te.comparators):\n    print(' ENTRY', rel, n.lineno)\n  if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef,ast.ClassDef)) and any(k in n.name.lower() for k in keys):\n   print(' DEF', n.name, rel, n.lineno)\n   if isinstance(n, ast.ClassDef):\n    for s in n.body:\n     if isinstance(s,(ast.FunctionDef,ast.AsyncFunctionDef)) and any(k in s.name.lower() for k in keys):\n      print('  M', s.name, s.lineno)\n"
+  ],
+  "verdict": "no_observed_violation",
+  "accepted_monotonic": 25.335811081,
+  "client_binding": {
+    "status": "verified",
+    "expected_conversation": "01a1de3e-92fe-7b21-99dc-077973f0d60a"
+  },
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "agent_observer.py 5894 d48fee42589fa406\n DEF AgentObserver agent_observer.py 25\n  M observe 36\nbuild_release.py 5977 ca6c4ddc39d72922\n DEF main build_release.py 11\n ENTRY build_release.py 72\ndecision_review.py 1526 4690f5b337863e93\n DEF review_candidate decision_review.py 10\nevidence_memory.py 4568 dc7e41395c6f61d7\nflow_policy.py 6761 97e06d31a63f1822\nguarded_agent.py 5990 937c265c0da53ab1\n DEF main guarded_agent.py 91\n ENTRY guarded_agent.py 122\nguarded_handoff.py 3066 dba2d71c3d0edd8e\nguarded_session.py 6435 486b64b34d1de219\n ENTRY guarded_session.py 99\nguardian.py 5841 a7e4e23368a28d1d\n DEF main guardian.py 111\n ENTRY guardian.py 134\nguardian_mcp.py 24473 f06973084dc8cc27\n DEF main guardian_mcp.py 406\n ENTRY guardian_mcp.py 428\nmonitor.py 10014 671fb15e349dde1f\nnative/notify_launch.c 4616 75aab0fb263429ed\npeer_handoff.py 6214 e36695d860fc737f\n DEF main peer_handoff.py 91\n ENTRY peer_handoff.py 101\nrelease_broker.py 9134 6bab29a10c799d73\n DEF ScopeStop release_broker.py 17\n DEF judge_release release_broker.py 31\n DEF ReleaseBroker release_broker.py 37\nruntime_supervisor.py 21735 d9470bbf68205b0a\n DEF observe runtime_supervisor.py 27\n ENTRY runtime_supervisor.py 375\nseccomp_gate.py 11019 c51a499929a7f8b0\nsession_observer.py 8016 176b7871602e3da9\n DEF SessionObserver session_observer.py 14\n  M observe 101\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001",
+  "information_flow": {
+    "sender": "coding-worker",
+    "recipient": "coding-client",
+    "sender_labels": [
+      "internal-baseline"
+    ],
+    "recipient_clearance": [
+      "internal-baseline"
+    ],
+    "scope_stopped": false,
+    "permitted": true,
+    "scope": "Trusted confidentiality metadata, not proof of intent. All sender output inherits possible exposure labels; no semantic declassification.",
+    "delivered": true,
+    "recipient_labels": [
+      "internal-baseline"
+    ],
+    "stage": "committed"
+  },
+  "artifact_observation": {
+    "files": [],
+    "observer_sequence": null,
+    "visibility": "Complete UTF-8 files without NUL are text evidence. Other file contents are opaque; only paths, sizes and SHA-256 are observed. Encodings, archives and binary meaning are not decoded.",
+    "allowed": true
+  }
+}

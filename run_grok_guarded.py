@@ -15,6 +15,7 @@ def main():
     for name in ('grok', 'client', 'prompt', 'report', 'evidence'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--resume', help='Resume an existing Grok conversation under a new GuardianAI scope')
+    parser.add_argument('--history-root', help='Trusted evidence root containing this and earlier launcher evidence; never an agent mount')
     args = parser.parse_args()
     evidence = Path(args.evidence)
     evidence.mkdir(parents=True, exist_ok=False)
@@ -58,7 +59,7 @@ def main():
                 'earlier_calls_omitted': max(0, len(state['calls']) - 4)}
 
     observer = AgentObserver(Path(args.prompt).read_text(), evidence / 'agent-content',
-                             context=execution_context, stop=stop_scope)
+                             context=execution_context, stop=stop_scope, memory_root=args.history_root)
     if not observer.observe('host_supplied_prompt', Path(args.prompt).read_text()):
         (evidence / 'launcher.json').write_text(json.dumps({'launched': False, 'reason': 'prompt_observer_stop'}) + '\n')
         return 77

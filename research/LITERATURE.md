@@ -97,3 +97,19 @@ an individual informational proposal, not an adopted standard or vendor validati
 See [KERNEL_GATE_REPORT.md](KERNEL_GATE_REPORT.md) for the working boundary, retained
 evidence, and narrower empirical questions. No comparative performance or journal
 novelty claim follows from this implementation alone.
+
+## Retained-evidence retrieval update, 2026-11-15
+
+[The Arbiter Agent](https://arxiv.org/abs/2606.10747) already treats continual
+auditing as a limited-inspection problem. [Local monitors and compositional harm](https://arxiv.org/abs/2607.11751)
+show that useful evidence can be absent from a monitor's view, while full traces
+alone need not expose the harmful representation. These motivate recovering older
+related records, not a claim that retrieval solves covert communication.
+
+The implemented undergraduate contribution is an integration: a standard
+[SQLite FTS5](https://www.sqlite.org/fts5.html) index supplies bounded older
+excerpts to the existing Jev/OS supervisor, with verified source hashes, exact
+character spans and explicit match/omission counts. The
+[actual archive and live-build report](HISTORY_RETRIEVAL_RUN.md) verifies this
+path. Search, persistent memory and retrieval are not claimed as new algorithms;
+better detection and context-exhaustion behavior remain unmeasured.

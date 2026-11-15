@@ -19,7 +19,11 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/paired-workflow-runs/v2/build/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/history-retrieval-runs/v1/build-run/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+The [retained-evidence retrieval feature](HISTORY.md) recovers older related
+records with verified source spans under the same context budget. It ran during
+a [real release build](research/HISTORY_RETRIEVAL_RUN.md), without launching more
+Grok subjects. The completed v2 package and historical failures remain retained.
 The [corrected two-agent workflow](research/OBSERVER_CORRECTIONS_RUN.md) completed
 all four phases, with 15 successful commands, three verified handoffs and four
 closed tool sessions. It adds contextual alert review and acknowledged stopping;
@@ -113,6 +117,7 @@ Use [reproduction instructions](research/REPRODUCE.md) to inspect the raw traces
 or run the study. The report preserves negative results and limits novelty claims.
 
 Requires Python 3.10+, Linux (native or WSL2), Bubblewrap, and user namespaces.
+The history-enabled observers also require Python SQLite with FTS5 support.
 Set `TYPESAFE_API_KEY` in the trusted supervisor environment. Never put credentials
 in the task directory. Jev evaluates task text and command arguments remotely.
 

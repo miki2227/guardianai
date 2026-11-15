@@ -1,5 +1,11 @@
 # Research scope and completion audit
 
+The [history-retrieval run](HISTORY_RETRIEVAL_RUN.md) adds verified older source
+excerpts to actual Jev inputs within the same state budget. Its archive uses real
+paired-run records, and its live release build completed without additional Grok
+subjects. This is a monitoring-visibility feature, not evidence of context
+exhaustion or a validated covert convention.
+
 **15 November user clarification:** the completion target is now an undergraduate
 systems project based on attributed recent work, not a Q1 novelty requirement.
 The [current direction](../PROJECT_DIRECTION.md) supersedes that earlier priority.

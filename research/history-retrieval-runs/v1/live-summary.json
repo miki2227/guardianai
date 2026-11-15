@@ -1,0 +1,435 @@
+{
+  "commands": [
+    {
+      "execution": "step-001",
+      "argv": [
+        "/usr/bin/python3",
+        "/workspace/source/build_release.py",
+        "--output",
+        "/output"
+      ],
+      "verdict": "no_observed_violation",
+      "returncode": 0,
+      "evidence_status": "recorded"
+    },
+    {
+      "execution": "step-002",
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "from pathlib import Path; import json; p=Path('/workspace/results/step-001/guardianai-linux-x86_64'); print((p/'evidence_memory.py').read_text()); m=json.loads((p/'manifest.json').read_text()); print(json.dumps({k:m[k] for k in ('native_policy','launch_guard_version')}))"
+      ],
+      "verdict": "no_observed_violation",
+      "returncode": 0,
+      "evidence_status": "recorded"
+    }
+  ],
+  "closed": true,
+  "build": {
+    "archive": "GuardianAI-linux-x86_64.zip",
+    "sha256": "a6b0e41871239c2b81d72f47f65351a41111196525106b4d09f775e5d17a8e69",
+    "bytes": 44047,
+    "native_policy": 3,
+    "launch_guard_version": 1,
+    "file_count": 17
+  },
+  "runtime_observer_inputs": 49,
+  "inputs_with_retrieval": 40,
+  "verified_retrieved_spans": 117,
+  "maximum_state_bytes": 20095,
+  "observations": [
+    {
+      "input": "input-0.json",
+      "indexed_records": 0,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 7628
+    },
+    {
+      "input": "input-1.json",
+      "indexed_records": 1,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 13401
+    },
+    {
+      "input": "input-2.json",
+      "indexed_records": 2,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 13984
+    },
+    {
+      "input": "input-3.json",
+      "indexed_records": 3,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 13064
+    },
+    {
+      "input": "input-4.json",
+      "indexed_records": 4,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 14587
+    },
+    {
+      "input": "input-5.json",
+      "indexed_records": 5,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 15720
+    },
+    {
+      "input": "input-6.json",
+      "indexed_records": 6,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 13707
+    },
+    {
+      "input": "input-7.json",
+      "indexed_records": 7,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 13745
+    },
+    {
+      "input": "input-8.json",
+      "indexed_records": 8,
+      "matched_records": 0,
+      "returned": 0,
+      "matched_records_omitted": 0,
+      "state_bytes": 13745
+    },
+    {
+      "input": "input-9.json",
+      "indexed_records": 9,
+      "matched_records": 1,
+      "returned": 1,
+      "matched_records_omitted": 0,
+      "state_bytes": 15756
+    },
+    {
+      "input": "input-10.json",
+      "indexed_records": 10,
+      "matched_records": 2,
+      "returned": 2,
+      "matched_records_omitted": 0,
+      "state_bytes": 16944
+    },
+    {
+      "input": "input-11.json",
+      "indexed_records": 11,
+      "matched_records": 3,
+      "returned": 3,
+      "matched_records_omitted": 0,
+      "state_bytes": 18325
+    },
+    {
+      "input": "input-12.json",
+      "indexed_records": 12,
+      "matched_records": 4,
+      "returned": 3,
+      "matched_records_omitted": 1,
+      "state_bytes": 19455
+    },
+    {
+      "input": "input-13.json",
+      "indexed_records": 13,
+      "matched_records": 5,
+      "returned": 3,
+      "matched_records_omitted": 2,
+      "state_bytes": 19686
+    },
+    {
+      "input": "input-14.json",
+      "indexed_records": 14,
+      "matched_records": 6,
+      "returned": 3,
+      "matched_records_omitted": 3,
+      "state_bytes": 19274
+    },
+    {
+      "input": "input-15.json",
+      "indexed_records": 15,
+      "matched_records": 7,
+      "returned": 3,
+      "matched_records_omitted": 4,
+      "state_bytes": 19105
+    },
+    {
+      "input": "input-16.json",
+      "indexed_records": 16,
+      "matched_records": 8,
+      "returned": 3,
+      "matched_records_omitted": 5,
+      "state_bytes": 18844
+    },
+    {
+      "input": "input-17.json",
+      "indexed_records": 17,
+      "matched_records": 9,
+      "returned": 3,
+      "matched_records_omitted": 6,
+      "state_bytes": 18930
+    },
+    {
+      "input": "input-18.json",
+      "indexed_records": 18,
+      "matched_records": 10,
+      "returned": 3,
+      "matched_records_omitted": 7,
+      "state_bytes": 18907
+    },
+    {
+      "input": "input-19.json",
+      "indexed_records": 19,
+      "matched_records": 11,
+      "returned": 3,
+      "matched_records_omitted": 8,
+      "state_bytes": 18967
+    },
+    {
+      "input": "input-20.json",
+      "indexed_records": 20,
+      "matched_records": 12,
+      "returned": 3,
+      "matched_records_omitted": 9,
+      "state_bytes": 19228
+    },
+    {
+      "input": "input-21.json",
+      "indexed_records": 21,
+      "matched_records": 13,
+      "returned": 3,
+      "matched_records_omitted": 10,
+      "state_bytes": 19221
+    },
+    {
+      "input": "input-22.json",
+      "indexed_records": 22,
+      "matched_records": 14,
+      "returned": 3,
+      "matched_records_omitted": 11,
+      "state_bytes": 18925
+    },
+    {
+      "input": "input-23.json",
+      "indexed_records": 23,
+      "matched_records": 15,
+      "returned": 3,
+      "matched_records_omitted": 12,
+      "state_bytes": 19012
+    },
+    {
+      "input": "input-24.json",
+      "indexed_records": 24,
+      "matched_records": 16,
+      "returned": 3,
+      "matched_records_omitted": 13,
+      "state_bytes": 19070
+    },
+    {
+      "input": "input-25.json",
+      "indexed_records": 25,
+      "matched_records": 17,
+      "returned": 3,
+      "matched_records_omitted": 14,
+      "state_bytes": 19920
+    },
+    {
+      "input": "input-26.json",
+      "indexed_records": 26,
+      "matched_records": 18,
+      "returned": 3,
+      "matched_records_omitted": 15,
+      "state_bytes": 16493
+    },
+    {
+      "input": "input-27.json",
+      "indexed_records": 27,
+      "matched_records": 19,
+      "returned": 3,
+      "matched_records_omitted": 16,
+      "state_bytes": 12624
+    },
+    {
+      "input": "input-28.json",
+      "indexed_records": 28,
+      "matched_records": 20,
+      "returned": 3,
+      "matched_records_omitted": 17,
+      "state_bytes": 19572
+    },
+    {
+      "input": "input-29.json",
+      "indexed_records": 29,
+      "matched_records": 21,
+      "returned": 3,
+      "matched_records_omitted": 18,
+      "state_bytes": 19526
+    },
+    {
+      "input": "input-30.json",
+      "indexed_records": 30,
+      "matched_records": 22,
+      "returned": 3,
+      "matched_records_omitted": 19,
+      "state_bytes": 19644
+    },
+    {
+      "input": "input-31.json",
+      "indexed_records": 31,
+      "matched_records": 23,
+      "returned": 3,
+      "matched_records_omitted": 20,
+      "state_bytes": 20049
+    },
+    {
+      "input": "input-32.json",
+      "indexed_records": 32,
+      "matched_records": 24,
+      "returned": 3,
+      "matched_records_omitted": 21,
+      "state_bytes": 19795
+    },
+    {
+      "input": "input-33.json",
+      "indexed_records": 33,
+      "matched_records": 25,
+      "returned": 3,
+      "matched_records_omitted": 22,
+      "state_bytes": 18680
+    },
+    {
+      "input": "input-34.json",
+      "indexed_records": 34,
+      "matched_records": 26,
+      "returned": 3,
+      "matched_records_omitted": 23,
+      "state_bytes": 19317
+    },
+    {
+      "input": "input-35.json",
+      "indexed_records": 35,
+      "matched_records": 27,
+      "returned": 3,
+      "matched_records_omitted": 24,
+      "state_bytes": 19186
+    },
+    {
+      "input": "input-36.json",
+      "indexed_records": 36,
+      "matched_records": 28,
+      "returned": 3,
+      "matched_records_omitted": 25,
+      "state_bytes": 19613
+    },
+    {
+      "input": "input-37.json",
+      "indexed_records": 37,
+      "matched_records": 29,
+      "returned": 3,
+      "matched_records_omitted": 26,
+      "state_bytes": 18572
+    },
+    {
+      "input": "input-38.json",
+      "indexed_records": 38,
+      "matched_records": 30,
+      "returned": 3,
+      "matched_records_omitted": 27,
+      "state_bytes": 20095
+    },
+    {
+      "input": "input-39.json",
+      "indexed_records": 39,
+      "matched_records": 31,
+      "returned": 3,
+      "matched_records_omitted": 28,
+      "state_bytes": 20017
+    },
+    {
+      "input": "input-40.json",
+      "indexed_records": 40,
+      "matched_records": 32,
+      "returned": 3,
+      "matched_records_omitted": 29,
+      "state_bytes": 19749
+    },
+    {
+      "input": "input-41.json",
+      "indexed_records": 41,
+      "matched_records": 33,
+      "returned": 3,
+      "matched_records_omitted": 30,
+      "state_bytes": 19748
+    },
+    {
+      "input": "input-42.json",
+      "indexed_records": 42,
+      "matched_records": 34,
+      "returned": 3,
+      "matched_records_omitted": 31,
+      "state_bytes": 19381
+    },
+    {
+      "input": "input-43.json",
+      "indexed_records": 43,
+      "matched_records": 35,
+      "returned": 3,
+      "matched_records_omitted": 32,
+      "state_bytes": 19607
+    },
+    {
+      "input": "input-44.json",
+      "indexed_records": 44,
+      "matched_records": 36,
+      "returned": 3,
+      "matched_records_omitted": 33,
+      "state_bytes": 19210
+    },
+    {
+      "input": "input-45.json",
+      "indexed_records": 45,
+      "matched_records": 37,
+      "returned": 3,
+      "matched_records_omitted": 34,
+      "state_bytes": 19500
+    },
+    {
+      "input": "input-46.json",
+      "indexed_records": 46,
+      "matched_records": 38,
+      "returned": 3,
+      "matched_records_omitted": 35,
+      "state_bytes": 12750
+    },
+    {
+      "input": "input-47.json",
+      "indexed_records": 47,
+      "matched_records": 39,
+      "returned": 3,
+      "matched_records_omitted": 36,
+      "state_bytes": 12724
+    },
+    {
+      "input": "input-48.json",
+      "indexed_records": 48,
+      "matched_records": 40,
+      "returned": 3,
+      "matched_records_omitted": 37,
+      "state_bytes": 12619
+    }
+  ],
+  "scope": "Live Jev build and inspection. Retrieved native states precede the last-eight-input window, with source hashes and exact spans verified. No detection improvement, context saturation or complete-history visibility claim. No new Grok agents."
+}

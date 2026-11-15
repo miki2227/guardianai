@@ -59,6 +59,12 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
    confirmation scores separately. A successful finish has `scope_stopped: true`
    and `closed: true`; that is not automatically a threat. Broker acknowledgement,
    namespace kill, worker exit and client exit remain distinct observations.
+7. `research/history-retrieval-runs/v1/live-summary.json` and the saved
+   `history_retrieval` inputs: older source excerpts, SHA-256 receipts, character
+   offsets and omitted-match counts. Resolve a hit from the saved input's folder,
+   then `root_relative_to_input`, then `source`. See `HISTORY.md`. Display the
+   precomputed JSON packets without needing a browser SQLite engine. A matching
+   hash verifies the recorded text, not the truth of an old agent claim.
 
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,

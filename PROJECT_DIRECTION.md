@@ -106,3 +106,9 @@ of token usage. A suspected covert convention still needs recurrent behavior and
 task-preserving counterfactual evidence; a suspicion score alone is insufficient.
 The existing short social pilot found no validated convention. Training is not
 part of this milestone.
+
+The [retained-evidence retrieval feature](HISTORY.md) adds older source excerpts
+to bounded observer inputs, with exact hashes and omission counts. The
+[live build and archive report](research/HISTORY_RETRIEVAL_RUN.md) verifies that
+those older records were actually supplied. It does not establish agent context
+exhaustion or detection of secret communication.

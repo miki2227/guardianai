@@ -8,6 +8,7 @@ import threading
 
 from guardian import POLICY, query_jev
 from decision_review import review_candidate
+from evidence_memory import EvidenceMemory, fit_history
 
 
 class SessionObserver:
@@ -20,6 +21,8 @@ class SessionObserver:
         self.recent = deque(maxlen=32)
         self.counts = {}
         self.sequence = 0
+        self.memory = EvidenceMemory(self.evidence)
+        self.recent_inputs = deque(maxlen=8)
 
     def _context(self):
         with self.broker.lock:
@@ -53,6 +56,9 @@ class SessionObserver:
     def _evaluate(self, state, question):
         with self.lock:
             state['session_context'] = self._context()
+            query = state.get('current_event_batch', {key: state[key] for key in ('resource_id', 'principal', 'operation') if key in state})
+            state['history_retrieval'] = self.memory.lookup(json.dumps(query), exclude=self.recent_inputs)
+            fit_history(state)
             raw = json.dumps(state).encode()
             if len(raw) > 20 * 1024:
                 raise RuntimeError('Shared observer request exceeds its byte budget')
@@ -61,6 +67,8 @@ class SessionObserver:
             name = f'input-{sequence}.json'
             (self.evidence / name).write_bytes(raw)
             digest = hashlib.sha256(raw).hexdigest()
+            self.memory.record(self.evidence / name, 'runtime_batch' if 'current_event_batch' in state else 'resource_authorization')
+            self.recent_inputs.append(self.evidence / name)
         receipt = {'input_sha256': digest}
         try:
             result = query_jev(state, {'violation': {'type': 'noul', 'instructions': question}})

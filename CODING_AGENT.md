@@ -133,3 +133,10 @@ acknowledgement alone does not assert that every worker has exited; runtime
 actions and process evidence establish that separately. The
 [correction run](research/OBSERVER_CORRECTIONS_RUN.md) records normal completion,
 actual build cancellation and the original failures unchanged.
+
+The current observers also [retrieve older retained evidence](HISTORY.md) through
+SQLite FTS5. Saved `history_retrieval` fields expose source hashes, character spans
+and omitted-match counts. Per-scope indexes are the default. A trusted launcher
+can pass `--history-root` for an existing dedicated parent of its current and
+earlier evidence directories; source files must remain unchanged and available.
+This does not reconstruct unexposed model history or change current grants.

@@ -1,0 +1,53 @@
+{
+  "current_content": "{\n  \"verdict\": \"documentation_accepted_archive_unverified\",\n  \"scope\": \"Evidence-bounded review of the builder response and operator guide against public source and the prior v2 review. Not a universal safety certification and not a verification of packaged bytes.\",\n  \"checked\": [\n    \"Receipt hashes match response.md and operator-guide.md\",\n    \"Builder does not claim a rebuild, a recomputed archive digest, zip membership, launcher bytes, or a live --abi run\",\n    \"Reported figures remain zip sha256 b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026, 41744 bytes, native_policy 3, launch_guard_version 1, file_count 16, labeled as build stdout\",\n    \"build_release.py still requires policy_version 3 and launch_guard_version 1 and sets file_count to len(files_sha256)+1, omitting manifest.json from the map\",\n    \"Operator guide matches the RUNNING.txt text embedded in build_release.py and the corresponding gates in guardian.py, guarded_agent.py, guarded_session.py, release_broker.py, monitor.py, runtime_supervisor.py, seccomp_gate.py, and guardian_mcp.py\",\n    \"Guide explicitly does not confirm the packaged binary\"\n  ],\n  \"carried_from_prior_review\": [\n    \"13 public source hashes matched the then-supplied manifest, including agent_observer.py and decision_review.py\",\n    \"Supplied RUNNING.txt was 1952 bytes and sha256 0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab\",\n    \"Those files were not in this incoming set, so those hashes were not recomputed here\"\n  ],\n  \"unresolved\": [\n    \"Archive bytes, zip member names, digest b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026, and size 41744\",\n    \"native/notify-launch bytes and manifest hash 91491b52b824d340758e48c73804d09bcd789553b1a2373c3ed140af4786def0\",\n    \"Live --abi output from the packaged launcher\"\n  ],\n  \"release_action\": \"Accept the operator documentation. Withhold acceptance of GuardianAI-linux-x86_64.zip until the archive and compiled launcher are supplied and checked.\"\n}\n",
+  "history_retrieval": {
+    "indexed_records": 153,
+    "query_terms": [
+      "0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab",
+      "91491b52b824d340758e48c73804d09bcd789553b1a2373c3ed140af4786def0",
+      "b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026",
+      "documentation_accepted_archive_unverified",
+      "carried_from_prior_review",
+      "launch_guard_version",
+      "runtime_supervisor",
+      "decision_review",
+      "guarded_session",
+      "agent_observer",
+      "policy_version",
+      "release_action",
+      "release_broker",
+      "build_release",
+      "certification",
+      "corresponding"
+    ],
+    "matched_records": 97,
+    "matched_records_omitted": 94,
+    "hits": [
+      {
+        "source": "stored-sources\\handoff-observer-continuation\\content-1.json",
+        "sha256": "85bc0dd4b7b8fbcaa1c0aee3956f1c5d9bae5659ea7b31da1bee62cd7650a16b",
+        "kind": "agent_handoff",
+        "start_character": 1356,
+        "total_characters": 9588,
+        "excerpt": "p_gate.py, session_observer.py. decision_review.py is d2da3e0f30e7f0484410e0f8e44df703aa2303fd58927d6e79078540f431e195. agent_observer.py is 1e6ff4a8f03368125e09ee0334f1ee78defb78b93cde2308a2d03c620d49d0ba.\\n\\nIncoming RUNNING.txt is 1952 bytes and sha256 0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab, equal to the manifest entry. It is not in the public source root.\\n\\nfile_count 16 matches build_release.py as source logic: the hash map is built before manifest.json is written, and file_count is len(files_sha256)+1. The copy list includes agent_observer.py and decision_review.py. Fifteen hashed names plus the manifest is 16. The zip was not opened, so membership is not confirmed.\\n\\nnotify_launch.c --abi prints policy_version 3 and launch_guard_version 1. build_release.py and seccomp_gate.py reject any other pair. The packaged binary was not executed.\\n\\nguardian_mcp.py sets self.content_observer = AgentObserver. It calls observe('proposed_tool_argv', argv) before execution (content_observe"
+      },
+      {
+        "source": "stored-sources\\resolve-recovery\\session\\evidence\\_content\\content-3.json",
+        "sha256": "e7dfa0579014e173459b6ad598ddaf22c8ab682bf59e7c206494ebda2220e5f9",
+        "kind": "tool_content",
+        "start_character": 518,
+        "total_characters": 6101,
+        "excerpt": "n, manifest.json, handoff.md, and RUNNING.txt.\\n\\nChecked against this handoff, not an older package: files_sha256 has 15 names. Thirteen public files match, including decision_review.py and agent_observer.py. Incoming RUNNING.txt is 1952 bytes and sha256 0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab, same as the manifest. native_policy 3 and launch_guard_version 1 match the report, manifest, notify_launch.c, the build ABI gate, and seccomp_gate.py. file_count 16 matches len(files_sha256)+1 in build_release.py. guardian_mcp.py still stops on content_observer before execution and can withhold the tool result.\\n\\nUnverified: archive sha256 b4478b65a3610cb756b2d929d6795d7dd52e7a5babe9e9d517e5933210a8c026, size 41744, zip members, and native/notify-launch 91491b52b824d340758e48c73804d09bcd789553b1a2373c3ed140af4786def0. The zip and launcher were not supplied. --abi was not run.\\n\\nPlease attach the archive or a member listing plus the raw digest, and the notify-launch bytes. Keep the note that "
+      },
+      {
+        "source": "stored-sources\\review-recovery\\session\\evidence\\_content\\content-6.json",
+        "sha256": "f1b26243180c691bfee6b1cee9ed200124a097c4474097758a7d8707b5b7c5ec",
+        "kind": "tool_content",
+        "start_character": 1740,
+        "total_characters": 5102,
+        "excerpt": "p_gate.py, session_observer.py. decision_review.py is d2da3e0f30e7f0484410e0f8e44df703aa2303fd58927d6e79078540f431e195. agent_observer.py is 1e6ff4a8f03368125e09ee0334f1ee78defb78b93cde2308a2d03c620d49d0ba.\\n\\nIncoming RUNNING.txt is 1952 bytes and sha256 0571b1701c1d86a9de37ee14ac7495cc8506a5e0d23323b04bb30237085e40ab, equal to the manifest entry. It is not in the public source root.\\n\\nfile_count 16 matches build_release.py as source logic: the hash map is built before manifest.json is written, and file_count is len(files_sha256)+1. The copy list includes agent_observer.py and decision_review.py. Fifteen hashed names plus the manifest is 16. The zip was not opened, so membership is not confirmed.\\n\\nnotify_launch.c --abi prints policy_version 3 and launch_guard_version 1. build_release.py and seccomp_gate.py reject any other pair. The packaged binary was not executed.\\n\\nguardian_mcp.py sets self.content_observer = AgentObserver. It calls observe('proposed_tool_argv', argv) before execution (content_observe"
+      }
+    ],
+    "scope": "Lexical retrieval of earlier evidence, not semantic completeness, current permissions or proof of intent. Excerpts are copied from verified source files; omitted context remains on disk."
+  }
+}

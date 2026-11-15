@@ -4,11 +4,13 @@ import hashlib
 import json
 
 from guardian import query_jev
+from evidence_memory import fit_history
 
 
 def review_candidate(state, evidence, name):
     state = copy.deepcopy(state)
     state['decision_stage'] = 'Context review of a candidate semantic alert; original numerical scores are withheld.'
+    fit_history(state)
     while len(json.dumps(state).encode()) > 20 * 1024 and state.get('recent_content'):
         state['recent_content'].pop(0)
     raw = json.dumps(state).encode()

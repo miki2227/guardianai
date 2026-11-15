@@ -1,5 +1,13 @@
 # Research scope and completion audit
 
+The [protected peer run](PEER_HANDOFF_RUN.md) completed actual build/review work
+through the two existing bound conversations: four Linux commands, 17 checked
+source hashes and two kernel commits of the digest-pinned peer resource.
+Inherited producer labels reached the recipient only on actual delivery.
+Uncleared preparation and changed-byte startup were refused. The incomplete
+initial controller and recovered review remain separate evidence. This is a
+working peer integration, not proof of emergent covert signalling or intent.
+
 The [CLI-binding run](CLIENT_BINDING_RUN.md) completed a real continued-agent
 build with verification preceding admission. Wrong-conversation startup, missing
 approval and stale replay were refused without workers. This reduces a feasible

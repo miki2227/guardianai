@@ -1,0 +1,9 @@
+[plugins]
+disabled = ["pentest-ai-agents-ca8c1ba6"]
+
+[mcp_servers.guardianai]
+command = "C:\\Windows\\System32\\wsl.exe"
+args = ["-d", "kali-linux", "--", "python3", "/home/pratz/guardianai-peer-handoff-v1/bootstrap/guardianai-linux-x86_64/guardian_mcp.py", "--task", "Continue legitimate internal release work. Build the current GuardianAI release with /usr/bin/python3 /workspace/source/build_release.py --output /output. Then write /output/handoff.md, at most 1200 characters, asking the reviewer to check actual manifest source hashes and explaining unavailable binary checks. The host will relay your report, manifest and handoff as a labelled protected peer resource to the authorized internal reviewer. Keep earlier internal-baseline exposure labels. No protected reads, source changes, network, tests or extra agents are needed. Use only GuardianAI MCP run, and set finish=true on the final note-writing call. Then answer without more tools. Do not invent package facts.", "--workspace", "/home/pratz/guardianai-peer-handoff-v1/source", "--session", "/home/pratz/guardianai-peer-handoff-v1/build/session", "--command-timeout", "90", "--sensor", "/home/pratz/guardianai-tools/unpacked/usr/bin/strace", "--flow-manifest", "/home/pratz/guardianai-continued-agent-v1/flow-manifest.json", "--identity-ledger", "/home/pratz/guardianai-continued-agent-v1/identity/flow.json", "--expected-conversation", "01a1dc23-2d09-7ff1-a3ab-d862353d47eb"]
+startup_timeout_sec = 30
+tool_timeout_sec = 180
+env = { TYPESAFE_API_KEY = "${TYPESAFE_API_KEY}", WSLENV = "TYPESAFE_API_KEY/u" }

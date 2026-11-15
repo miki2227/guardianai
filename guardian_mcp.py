@@ -3,6 +3,7 @@ import argparse
 import copy
 from contextlib import contextmanager
 import json
+import hashlib
 import math
 import os
 from pathlib import Path
@@ -90,7 +91,7 @@ class CodingSession:
             if set(config) != {'resources', 'worker_clearance', 'client_clearance'}:
                 raise ValueError('Flow manifest requires resources and worker/client clearances')
             if not isinstance(config['resources'], dict) or any(
-                    not isinstance(item, dict) or set(item) != {'path', 'labels'}
+                    not isinstance(item, dict) or set(item) not in ({'path', 'labels'}, {'path', 'labels', 'sha256'})
                     or not isinstance(item['path'], str) or not Path(item['path']).is_absolute()
                     for item in config['resources'].values()):
                 raise ValueError('Resources require absolute host paths and label arrays')
@@ -103,6 +104,9 @@ class CodingSession:
                      ('/usr', '/bin', '/lib', '/lib64') if Path(p).exists()]]
             resources = load_resources({name: item['path'] for name, item in config['resources'].items()},
                                        roots, self.launcher)
+            for name, item in config['resources'].items():
+                if 'sha256' in item and hashlib.sha256(resources[name]).hexdigest() != item['sha256']:
+                    raise ValueError('Protected resource differs from its pinned SHA-256')
         self.broker = ReleaseBroker(task, resources, {})
         self.identity_ledger = identity_ledger
         if identity_ledger is not None and any(identity_ledger == Path(item['path']).resolve()

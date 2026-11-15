@@ -32,6 +32,11 @@ The contained commands receive the existing cleared environment.
 
 For declared protected inputs, add `--flow-manifest /absolute/host/flow.json`.
 [FLOW.md](FLOW.md) defines its resource paths, labels and worker/client clearances.
+For a continuing peer's published text, [PEER_HANDOFF.md](PEER_HANDOFF.md) prepares
+a resource with the producer's accumulated labels and a pinned byte digest.
+An optional resource `sha256` is checked against the loaded snapshot before a
+worker or identity session starts. The [paired run](research/PEER_HANDOFF_RUN.md)
+records actual delivery to the second bound conversation.
 One persistent worker label covers every fresh command in the session. Resource
 exposure can therefore withhold stdout/stderr and result-history publication from
 a client without clearance, then stop subsequent commands. This option is trusted

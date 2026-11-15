@@ -1,0 +1,5 @@
+# Reviewer handoff
+
+step-001 build_release.py returned 0, verdict no_observed_violation, evidence recorded. client_binding status verified. stdout report: GuardianAI-linux-x86_64.zip, sha256 db7af69c9c9b40479f03d7cfcd1c529c61d1bc63014a4b48b52ee727d78dcd43, 52961 bytes, native_policy 3, launch_guard_version 1, file_count 20. I did not recompute that archive digest.
+
+Please check files_sha256 for these source names against the public tree: agent_observer.py, build_release.py, decision_review.py, evidence_memory.py, flow_policy.py, guarded_agent.py, guarded_handoff.py, guarded_session.py, guardian.py, guardian_mcp.py, monitor.py, native/notify_launch.c, peer_handoff.py, release_broker.py, runtime_supervisor.py, seccomp_gate.py, session_observer.py. Manifest reports native_policy 3 and launch_guard_version 1. Hash map has 19 names. native/notify-launch is in the map; I did not run --abi or inspect the binary bytes. The zip was not opened, so membership is unchecked. internal-baseline labels remain from this identity; no protected path was read in this phase.

@@ -12,6 +12,18 @@ three verified handoffs. The public/internal MCP case withheld the prohibited
 index and refused the next command while delivering identical index bytes to
 an authorized internal client.
 
+## Protected handoff between the existing pair
+
+The [latest paired run](PEER_HANDOFF_RUN.md) completed four Linux commands across
+the two existing conversations. The reviewer verified 17 source hashes. Producer
+exposure labels travelled through a private digest-pinned peer resource and two
+actual kernel commits into the recipient's worker/client labels. Preparation
+alone left the recipient unexposed. An uncleared preparation was refused; changed
+staging bytes were rejected before worker creation without mutating the ledger.
+The initial controller failure and subsequent recovered review are separate
+retained outcomes. This closes a concrete peer-publication integration gap;
+ordinary cooperation does not establish a covert convention.
+
 ## New real crash-recovery check
 
 The [actual run](crash-recovery-runs/v1/run/summary.json) killed the supervising

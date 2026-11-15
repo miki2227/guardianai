@@ -23,7 +23,13 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/binding-runs/v1/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+A [current Linux core runtime](research/peer-handoff-runs/v1/build/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+The [protected peer handoff](PEER_HANDOFF.md) carries producer exposure labels
+into a digest-pinned resource for an explicitly cleared recipient. In the
+[real paired build/review run](research/PEER_HANDOFF_RUN.md), the two existing
+conversations completed four Linux commands; the reviewer checked 17 source
+hashes. An uncleared preparation was refused, and changed staging bytes were
+rejected before worker creation. No covert convention was established.
 The [pre-execution CLI binding gate](research/CLIENT_BINDING_RUN.md) now checks
 trusted startup metadata before admitting commands. One existing conversation
 built the release with its retained exposure labels; three controlled invalid

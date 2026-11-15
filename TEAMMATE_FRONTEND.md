@@ -109,6 +109,19 @@ approval nonce with the server record; compare native `checked_monotonic` only
 against native call `accepted_monotonic`. Do not present this as remote-provider
 authentication. The invalid-admission scopes have no worker events by design.
 
+The paired provenance dataset is `research/peer-handoff-runs/v1/audit.json`.
+Join `peer-internal/receipt.json` and `peer-resource.json` to the receiver's
+`release_committed` events by resource SHA-256, then to
+`reviewer-identity-after.json`. The initial `identity/reviewer.json` has no
+exposure: preparation is distinct from actual delivery. Show the public-clearance
+refusal and `changed-staging/summary.json` as boundary checks with no worker.
+`workflow.json` remains incomplete after a controller config error; recovered
+review completion is separately recorded in `review-recovery-result.json` and
+the audit. Four completed Linux commands and 17 checked source hashes refer to
+the completed build/review phases, not the failed controller as a passing run.
+See `research/PEER_HANDOFF_RUN.md`; do not infer a covert convention from this
+ordinary handoff or merge native and Windows clocks as one causal timeline.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

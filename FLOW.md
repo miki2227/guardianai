@@ -95,6 +95,15 @@ mounts. Resources use the existing 32 KiB immutable broker snapshots. The truste
 task must authorize their use; a grant does not bypass Jev. Never let a model
 choose the manifest, clearances, resource paths or its session's identity.
 
+A resource may additionally contain `"sha256": "<64 lowercase hex characters>"`.
+The MCP server checks this expected digest against its loaded byte snapshot
+before creating a worker or opening its identity session. A mismatch refuses
+startup. Unpinned existing manifests remain supported. The trusted host owns
+the expected digest as well as the manifest; this is not a signed attestation.
+[Peer preparation](PEER_HANDOFF.md) emits a pinned resource whose classification
+comes from the producer's saved possible-exposure labels, rather than placing
+that publication among the next agent's assumed-public source files.
+
 All fresh command processes map to one persistent `coding-worker` subject in
 that session. Actual resource exposure checkpoints that subject before delivery.
 `coding-client` is the external coding agent receiving tool results. A protected

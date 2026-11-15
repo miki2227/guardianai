@@ -12,6 +12,12 @@ an undergraduate systems integration project drawing on attributed recent work;
 global algorithmic novelty and Q1 submission are not completion requirements.
 The [combined workflow](research/CONTENT_OBSERVER_RUN.md) completed a real build
 with exposed assistant-content checks and tool-input/result gates active.
+The later [two-agent practical run](research/PAIRED_WORKFLOW_RUN.md) completed a
+build and review, then stopped on an ambiguous content flag. Its failures and
+unfinished final phase are retained; this is not a full workflow pass.
+The [follow-up developer package](research/paired-workflow-runs/v1/developer-build/GuardianAI-linux-x86_64.zip)
+contains the chunk-context correction. It was built without live oversight;
+the supervised follow-up was stopped and is reported separately.
 
 A [built Linux core runtime](dist/GuardianAI-linux-x86_64.zip) is available.
 The newer [content-observer build](research/content-observer-runs/v1/session/public/results/step-001/GuardianAI-linux-x86_64.zip)

@@ -1,0 +1,29 @@
+==== agent_observer.py
+==== build_release.py
+22:             'seccomp_gate.py', 'guarded_agent.py', 'guarded_session.py', 'session_observer.py', 'agent_observer.py', 'guardian_mcp.py', 'build_release.py', 'native/notify_launch.c']
+29:    if abi.get('policy_version') != 3 or abi.get('launch_guard_version') != 1:
+31:    (stage / 'RUNNING.txt').write_text(
+51:    manifest = {'architecture': 'Linux x86-64', 'native_policy': abi['policy_version'],
+52:                'launch_guard_version': abi['launch_guard_version'],
+53:                'files_sha256': {str(p.relative_to(stage)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+62:              'bytes': archive.stat().st_size, 'native_policy': abi['policy_version'],
+63:              'launch_guard_version': abi['launch_guard_version'],
+64:              'file_count': len(manifest['files_sha256']) + 1}
+==== guarded_agent.py
+==== guarded_session.py
+==== guardian.py
+==== guardian_mcp.py
+12:from agent_observer import AgentObserver
+60:        self.content_observer = AgentObserver(task, self.evidence / '_content',
+99:            if not self.content_observer.observe('proposed_tool_argv', argv):
+100:                call['reason'] = 'content_observer_stop_before_execution'
+115:            if not self.content_observer.observe('tool_result_before_delivery', result):
+116:                call.update(verdict='abstain', reason='content_observer_withheld_tool_result')
+==== monitor.py
+==== release_broker.py
+==== runtime_supervisor.py
+==== seccomp_gate.py
+45:        if (self.abi.get("policy_version") != 3 or self.abi.get("launch_guard_version") != 1
+==== session_observer.py
+==== notify_launch.c
+33:        printf("{\"policy_version\":3,\"launch_guard_version\":1,\"notif_size\":%u,\"response_size\":%u,\"recv\":%lu,\"send\":%lu,\"valid\":%lu,\"addfd\":%lu}\n",

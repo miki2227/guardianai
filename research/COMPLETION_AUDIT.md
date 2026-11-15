@@ -8,6 +8,12 @@ assistant text, tool-input and tool-result observation alongside Linux evidence.
 Historical publication audits and missing scientific outcomes below remain
 valid descriptions of what was and was not established.
 
+The [two-agent practical run](PAIRED_WORKFLOW_RUN.md) now retains continuing
+builder/reviewer conversations, approved text handoffs, a completed release and
+review, client failures and a stopped continuation. A separate supervised
+follow-up build was killed on a likely false alarm. The intended four-phase task
+did not complete, and no covert convention or context saturation was established.
+
 The goal is a reproducible study of two fixed pretrained agents under Jev
 observation, grounded in the literature. A guaranteed detector for every possible
 malicious activity cannot be established by a finite experiment. A research result

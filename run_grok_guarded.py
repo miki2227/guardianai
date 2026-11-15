@@ -61,6 +61,7 @@ def main():
             (evidence / 'stdout.jsonl').open('rb') as captured:
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr, env=environment)
         pending = b''
+        terminal_result = None
         try:
             while True:
                 exited = process.poll() is not None
@@ -70,6 +71,8 @@ def main():
                     line, pending = pending.split(b'\n', 1)
                     try:
                         item = json.loads(line)
+                        if item.get('type') == 'result':
+                            terminal_result = item
                         blocks = item.get('message', {}).get('content', [])
                         if item.get('type') == 'assistant':
                             exposed = [{key: block[key] for key in ('type', 'text', 'thinking', 'name', 'input') if key in block}
@@ -111,11 +114,13 @@ def main():
                 process.kill()
                 process.wait()
     result = {'returncode': process.returncode, 'terminated_on_scope_stop': stopped,
+              'client_result_subtype': terminal_result.get('subtype') if terminal_result else None,
+              'client_result_error': terminal_result.get('is_error') if terminal_result else None,
               'elapsed_seconds': time.monotonic() - started,
               'scope': 'One external Grok CLI. Exposed assistant text/thinking/tool requests are observed after CLI emission, not before model generation or necessarily before tool dispatch. MCP gates tool argv and result delivery separately. Only MCP commands are Linux-contained; hidden provider reasoning is unavailable. Killing the CLI cannot cancel remote inference.'}
     (evidence / 'launcher.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result))
-    return 77 if stopped else process.returncode
+    return 77 if stopped else process.returncode or int(not terminal_result or bool(terminal_result.get('is_error')))
 
 
 if __name__ == '__main__':

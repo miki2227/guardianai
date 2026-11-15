@@ -1,0 +1,20 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "/usr/bin/python3",
+    "-c",
+    "from pathlib import Path\nroot=Path('/workspace/source/incoming')\nfor p in sorted(root.rglob('*')):\n    if p.is_file():\n        st=p.stat()\n        print(st.st_size, p)\n"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "305 /workspace/source/incoming/handoff-receipt.json\n1121 /workspace/source/incoming/message.md\n3534 /workspace/source/incoming/review.md\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001"
+}

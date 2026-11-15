@@ -1,0 +1,82 @@
+{
+  "phases": [
+    {
+      "role": "builder",
+      "phase": "build",
+      "returncode": 0,
+      "conversation": "01a1dc23-2d09-7ff1-a3ab-d862353d47eb"
+    },
+    {
+      "role": "reviewer",
+      "phase": "review",
+      "returncode": 0,
+      "conversation": "01a1de3e-92fe-7b21-99dc-077973f0d60a",
+      "scope": "review-recovery-2",
+      "evidence_scope": "review-recovery-2",
+      "client_result_error": false
+    },
+    {
+      "role": "builder",
+      "phase": "resolve",
+      "returncode": 77,
+      "conversation": "01a1dc23-2d09-7ff1-a3ab-d862353d47eb",
+      "scope": "resolve-recovery",
+      "evidence_scope": "resolve-recovery",
+      "client_result_error": null
+    }
+  ],
+  "handoffs": [
+    {
+      "delivered": true,
+      "sender": "builder",
+      "recipient": "reviewer",
+      "observer_sequence": 0,
+      "files_sha256": {
+        "build-report.json": "0d615578a15cf85a16cfc50d60150c6e50b2fa251b378b216a01ca6fe45461ad",
+        "manifest.json": "d082456bfe1342cab51bfb2ffd33cbf7c885cd5605bea9d6b7d2bc9b2e7a05e2",
+        "handoff.md": "c1f52372023446cbc397805a54387acb6d0e2c0c9cdacdb56e1f7d5b108c4d3d"
+      },
+      "observer_journal": "handoff-observer"
+    },
+    {
+      "delivered": true,
+      "sender": "builder",
+      "recipient": "reviewer",
+      "observer_sequence": 0,
+      "files_sha256": {
+        "build-report.json": "0d615578a15cf85a16cfc50d60150c6e50b2fa251b378b216a01ca6fe45461ad",
+        "manifest.json": "d082456bfe1342cab51bfb2ffd33cbf7c885cd5605bea9d6b7d2bc9b2e7a05e2",
+        "handoff.md": "c1f52372023446cbc397805a54387acb6d0e2c0c9cdacdb56e1f7d5b108c4d3d"
+      },
+      "observer_journal": "handoff-observer-continuation",
+      "recipient_phase": "review"
+    },
+    {
+      "delivered": true,
+      "sender": "builder",
+      "recipient": "reviewer",
+      "observer_sequence": 0,
+      "files_sha256": {
+        "build-report.json": "0d615578a15cf85a16cfc50d60150c6e50b2fa251b378b216a01ca6fe45461ad",
+        "manifest.json": "d082456bfe1342cab51bfb2ffd33cbf7c885cd5605bea9d6b7d2bc9b2e7a05e2",
+        "handoff.md": "c1f52372023446cbc397805a54387acb6d0e2c0c9cdacdb56e1f7d5b108c4d3d"
+      },
+      "observer_journal": "handoff-observer-continuation-2",
+      "recipient_phase": "review",
+      "recipient_scope": "review-recovery-2"
+    },
+    {
+      "delivered": true,
+      "sender": "reviewer",
+      "recipient": "builder",
+      "observer_sequence": 1,
+      "files_sha256": {
+        "review.md": "f09308fd07431bc323dd775d7e214d404a40a4a67dffeae05a8ebded3f40dd2a",
+        "message.md": "08c01d490cd0298aee2968bc40d41579a2ac6329eb52a4394ee410e0958a9796"
+      },
+      "observer_journal": "handoff-observer-continuation-2",
+      "recipient_phase": "resolve",
+      "recipient_scope": "resolve-recovery"
+    }
+  ]
+}

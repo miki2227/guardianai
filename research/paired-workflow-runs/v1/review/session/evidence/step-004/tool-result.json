@@ -1,0 +1,20 @@
+{
+  "execution": "step-004",
+  "argv": [
+    "python3",
+    "-c",
+    "import pathlib\nroot=pathlib.Path('/workspace/source')\nkeys=('native_policy','launch_guard','file_count','agent_observer','content_observer','files_sha256','RUNNING')\nfor p in sorted(root.glob('*.py'))+sorted((root/'native').glob('*')):\n text=p.read_text(errors='replace')\n print('====', p.name)\n for i,line in enumerate(text.splitlines(),1):\n  if any(k in line for k in keys):\n   print(f'{i}:{line[:200]}')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "==== agent_observer.py\n==== build_release.py\n22:             'seccomp_gate.py', 'guarded_agent.py', 'guarded_session.py', 'session_observer.py', 'agent_observer.py', 'guardian_mcp.py', 'build_release.py', 'native/notify_launch.c']\n29:    if abi.get('policy_version') != 3 or abi.get('launch_guard_version') != 1:\n31:    (stage / 'RUNNING.txt').write_text(\n51:    manifest = {'architecture': 'Linux x86-64', 'native_policy': abi['policy_version'],\n52:                'launch_guard_version': abi['launch_guard_version'],\n53:                'files_sha256': {str(p.relative_to(stage)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files},\n62:              'bytes': archive.stat().st_size, 'native_policy': abi['policy_version'],\n63:              'launch_guard_version': abi['launch_guard_version'],\n64:              'file_count': len(manifest['files_sha256']) + 1}\n==== guarded_agent.py\n==== guarded_session.py\n==== guardian.py\n==== guardian_mcp.py\n12:from agent_observer import AgentObserver\n60:        self.content_observer = AgentObserver(task, self.evidence / '_content',\n99:            if not self.content_observer.observe('proposed_tool_argv', argv):\n100:                call['reason'] = 'content_observer_stop_before_execution'\n115:            if not self.content_observer.observe('tool_result_before_delivery', result):\n116:                call.update(verdict='abstain', reason='content_observer_withheld_tool_result')\n==== monitor.py\n==== release_broker.py\n==== runtime_supervisor.py\n==== seccomp_gate.py\n45:        if (self.abi.get(\"policy_version\") != 3 or self.abi.get(\"launch_guard_version\") != 1\n==== session_observer.py\n==== notify_launch.c\n33:        printf(\"{\\\"policy_version\\\":3,\\\"launch_guard_version\\\":1,\\\"notif_size\\\":%u,\\\"response_size\\\":%u,\\\"recv\\\":%lu,\\\"send\\\":%lu,\\\"valid\\\":%lu,\\\"addfd\\\":%lu}\\n\",\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-004"
+}

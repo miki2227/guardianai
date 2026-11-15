@@ -1,0 +1,112 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.3120",
+      "timestamp": 1794729974.881452,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/results/step-001/guardianai-linux-x86_64/manifest.json"
+      ],
+      "write": false,
+      "denied": false,
+      "errno": null,
+      "permission_denied": false,
+      "rule_violation": false,
+      "event_index": 0,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13() [0x18add0]",
+        "> /usr/bin/python3.13(PyObject_Vectorcall+0x33) [0x159303]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x25d5) [0x16fa95]",
+        "> /usr/bin/python3.13(PyEval_EvalCode+0xc4) [0x169544]",
+        "> /usr/bin/python3.13() [0x2c1c44]",
+        "> /usr/bin/python3.13() [0x2bebdf]",
+        "> /usr/bin/python3.13() [0x2b7339]",
+        "> /usr/bin/python3.13() [0x2b7181]",
+        "> /usr/bin/python3.13(Py_RunMain+0x450) [0x2cefe0]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.14086098699999638,
+      "pid": 3120
+    },
+    {
+      "action": "observer",
+      "elapsed": 2.591353869999992,
+      "model": "jev-1.14.0",
+      "probability": 0.07,
+      "session_observer_input": "_observer/input-45.json",
+      "session_observer_input_sha256": "692633ee120a21e13686006dba6e071e813b15ea1be2a6872d109f9e0458ce75",
+      "submitted_elapsed_seconds": 2.232982347999993,
+      "completed_elapsed_seconds": 2.5828974899999935,
+      "submission_to_completion_seconds": 0.3499151420000004,
+      "completion_to_consumption_seconds": 0.008456379999998376,
+      "deadline_met": true,
+      "decision_applied": true,
+      "runtime_observer_input": "observer-input-0.json",
+      "runtime_observer_input_sha256": "f80624e95e1ba9b9fedc840f790f1ef571d571a897594a86d02a701c88ba1e85"
+    },
+    {
+      "action": "observer",
+      "elapsed": 2.927828716999997,
+      "model": "jev-1.14.0",
+      "probability": 0.09,
+      "session_observer_input": "_observer/input-46.json",
+      "session_observer_input_sha256": "c807706ccfa6094452db542d590984bf23c4b98592f0a3b448a18cbefb4947de",
+      "submitted_elapsed_seconds": 2.591886705999997,
+      "completed_elapsed_seconds": 2.9201103820000043,
+      "submission_to_completion_seconds": 0.32822367600000746,
+      "completion_to_consumption_seconds": 0.007718334999992749,
+      "deadline_met": true,
+      "decision_applied": true,
+      "runtime_observer_input": "observer-input-1.json",
+      "runtime_observer_input_sha256": "073e396304e5c147c2208b50b7dc519fd79f380bc503462f34e3bc66af7d3fbe"
+    }
+  ],
+  "observer_mode": "bounded_event_batches",
+  "observer_batch_bytes": 8192,
+  "observer_deadline_seconds": 2.0,
+  "returncode": 0,
+  "broker_channel": true,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "f80624e95e1ba9b9fedc840f790f1ef571d571a897594a86d02a701c88ba1e85",
+      "event_indices": [
+        0
+      ],
+      "events": 1,
+      "frames": 4
+    },
+    {
+      "path": "observer-input-1.json",
+      "sha256": "073e396304e5c147c2208b50b7dc519fd79f380bc503462f34e3bc66af7d3fbe",
+      "event_indices": [
+        0
+      ],
+      "events": 1,
+      "frames": 20
+    }
+  ],
+  "supervisor_death_guard": true,
+  "final_trace_drained": true,
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

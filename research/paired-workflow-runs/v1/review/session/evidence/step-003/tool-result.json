@@ -1,0 +1,20 @@
+{
+  "execution": "step-003",
+  "argv": [
+    "python3",
+    "-c",
+    "import hashlib,pathlib,json\nroot=pathlib.Path('/workspace/source')\nman=json.loads((root/'incoming/manifest.json').read_text())\nrep=json.loads((root/'incoming/build-report.json').read_text())\nh=json.loads((root/'incoming/handoff-receipt.json').read_text())\nprint('RECEIPT')\nfor n,exp in h['files_sha256'].items():\n b=(root/'incoming'/n).read_bytes()\n dig=hashlib.sha256(b).hexdigest()\n print(n, dig==exp, len(b), dig)\nprint('MANIFEST vs SOURCE')\nfor n,exp in man['files_sha256'].items():\n p=root/n\n if not p.exists():\n  print('MISSING', n); continue\n dig=hashlib.sha256(p.read_bytes()).hexdigest()\n print(('MATCH' if dig==exp else 'DIFF'), n, p.stat().st_size)\nprint('source files not in map:')\nfor p in sorted(root.rglob('*')):\n if p.is_file() and 'incoming' not in p.parts:\n  rel=str(p.relative_to(root)).replace('\\\\','/')\n  if rel not in man['files_sha256']:\n   print(' ', rel, p.stat().st_size)\n"
+  ],
+  "verdict": "no_observed_violation",
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "RECEIPT\nbuild-report.json True 216 0d615578a15cf85a16cfc50d60150c6e50b2fa251b378b216a01ca6fe45461ad\nmanifest.json True 1723 d082456bfe1342cab51bfb2ffd33cbf7c885cd5605bea9d6b7d2bc9b2e7a05e2\nhandoff.md True 799 c1f52372023446cbc397805a54387acb6d0e2c0c9cdacdb56e1f7d5b108c4d3d\nMANIFEST vs SOURCE\nMISSING RUNNING.txt\nMATCH agent_observer.py 4650\nMATCH build_release.py 4911\nMATCH guarded_agent.py 5990\nMATCH guarded_session.py 6435\nMATCH guardian.py 5841\nMATCH guardian_mcp.py 9633\nMATCH monitor.py 10014\nMISSING native/notify-launch\nMATCH native/notify_launch.c 4616\nMATCH release_broker.py 8772\nMATCH runtime_supervisor.py 21735\nMATCH seccomp_gate.py 11019\nMATCH session_observer.py 6256\nsource files not in map:\n  CODING_AGENT.md 6704\n  PROJECT_DIRECTION.md 5594\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-003"
+}

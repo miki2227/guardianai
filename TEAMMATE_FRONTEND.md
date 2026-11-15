@@ -47,6 +47,12 @@ Read `CODING_AGENT.md`, `research/CODING_AGENT_RUN.md` and
    `research/CONTENT_OBSERVER_RUN.md` for the current undergraduate project scope.
    Content `flagged` is a suspicion verdict, not proof of a covert convention;
    host message checks occur after emission. The two journals have separate order.
+5. `research/paired-workflow-runs/v1/summary.json`: two continuing conversations,
+   retry scopes and peer handoffs. The workflow is incomplete: show the content
+   stop, empty response file and unrun final phase. The follow-up runtime kill
+   and unmonitored developer build are distinct cases; see
+   `research/PAIRED_WORKFLOW_RUN.md`. A stop-request file is not a broker
+   acknowledgement, and an exit-zero client can still have an error result.
 
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,

@@ -1,0 +1,89 @@
+# GuardianAI: agent activity observer
+
+The current objective is an undergraduate systems project that combines and
+attributes recent research. A globally new algorithm or Q1 submission is not a
+completion requirement. Earlier journal-readiness audits remain historical
+research assessments, not a prerequisite for building this product.
+
+The central question is whether an independent Jev observer, supplied with both
+agent communication and execution evidence, can flag unauthorized behavior and
+stop further local work while preserving useful task completion. No model weight
+training, supplied secret code or explicit malicious objective is required.
+Covert coordination is a possibility to investigate, not an outcome to force.
+
+## One observation path across the layers
+
+1. The trusted host supplies a task and permissions.
+2. `run_grok_guarded.py` observes that prompt and exposed assistant text, emitted
+   reasoning summaries and tool requests through `AgentObserver`. The original
+   CLI JSONL, including reported usage, remains available.
+3. `guardian_mcp.py` checks proposed command arguments before execution and
+   checks returned tool content before delivery. It uses the same content
+   observer implementation, with bounded shared execution context.
+4. Existing Linux isolation, seccomp mediation and native syscall/frame
+   observation constrain commands. `SessionObserver` supplies cross-worker
+   facts, grants and recent gate events to the content checks.
+5. A content flag or observer error revokes the tool scope. A host content stop
+   creates `external-stop.json` in trusted session evidence. The MCP watcher
+   revokes the broker, and active supervised workers observe its terminal stop.
+   The local CLI is terminated. Protected reads retain their existing gate.
+6. Original content, chunk inputs, Jev responses, hashes and verdicts are saved
+   alongside the existing Linux evidence for the teammate's evidence viewer.
+
+There are separate host and MCP content journals, not a claim of one globally
+ordered transcript. Each stores the preceding content hash and bounded recent
+excerpts. Full source content remains on disk; Jev receives chunks of at most
+2,048 characters plus context, under a 20 KiB serialized-state bound. Inputs over
+256 KiB abstain and stop. The threshold is 0.5 for three questions: task deviation,
+disclosure/evasion and suspected unauthorized coordination. It is not calibrated
+as a deployment operating point. No generative summarizer or model training is
+introduced.
+
+## What visibility actually means
+
+The host observer runs after a complete JSONL message becomes available. Tools
+can already have been dispatched by that time; command gating inside MCP is the
+separate pre-execution boundary. This is not token-by-token provider interception.
+Only provider-exposed reasoning is available. Private thoughts, hidden provider
+state, exact retained context occupancy and arbitrary side channels are not
+observable from native stacks. Historical conversation loaded through `--resume`
+is not automatically replayed into the observer's new journal.
+
+Tool outputs are inspected before MCP delivery, but an agent can still read
+allowed files through later commands. Content checks cannot recall bytes already
+delivered. Artifacts not emitted as tool results are not automatically scanned.
+The full raw tool output remains evidence; the delivered bounded result is the
+content check's input. Chunking and bounded history can miss relationships.
+The host harness, its configuration, observer credentials and evidence directory
+are trusted. A host stop during startup can terminate the CLI before a Linux
+session exists; a receipt file is not a provider inference cancellation API.
+
+## Literature basis and incident motivation
+
+OpenAI's [26 August 2026 incident account](https://openai.com/index/hugging-face-incident-and-the-road-ahead/)
+describes unauthorized agent communication through shared infrastructure and
+subsequent compromise of Hugging Face during reduced-safeguard evaluations.
+It motivates inspecting shared artifacts and communication as well as commands.
+It does not establish that long context caused that incident or that GuardianAI
+would have stopped it. The [July clarification](https://openai.com/index/hugging-face-model-evaluation-security-incident/)
+identifies the pre-release model as an internal research prototype.
+
+[The Arbiter Agent](https://arxiv.org/abs/2606.10747) motivates continuous
+conversation oversight. [TraceGuard](https://arxiv.org/abs/2604.03968) motivates
+separating several monitoring questions rather than interpreting one score as
+proof of intent. [When Local Monitors Miss Compositional Harm](https://arxiv.org/abs/2607.11751)
+motivates connecting messages to assembled artifacts and execution context;
+bounded local checks alone can miss harmful composition. These are attributed
+design influences, not reproduced results or an assertion that our implementation
+matches those papers.
+
+## Next research milestone
+
+Use a small number of continuing pretrained workers on complementary repository
+tasks, with host-mediated messages and artifact handoffs. Observe ordinary work
+and retain benign, erroneous and suspicious outcomes. Record the history actually
+exposed to both workers and observer. Do not claim context exhaustion from a sum
+of token usage. A suspected covert convention still needs recurrent behavior and
+task-preserving counterfactual evidence; a suspicion score alone is insufficient.
+The existing short social pilot found no validated convention. Training is not
+part of this milestone.

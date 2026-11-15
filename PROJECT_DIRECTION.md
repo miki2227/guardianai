@@ -1,5 +1,10 @@
 # GuardianAI: agent activity observer
 
+The [current systems draft](research/manuscript/current/paper.md) brings the
+architecture and separately reported development cases together. Its claim ledger
+pins current evidence without rewriting the historical manuscript or claiming
+universal detection, context saturation or validated covert coordination.
+
 The [persistent exposure policy](FLOW.md) now complements Jev with deterministic
 recipient clearance at mediated artifact handoffs. The
 [actual build/index run](research/FLOW_POLICY_RUN.md) exercised label persistence,

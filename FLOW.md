@@ -152,7 +152,12 @@ refuses work; a new process is not a reset.
 The ledger records an active session before commands are accepted and clears it
 only on clean explicit completion. EOF or an exception before explicit completion
 revokes it. An abrupt process death leaves its marker: the next opener stops the
-identity conservatively. Atomic replacement is still not an fsync/power-loss
+identity conservatively.
+
+The [real crash-recovery run](research/REAL_SYSTEM_VERDICT.md) now verifies one
+live release-worker exit and failed identity resumption after supervisor SIGKILL.
+It does not establish every crash timing or power-loss behavior.
+Atomic replacement is still not an fsync/power-loss
 durability guarantee, and the advisory lock assumes cooperating trusted local
 processes. Uncooperative host writers and remote filesystems are outside the
 contract. Ledger history can grow; no retention policy silently drops labels.

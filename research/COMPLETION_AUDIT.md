@@ -1,5 +1,10 @@
 # Research scope and completion audit
 
+The [current systems manuscript](manuscript/current/paper.md) documents the newer
+integration with separate case scopes and a hash-pinned claim ledger. The older
+draft's manifest is unchanged. Producing a paper does not close the unmet
+private-thought, universal-detection, context-saturation or convention requirements.
+
 The [continued existing-agent run](CONTINUED_AGENT_RUN.md) completed useful index,
 build and note-correction work through one retained Grok conversation. It joins
 actual tool, host-content, exposure-label and shared-history evidence. It retains

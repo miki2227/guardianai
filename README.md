@@ -2,6 +2,10 @@
 
 # GuardianAI
 
+[Current practical verdict](research/REAL_SYSTEM_VERDICT.md): useful supervised
+work and declared flow gates work in the retained cases. A real supervisor-crash
+run also confirmed observed worker exit and refused identity resumption.
+
 Research testbed for pretrained sender/receiver agents communicating under Jev
 oversight, supported by Linux kernel namespace isolation and execution evidence.
 See [research scope and limitations](RESEARCH.md) before running untrusted code.
@@ -84,7 +88,12 @@ Jev runtime and release decisions now also receive
 state receipts and explicit errno/namespace facts. The first integration's false
 alarm remains in the evidence alongside the subsequent completed real workflow.
 
-An [evidence-grounded manuscript draft](research/manuscript/manuscript.md)
+The [current undergraduate systems draft](research/manuscript/current/paper.md)
+describes the delivered observation, persistent-flow and continued-agent system.
+Its [PDF](research/manuscript/current/output/pdf/main.pdf),
+[source package](research/manuscript/current/GuardianAI-current-draft.zip) and
+separate claim ledger preserve the earlier pinned study.
+The [earlier evidence-grounded manuscript](research/manuscript/manuscript.md)
 consolidates the system, conditional authorization arguments, retained failures
 and actual workloads. Its [submission status](research/manuscript/SUBMISSION_STATUS.md)
 and [original-objective audit](research/manuscript/OBJECTIVE_AUDIT.md) keep the

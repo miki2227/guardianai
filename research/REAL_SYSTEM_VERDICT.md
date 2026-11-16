@@ -4,6 +4,12 @@
 information-flow policy. It is not yet a validated detector of emergent hidden
 signalling, and it cannot inspect private model thoughts.**
 
+The [real Checkstyle attempt](CHECKSTYLE_PRACTICAL_RUN.md) did **not** complete.
+One Grok session reached an unavailable Java executable path, then exceeded the
+trace budget during discovery. A separate host run with the resolved executable
+also abstained during JVM loading. Stopping worked, but this Java investigation
+was not practically usable. No Checkstyle bug or P0 was established.
+
 The [latest feedback-cycle attempt](FEEDBACK_LOOP_RUN.md) did **not** complete.
 The builder made an invalid child-path read of a virtual resource and was
 revoked before building. The denial and stop acknowledgement worked; a clean

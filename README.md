@@ -120,8 +120,14 @@ Jev runtime and release decisions now also receive
 state receipts and explicit errno/namespace facts. The first integration's false
 alarm remains in the evidence alongside the subsequent completed real workflow.
 
-The [current undergraduate systems draft](research/manuscript/current/paper.md)
-describes the delivered observation, persistent-flow and continued-agent system.
+The [updated IEEE systems-study revision](research/manuscript/ieee-r2/paper.md)
+includes the later protected handoffs, publication cancellation, ZIP observation
+and retained quarantine failure. Its [PDF](research/manuscript/ieee-r2/output/pdf/main.pdf)
+and [editable source package](research/manuscript/ieee-r2/GuardianAI-ieee-r2.zip)
+preserve the supplied title, authors, abstract and keywords. It reports measured
+cases without claiming validated emergent covert coordination.
+The [earlier undergraduate systems draft](research/manuscript/current/paper.md)
+describes the observation, persistent-flow and continued-agent system.
 Its [PDF](research/manuscript/current/output/pdf/main.pdf),
 [source package](research/manuscript/current/GuardianAI-current-draft.zip) and
 separate claim ledger preserve the earlier pinned study.

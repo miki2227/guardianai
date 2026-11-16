@@ -27,6 +27,13 @@ an authorized internal client.
 
 ## Generated-file observation
 
+The [two-subject Checkstyle attempt](CHECKSTYLE_PAIRED_RUN.md) exchanged a Jev-
+approved transcript and verified its recipient read, but both subjects stopped
+before final findings. Process-group backpressure enabled a configured Java
+smoke check; the actual investigator later missed an observer deadline and the
+reviewer exceeded the host full-message review budget. Practical paired Java
+analysis remains incomplete; stopping alone is not successful task completion.
+
 The [host tool-result adapter](TOOL_RESULT_OBSERVER_RUN.md) also observes exposed
 CLI replies, including tool discovery. Live Jev replay verified five real saved
 replies with exact source joins. It started no agent or worker; these are

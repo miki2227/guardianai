@@ -123,6 +123,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
     last_event, observer_inputs = {}, []
     input_bytes = 0
     pending_input = {}
+    paused = False
     def timed_observer(snapshot):
         answer = observer(task, snapshot)
         return answer, time.monotonic()
@@ -177,10 +178,14 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                     raise RuntimeError("Trace budget exceeded")
                 batch = []
                 trace_drained = True
+                remaining_lines = 128
                 for path in trace_paths:
+                    if remaining_lines == 0:
+                        trace_drained = False
+                        break
                     with path.open() as stream:
                         stream.seek(positions.get(path.name, 0))
-                        for _ in range(4096):
+                        for _ in range(remaining_lines):
                             offset = stream.tell()
                             line = stream.readline()
                             if not line.endswith("\n"):
@@ -192,6 +197,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                                 break
                             positions[path.name] = stream.tell()
                             batch.append((path.name, line))
+                            remaining_lines -= 1
                         else:
                             # A bounded read is not EOF; continue draining even
                             # when this chunk contains no scoped observer events.
@@ -249,6 +255,16 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                     future = None
                 if len(events) - consumed > 256:
                     raise RuntimeError("Observer backlog exceeded")
+                if not paused and len(events) - consumed >= 64:
+                    try:
+                        if os.getpgid(payload_pid) != payload_pid:
+                            raise RuntimeError("Worker process group changed before backpressure")
+                        os.killpg(payload_pid, signal.SIGSTOP)
+                    except ProcessLookupError:
+                        pass  # Exited namespace leaders have no further workload to pause.
+                    else:
+                        paused = True
+                        actions.append({"action": "observer_backpressure_pause", "elapsed": time.monotonic() - start})
                 if future and time.monotonic() - pending_since > OBSERVER_DEADLINE_SECONDS:
                     timeout_kind = "observer_response"
                     raise TimeoutError("Observer deadline")
@@ -283,6 +299,10 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                                          "runtime_observer_input_sha256": observer_inputs[-1]["sha256"]}
                     pending_since = time.monotonic()
                     future = executor.submit(timed_observer, snapshot)
+                if paused and not future and not pending and trace_drained:
+                    os.killpg(payload_pid, signal.SIGCONT)
+                    paused = False
+                    actions.append({"action": "observer_backpressure_resume", "elapsed": time.monotonic() - start})
                 if time.monotonic() - start > timeout:
                     timeout_kind = "execution"
                     raise TimeoutError("Execution deadline")

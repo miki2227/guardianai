@@ -24,6 +24,16 @@ PATH_CALLS = MUTATIONS | {"open", "openat", "openat2", "access", "faccessat", "f
                           "stat", "lstat", "newfstatat", "statx", "execve", "execveat", "readlink", "readlinkat"}
 
 
+def relative_path_base(syscall, arguments):
+    if syscall == 'unlinkat':
+        # This call has one path and one directory fd. Accept only an anchored,
+        # unambiguous -yy annotation; unknown or escaped bases still abstain.
+        match = re.match(r'(?:AT_FDCWD|\d+)<(/[A-Za-z0-9/._-]*)>, ', arguments)
+    else:
+        match = re.search(r'AT_FDCWD<(/[^>]*)>', arguments)
+    return match[1] if match else None
+
+
 def missing_nscd_lookup(arguments, result):
     if not result.startswith('-1 ENOENT '):
         return None
@@ -129,11 +139,11 @@ def summarize(evidence):
                 quoted = QUOTED.findall(arguments) if syscall in PATH_CALLS else []
                 if syscall not in {"rename", "renameat", "renameat2", "link", "linkat", "symlink", "symlinkat"}:
                     quoted = quoted[:1]
-                cwd = re.search(r"AT_FDCWD<(/[^>]*)>", arguments)
+                cwd = relative_path_base(syscall, arguments)
                 if syscall in MUTATIONS and any(p and not p.startswith("/") for p in quoted) and not cwd:
                     problems.append("unresolved_relative_mutation")
                 resolved = [posixpath.normpath(p if p.startswith("/") else
-                            posixpath.join(cwd.group(1), p) if cwd else p) for p in quoted]
+                            posixpath.join(cwd, p) if cwd else p) for p in quoted]
                 paths = [p for p in resolved if p.startswith(("/workspace/", "/output/", "/home/", "/etc/"))]
                 scoped = paths or ("AT_FDCWD</output>" in arguments and syscall in MUTATIONS)
                 network = syscall == "connect"

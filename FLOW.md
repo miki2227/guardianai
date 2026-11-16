@@ -69,8 +69,9 @@ The generic `deliver` helper guards selected text artifacts, not binary handoffs
 The MCP integration below gates the entire worker output directory, including
 binary files such as a release ZIP. It does not semantically inspect arbitrary
 binary contents; its content checks cover the serialized tool response and
-[generated text artifacts](ARTIFACTS.md). Nontext files retain opaque inventory
-entries as well as the same confidentiality publication gate. Arbitrary
+[generated text artifacts](ARTIFACTS.md), including bounded decoded ZIP text.
+Nontext leaves retain opaque inventory entries and the same confidentiality
+publication gate. Archive interpretation never removes accumulated labels. Arbitrary
 hosted-model final chat, unmediated files, timing, termination and hardware side
 channels remain outside these interfaces.
 It does not label facts inferred entirely from public inputs.

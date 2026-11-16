@@ -2,7 +2,8 @@
 
 The [latest feedback attempt](research/FEEDBACK_LOOP_RUN.md) prepared a return
 handoff in the builder's existing policy slot, then stopped on its invalid
-child-path read. The cycle is incomplete and that identity remains revoked.
+child-path read. The cycle is incomplete and that identity remains revoked;
+the user explicitly chose continued quarantine, so no recovery is authorized.
 The virtual snapshot contract is now explicit in the tool description; direct
 reads were verified in a separate host diagnostic, not a resumed builder.
 
@@ -100,8 +101,9 @@ is not automatically replayed into the observer's new journal.
 Tool outputs are inspected before MCP delivery, but an agent can still read
 allowed files through later commands. Content checks cannot recall bytes already
 delivered. The MCP [artifact-content gate](ARTIFACTS.md) now also observes generated
-UTF-8 text before result-history publication, with file hashes and explicit opaque
-binary entries. This does not unpack archives or classify binary meaning.
+UTF-8 text before result-history publication, including bounded decoded ZIP
+members. File/hash-attributed units retain explicit opaque binary leaves and
+the limits of cross-unit context; see the [actual packaging run](research/ZIP_OBSERVER_RUN.md).
 The full raw tool output remains evidence; the delivered bounded result is the
 content check's input. Chunking and bounded history can miss relationships.
 The host harness, its configuration, observer credentials and evidence directory

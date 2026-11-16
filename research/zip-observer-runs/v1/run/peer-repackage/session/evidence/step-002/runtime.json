@@ -1,0 +1,152 @@
+{
+  "verdict": "no_observed_violation",
+  "termination_requested": false,
+  "events": [
+    {
+      "source": "trace.979",
+      "timestamp": 1794786310.512676,
+      "syscall": "openat",
+      "paths": [
+        "/workspace/results/step-001/handoff/source-navigation.zip"
+      ],
+      "write": false,
+      "denied": false,
+      "errno": null,
+      "permission_denied": false,
+      "rule_violation": false,
+      "event_index": 0,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13() [0x18add0]",
+        "> /usr/bin/python3.13(PyObject_Vectorcall+0x33) [0x159303]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x25d5) [0x16fa95]",
+        "> /usr/bin/python3.13() [0x1ae9e2]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x25d5) [0x16fa95]",
+        "> /usr/bin/python3.13(PyEval_EvalCode+0xc4) [0x169544]",
+        "> /usr/bin/python3.13() [0x2c1c44]",
+        "> /usr/bin/python3.13() [0x2bebdf]",
+        "> /usr/bin/python3.13() [0x2b7339]",
+        "> /usr/bin/python3.13() [0x2b7181]",
+        "> /usr/bin/python3.13(Py_RunMain+0x450) [0x2cefe0]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    },
+    {
+      "source": "trace.979",
+      "timestamp": 1794786310.535186,
+      "syscall": "openat",
+      "paths": [
+        "/output/duplicate-navigation.zip"
+      ],
+      "write": true,
+      "denied": false,
+      "errno": null,
+      "permission_denied": false,
+      "rule_violation": false,
+      "event_index": 1,
+      "native_stack": [
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91e92]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x91ead]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__open64+0x4d) [0x106b5d]",
+        "> /usr/bin/python3.13() [0x205f3b]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(PyObject_CallFunction+0x201) [0x14cdb1]",
+        "> /usr/bin/python3.13() [0x2052d5]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x2446) [0x16f906]",
+        "> /usr/bin/python3.13() [0x1ae9e2]",
+        "> /usr/bin/python3.13(_PyObject_MakeTpCall+0x1d0) [0x1532e0]",
+        "> /usr/bin/python3.13(_PyEval_EvalFrameDefault+0x25d5) [0x16fa95]",
+        "> /usr/bin/python3.13(PyEval_EvalCode+0xc4) [0x169544]",
+        "> /usr/bin/python3.13() [0x2c1c44]",
+        "> /usr/bin/python3.13() [0x2bebdf]",
+        "> /usr/bin/python3.13() [0x2b7339]",
+        "> /usr/bin/python3.13() [0x2b7181]",
+        "> /usr/bin/python3.13(Py_RunMain+0x450) [0x2cefe0]",
+        "> /usr/bin/python3.13(Py_BytesMain+0x29) [0x29caa9]",
+        "> /lib/x86_64-linux-gnu/libc.so.6() [0x29f75]",
+        "> /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x87) [0x2a027]",
+        "> /usr/bin/python3.13(_start+0x21) [0x29be91]"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "action": "released",
+      "elapsed": 0.04080889699999979,
+      "pid": 979
+    },
+    {
+      "action": "observer",
+      "elapsed": 1.5884627279999997,
+      "model": "jev-1.14.0",
+      "probability": 0.08,
+      "session_observer_input": "_observer/input-7.json",
+      "session_observer_input_sha256": "e4aa51a94cc5b0dd185ec2b78b6e75a9b780b4a0511070766c16efd958aa8c86",
+      "submitted_elapsed_seconds": 1.2527103339999996,
+      "completed_elapsed_seconds": 1.5834242530000004,
+      "submission_to_completion_seconds": 0.3307139190000008,
+      "completion_to_consumption_seconds": 0.0050384749999992096,
+      "deadline_met": true,
+      "decision_applied": true,
+      "runtime_observer_input": "observer-input-0.json",
+      "runtime_observer_input_sha256": "2ef2fb7838dd90a76834cafe73551a241707aac9813aa13062b434213f31dcb7"
+    },
+    {
+      "action": "observer",
+      "elapsed": 1.9026106299999999,
+      "model": "jev-1.14.0",
+      "probability": 0.15,
+      "session_observer_input": "_observer/input-8.json",
+      "session_observer_input_sha256": "a3bedf8179aaf2afa26842bb27e58cce73490f1a6c10bccbafd592a1b29c2a3d",
+      "submitted_elapsed_seconds": 1.5886587619999997,
+      "completed_elapsed_seconds": 1.8976493560000005,
+      "submission_to_completion_seconds": 0.30899059400000084,
+      "completion_to_consumption_seconds": 0.004961273999999349,
+      "deadline_met": true,
+      "decision_applied": true,
+      "runtime_observer_input": "observer-input-1.json",
+      "runtime_observer_input_sha256": "0652e26305c7608579945c7b743e412782534627afdc27d58e426459e96fb536"
+    }
+  ],
+  "observer_mode": "bounded_event_batches",
+  "observer_batch_bytes": 8192,
+  "observer_deadline_seconds": 2.0,
+  "returncode": 0,
+  "broker_channel": true,
+  "native_stacks": true,
+  "observer_inputs": [
+    {
+      "path": "observer-input-0.json",
+      "sha256": "2ef2fb7838dd90a76834cafe73551a241707aac9813aa13062b434213f31dcb7",
+      "event_indices": [
+        0
+      ],
+      "events": 1,
+      "frames": 23
+    },
+    {
+      "path": "observer-input-1.json",
+      "sha256": "0652e26305c7608579945c7b743e412782534627afdc27d58e426459e96fb536",
+      "event_indices": [
+        1
+      ],
+      "events": 1,
+      "frames": 21
+    }
+  ],
+  "supervisor_death_guard": true,
+  "final_trace_drained": true,
+  "evidence_status": "recorded",
+  "problems": [],
+  "scope": "Live reaction to completed syscalls, not prevention or thought detection"
+}

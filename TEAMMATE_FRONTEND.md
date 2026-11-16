@@ -152,6 +152,18 @@ delivery or recovery. `contract/revoked-identity` executed zero commands. The
 builder's exposure history stayed unchanged and its canonical stop persists.
 See `research/FEEDBACK_LOOP_RUN.md`; do not label this hidden coordination.
 
+The ZIP-observer dataset is `research/zip-observer-runs/audit.json`.
+New snapshots have recursive `files`/`members`, `directories` and a private
+`text_by_sha256` table. Inventory receipts contain hashes and `text_units`, not
+full text. Join metadata through `observer_sequence` and every text unit through
+its own sequence, hash and character span. A metadata allow alone is insufficient;
+all units must pass. File/member paths are arrays of components in unit records.
+Keep ZIP containers and opaque binary leaves distinct, and retain v1/v2 failures
+separately from the completed v3 release. The duplicate-member case exited 0
+but publication abstained. `research/feedback-loop-runs/v1/quarantine-decision.json`
+records the user's decision to keep the builder quarantined; no recovery occurred.
+See `ARTIFACTS.md` and `research/ZIP_OBSERVER_RUN.md`.
+
 Important file shapes are `coding-session.json`, `runtime.json`,
 `guarded-agent.json`, session `session.json`, worker `manifest.json`,
 `observer-input-N.json`, and `_observer/input-N.json` / `decision-N.json`.

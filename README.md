@@ -23,11 +23,16 @@ The [follow-up developer package](research/paired-workflow-runs/v1/developer-bui
 contains the chunk-context correction. It was built without live oversight;
 the supervised follow-up was stopped and is reported separately.
 
-A [current Linux core runtime](research/feedback-loop-runs/v1/contract/bootstrap/GuardianAI-linux-x86_64.zip) is available.
+A [current supervised Linux core runtime](research/zip-observer-runs/v3/run/archive-only-release/session/public/results/step-001/GuardianAI-linux-x86_64.zip) is available.
+The [actual ZIP packaging run](research/ZIP_OBSERVER_RUN.md) supplies decoded
+text members to Jev with file/hash attribution and bounded review units.
+An archive-only release completed, and a duplicate-member fault was withheld.
+Earlier cleanup-resolution and oversized-review failures are retained.
 The [return-feedback attempt](research/FEEDBACK_LOOP_RUN.md) added trusted
 selection of an existing recipient resource slot without changing saved policy.
 The actual builder then inferred an invalid child path and was stopped before
-building. That identity remains revoked; the new reviewer phase was unrun.
+building. The user chose continued quarantine; no recovery is authorized,
+and the new reviewer phase was unrun.
 A separate host diagnostic verified direct snapshot reads. The MCP tool contract
 now explicitly distinguishes virtual byte snapshots from ordinary files.
 Public-only result publication now serializes its final stop check and directory

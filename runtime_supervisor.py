@@ -18,7 +18,7 @@ import time
 import urllib.error
 
 from guardian import POLICY, query_jev, sandbox_argv
-from monitor import LINE, MUTATIONS, PATH_CALLS, QUOTED, missing_nscd_lookup, sha256, summarize
+from monitor import LINE, MUTATIONS, PATH_CALLS, QUOTED, missing_nscd_lookup, relative_path_base, sha256, summarize
 
 
 OBSERVER_DEADLINE_SECONDS = 2.0
@@ -41,9 +41,9 @@ def event_from_line(line, source, *, nscd_emulation=False):
         for value in QUOTED.findall(arguments)[:2 if call in {"rename", "renameat", "renameat2", "link", "linkat", "symlink", "symlinkat"} else 1]:
             path = ast.literal_eval('"' + value + '"')
             if not path.startswith("/"):
-                cwd = re.search(r"AT_FDCWD<(/[^>]*)>", arguments)
+                cwd = relative_path_base(call, arguments)
                 if cwd:
-                    path = posixpath.join(cwd.group(1), path)
+                    path = posixpath.join(cwd, path)
                 elif call in MUTATIONS:
                     raise ValueError("Unresolved relative mutation")
             if path.startswith("/"):

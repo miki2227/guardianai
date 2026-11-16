@@ -88,9 +88,11 @@ explicit truncation flag; full output remains in supervisor evidence.
 
 Generated text files now pass through a separate
 [artifact-content gate](ARTIFACTS.md) before result-history publication. Saved
-inventories link file hashes to the actual Jev content decision. Nontext files
-are inventoried as opaque binaries; their meaning is not classified. Unsupported
-file types or exceeded snapshot budgets abstain and stop publication.
+inventories link file hashes to the actual Jev checks. Bounded stored/deflated
+ZIP text is decoded in memory and checked in attributed units; duplicate text
+shares one content hash. Nontext leaves remain opaque. Unsafe ZIP structure,
+unsupported compression, physical links/special files or exceeded budgets
+abstain and stop publication. See the [actual packaging run](research/ZIP_OBSERVER_RUN.md).
 
 Public-only publication rechecks broker revocation under the commit lock. An
 acknowledged stop that wins before the directory rename withholds the result.

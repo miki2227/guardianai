@@ -93,6 +93,6 @@ Run `python research/feedback-loop-runs/v1/summarize.py` to verify retained hash
 policies, native denial, unchanged exposure history, stop linkage and independent
 transport evidence without model calls. Machine-specific replay paths require
 new scope directories. The builder remains quarantined under the persistent
-revocation contract. A host-reviewed recovery policy is awaiting the user's
-decision; it has not been implemented or applied. IEEE front matter and the
+revocation contract. The user explicitly chose to keep this conversation
+quarantined. No recovery is authorized or applied. IEEE front matter and the
 pinned historical draft remain unchanged.

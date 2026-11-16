@@ -1,0 +1,81 @@
+{
+  "policy": {
+    "clearances": {
+      "coding-worker": [
+        "internal-baseline"
+      ],
+      "coding-client": [
+        "internal-baseline"
+      ]
+    },
+    "resources": {
+      "peer_index": [
+        "internal-baseline"
+      ],
+      "peer_readme": [
+        "internal-baseline"
+      ],
+      "peer_zip": [
+        "internal-baseline"
+      ]
+    }
+  },
+  "labels": {
+    "coding-worker": [
+      "internal-baseline"
+    ],
+    "coding-client": [
+      "internal-baseline"
+    ]
+  },
+  "exposures": [
+    {
+      "subject": "coding-worker",
+      "resource_id": "peer_index",
+      "resource_sha256": "6176f954d54d69431741f61b69b19020605bce8a3ff49615eda022930f2f9009",
+      "labels": [
+        "internal-baseline"
+      ],
+      "stage": "before_byte_commit"
+    },
+    {
+      "subject": "coding-worker",
+      "resource_id": "peer_readme",
+      "resource_sha256": "d310cac0d30114900f1d6f095a5da0b8e42928fd65ff9b6adc15d6bcb76159aa",
+      "labels": [
+        "internal-baseline"
+      ],
+      "stage": "before_byte_commit"
+    },
+    {
+      "subject": "coding-worker",
+      "resource_id": "peer_zip",
+      "resource_sha256": "3088fc423ed23cdb1baf642e2943123e10e73266ba4bab94e3b9a00b1b085730",
+      "labels": [
+        "internal-baseline"
+      ],
+      "stage": "before_byte_commit"
+    }
+  ],
+  "transfers": [
+    {
+      "sender": "coding-worker",
+      "recipient": "coding-client",
+      "sender_labels": [
+        "internal-baseline"
+      ],
+      "recipient_clearance": [
+        "internal-baseline"
+      ],
+      "scope_stopped": false,
+      "permitted": true,
+      "scope": "Trusted confidentiality metadata, not proof of intent. All sender output inherits possible exposure labels; no semantic declassification.",
+      "delivered": true,
+      "recipient_labels": [
+        "internal-baseline"
+      ],
+      "stage": "committed"
+    }
+  ],
+  "stopped": true
+}

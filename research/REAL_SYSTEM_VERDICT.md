@@ -21,6 +21,13 @@ an authorized internal client.
 
 ## Generated-file observation
 
+The [ZIP packaging run](ZIP_OBSERVER_RUN.md) completed an actual archive-only
+release with 152,754 UTF-8 bytes from 20 unique contents submitted in attributed
+units. A duplicate-member archive was withheld and its next command refused.
+The earlier unresolved-cleanup and oversized-review failures remain retained.
+ZIP container bytes and nontext leaves remain opaque; no new actor was used
+and the builder's quarantine was preserved.
+
 The [publication-stop run](PUBLICATION_STOP_RUN.md) found and corrected a real
 public-only cancellation gap: an acknowledged stop could precede a later file
 publication. The final stop check and rename now share the broker commit lock.

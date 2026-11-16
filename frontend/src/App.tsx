@@ -15,7 +15,7 @@ type FileRec = { path: string; text: string; json?: any; error?: string };
 type Call = { id:string; label:string; argv?:string[]; verdict?:string|null; rc?:number|null; elapsed?:number; evidence?:string|null; events:Obj[]; actions:Obj[]; files:string[]; detail:Obj };
 type Dataset = { title:string; description:string; files:Map<string,FileRec>; calls:Call[]; task?:string; closed?:boolean|null; stopped?:boolean|null; cancellation?:Obj; source:string };
 const demoSets: Record<string,Dataset> = {
-  grok: makeDataset('Grok build and review · real recorded run', 'research/coding-agent-runs/grok-v1/summary.json', {
+  grok: makeDataset('Build and review', 'research/coding-agent-runs/grok-v1/summary.json', {
     'summary.json':grokSummary,'session-completion/evidence/coding-session.json':codingSession,'session-completion/evidence/step-001/manifest.json':manifest,'session-completion/evidence/step-001/runtime.json':runtime,'session-completion/evidence/step-001/observer-input-0.json':observerInput,
   }, 'A real retained coding-agent run. Use the call list to switch between successful, policy-stopped and timed-out scopes in the summary.'),
   cancelled: makeDataset('Owner lifetime · normal build and cancellation', 'research/system-runs/owner-lifetime/summary.json', {

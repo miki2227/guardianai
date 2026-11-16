@@ -10,6 +10,19 @@ import uuid
 from agent_observer import AgentObserver
 
 
+def observe_message(observer, item):
+    """Observe exposed CLI content; tool replies have already reached the client."""
+    blocks = item.get('message', {}).get('content', [])
+    if item.get('type') == 'assistant':
+        exposed = [{key: block[key] for key in ('type', 'text', 'thinking', 'name', 'input') if key in block}
+                   for block in blocks if block.get('type') in ('text', 'thinking', 'tool_use')]
+        return not exposed or observer.observe('emitted_assistant_message', exposed)
+    if item.get('type') == 'user':
+        exposed = [block for block in blocks if block.get('type') == 'tool_result']
+        return not exposed or observer.observe('delivered_tool_result', exposed)
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('grok', 'client', 'prompt', 'report', 'evidence'):
@@ -132,13 +145,9 @@ def main():
                             publish_binding()
                         if item.get('type') == 'result':
                             terminal_result = item
-                        blocks = item.get('message', {}).get('content', [])
-                        if item.get('type') == 'assistant':
-                            exposed = [{key: block[key] for key in ('type', 'text', 'thinking', 'name', 'input') if key in block}
-                                       for block in blocks if block.get('type') in ('text', 'thinking', 'tool_use')]
-                            if exposed and not observer.observe('emitted_assistant_message', exposed):
-                                stopped = True
-                                break
+                        if not observe_message(observer, item):
+                            stopped = True
+                            break
                     except (ValueError, TypeError, AttributeError):
                         stop_scope()
                         stopped = True

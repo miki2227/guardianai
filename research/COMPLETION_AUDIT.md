@@ -1,5 +1,11 @@
 # Research scope and completion audit
 
+The [CLI tool-result replay](TOOL_RESULT_OBSERVER_RUN.md) verifies a host-observer
+coverage correction using real retained messages and live Jev decisions. Five
+tool replies now enter the host journal alongside assistant content. The replay
+started no model agent or worker and left the canonical quarantine unchanged.
+It does not establish prospective delivery control or covert coordination.
+
 The [ZIP observation run](ZIP_OBSERVER_RUN.md) completed real peer-bundle
 repackaging and an archive-only release, with decoded text, provenance and
 bounded review units. Duplicate-member refusal and next-command blocking were

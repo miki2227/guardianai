@@ -21,6 +21,11 @@ an authorized internal client.
 
 ## Generated-file observation
 
+The [host tool-result adapter](TOOL_RESULT_OBSERVER_RUN.md) also observes exposed
+CLI replies, including tool discovery. Live Jev replay verified five real saved
+replies with exact source joins. It started no agent or worker; these are
+retrospective decisions, not a newly completed workflow or pre-delivery control.
+
 The [ZIP packaging run](ZIP_OBSERVER_RUN.md) completed an actual archive-only
 release with 152,754 UTF-8 bytes from 20 unique contents submitted in attributed
 units. A duplicate-member archive was withheld and its next command refused.

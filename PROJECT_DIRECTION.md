@@ -45,7 +45,7 @@ Covert coordination is a possibility to investigate, not an outcome to force.
 
 1. The trusted host supplies a task and permissions.
 2. `run_grok_guarded.py` observes that prompt and exposed assistant text, emitted
-   reasoning summaries and tool requests through `AgentObserver`. The original
+   reasoning summaries, tool requests and CLI-emitted tool replies through `AgentObserver`. The original
    CLI JSONL, including reported usage, remains available.
 3. `guardian_mcp.py` checks proposed command arguments before execution and
    checks returned tool content before delivery. It uses the same content
@@ -97,6 +97,12 @@ Only provider-exposed reasoning is available. Private thoughts, hidden provider
 state, exact retained context occupancy and arbitrary side channels are not
 observable from native stacks. Historical conversation loaded through `--resume`
 is not automatically replayed into the observer's new journal.
+
+The host now records `delivered_tool_result` events, including tool discovery
+responses, with their content and tool-use IDs. These CLI events are already
+delivered; they do not move the pre-delivery MCP gate. The
+[retained-message replay](research/TOOL_RESULT_OBSERVER_RUN.md) verifies exact
+source-to-observer joins without resuming an agent or changing quarantine.
 
 Tool outputs are inspected before MCP delivery, but an agent can still read
 allowed files through later commands. Content checks cannot recall bytes already

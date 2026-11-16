@@ -1,5 +1,13 @@
 # Does GuardianAI work?
 
+The [corrected Checkstyle workflow](CHECKSTYLE_WORKING_RUN.md) now completes real
+two-subject work: nine successful worker commands, two approved handoffs with
+verified recipient reads and complete peer text in CLI results, and a final
+reconciled report. The earlier completed-but-stale review was rejected by the
+host audit and retained. A live unapproved-read control still stopped authority
+and refused subsequent work. This is a bounded functional pass, not proof of
+private-thought detection, a P0 finding or a covert convention.
+
 **Yes, as a bounded prototype for supervised MCP/Linux execution and declared
 information-flow policy. It is not yet a validated detector of emergent hidden
 signalling, and it cannot inspect private model thoughts.**

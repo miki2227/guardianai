@@ -1,0 +1,570 @@
+FILE XmlLoader.java LINES 169
+   1|///////////////////////////////////////////////////////////////////////////////////////////////
+   2|// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+   3|// Copyright (C) 2001-2026 the original author or authors.
+   4|//
+   5|// This library is free software; you can redistribute it and/or
+   6|// modify it under the terms of the GNU Lesser General Public
+   7|// License as published by the Free Software Foundation; either
+   8|// version 2.1 of the License, or (at your option) any later version.
+   9|//
+  10|// This library is distributed in the hope that it will be useful,
+  11|// but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12|// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  13|// Lesser General Public License for more details.
+  14|//
+  15|// You should have received a copy of the GNU Lesser General Public
+  16|// License along with this library; if not, write to the Free Software
+  17|// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  18|///////////////////////////////////////////////////////////////////////////////////////////////
+  19|
+  20|package com.puppycrawl.tools.checkstyle;
+  21|
+  22|import java.io.IOException;
+  23|import java.io.InputStream;
+  24|import java.util.Map;
+  25|
+  26|import javax.xml.parsers.ParserConfigurationException;
+  27|import javax.xml.parsers.SAXParserFactory;
+  28|
+  29|import org.xml.sax.InputSource;
+  30|import org.xml.sax.SAXException;
+  31|import org.xml.sax.SAXParseException;
+  32|import org.xml.sax.XMLReader;
+  33|import org.xml.sax.helpers.DefaultHandler;
+  34|
+  35|/**
+  36| * Contains the common implementation of a loader, for loading a configuration from an XML file.
+  37| *
+  38| * <p>
+  39| * The error handling policy can be described as being austere, dead set,
+  40| * disciplinary, dour, draconian, exacting, firm, forbidding, grim, hard, hard-
+  41| * boiled, harsh, harsh, in line, iron-fisted, no-nonsense, oppressive,
+  42| * persnickety, picky, prudish, punctilious, puritanical, rigid, rigorous,
+  43| * scrupulous, set, severe, square, stern, stickler, straight, strait-laced,
+  44| * stringent, stuffy, stuffy, tough, unpermissive, unsparing and uptight.
+  45| * </p>
+  46| *
+  47| * @noinspection ThisEscapedInObjectConstruction
+  48| * @noinspectionreason ThisEscapedInObjectConstruction - only reference is used and not
+  49| *      accessed until initialized
+  50| */
+  51|public class XmlLoader extends DefaultHandler {
+  52|
+  53|    /** Maps public id to resolve to resource name for the DTD. */
+  54|    private final Map<String, String> publicIdToResourceNameMap;
+  55|    /** Parser to read XML files. */
+  56|    private final XMLReader parser;
+  57|
+  58|    /**
+  59|     * Creates a new instance.
+  60|     *
+  61|     * @param publicIdToResourceNameMap maps public IDs to DTD resource names
+  62|     * @throws ParserConfigurationException if an error occurs
+  63|     * @throws SAXException if an error occurs
+  64|     */
+  65|    protected XmlLoader(Map<String, String> publicIdToResourceNameMap)
+  66|            throws SAXException, ParserConfigurationException {
+  67|        this.publicIdToResourceNameMap = Map.copyOf(publicIdToResourceNameMap);
+  68|        parser = createXmlReader(this);
+  69|    }
+  70|
+  71|    /**
+  72|     * Parses the specified input source.
+  73|     *
+  74|     * @param inputSource the input source to parse.
+  75|     * @throws IOException if an error occurs
+  76|     * @throws SAXException in an error occurs
+  77|     */
+  78|    public void parseInputSource(InputSource inputSource)
+  79|            throws IOException, SAXException {
+  80|        parser.parse(inputSource);
+  81|    }
+  82|
+  83|    @Override
+  84|    public InputSource resolveEntity(String publicId, String systemId) {
+  85|        InputSource inputSource = null;
+  86|        if (publicId != null) {
+  87|            final String dtdResourceName = publicIdToResourceNameMap.get(publicId);
+  88|
+  89|            if (dtdResourceName != null) {
+  90|                final ClassLoader loader = getClass().getClassLoader();
+  91|                final InputStream dtdIs = loader.getResourceAsStream(dtdResourceName);
+  92|                inputSource = new InputSource(dtdIs);
+  93|            }
+  94|        }
+  95|        return inputSource;
+  96|    }
+  97|
+  98|    @Override
+  99|    public void error(SAXParseException exception) throws SAXException {
+ 100|        throw exception;
+ 101|    }
+ 102|
+ 103|    /**
+ 104|     * Helper method to create {@code XMLReader}.
+ 105|     *
+ 106|     * @param handler the content handler
+ 107|     * @return new XMLReader instance
+ 108|     * @throws ParserConfigurationException if a parser cannot be created
+ 109|     * @throws SAXException for SAX errors
+ 110|     */
+ 111|    private static XMLReader createXmlReader(DefaultHandler handler)
+ 112|            throws SAXException, ParserConfigurationException {
+ 113|        final SAXParserFactory factory = SAXParserFactory.newInstance();
+ 114|        LoadExternalDtdFeatureProvider.setFeaturesBySystemProperty(factory);
+ 115|        factory.setValidating(true);
+ 116|        final XMLReader xmlReader = factory.newSAXParser().getXMLReader();
+ 117|        xmlReader.setContentHandler(handler);
+ 118|        xmlReader.setEntityResolver(handler);
+ 119|        xmlReader.setErrorHandler(handler);
+ 120|        return xmlReader;
+ 121|    }
+ 122|
+ 123|    /**
+ 124|     * Used for setting specific for secure java installations features to SAXParserFactory.
+ 125|     * Pulled out as a separate class in order to suppress Pitest mutations.
+ 126|     */
+ 127|    public static final class LoadExternalDtdFeatureProvider {
+ 128|
+ 129|        /** System property name to enable external DTD load. */
+ 130|        public static final String ENABLE_EXTERNAL_DTD_LOAD = "checkstyle.enableExternalDtdLoad";
+ 131|
+ 132|        /** Feature that enables loading external DTD when loading XML files. */
+ 133|        public static final String LOAD_EXTERNAL_DTD =
+ 134|                "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+ 135|        /** Feature that enables including external general entities in XML files. */
+ 136|        public static final String EXTERNAL_GENERAL_ENTITIES =
+ 137|                "http://xml.org/sax/features/external-general-entities";
+ 138|        /** Feature that enables including external parameter entities in XML files. */
+ 139|        public static final String EXTERNAL_PARAMETER_ENTITIES =
+ 140|                "http://xml.org/sax/features/external-parameter-entities";
+ 141|
+ 142|        /** Stop instances being created. */
+ 143|        private LoadExternalDtdFeatureProvider() {
+ 144|        }
+ 145|
+ 146|        /**
+ 147|         * Configures SAXParserFactory with features required
+ 148|         * to use external DTD file loading, this is not activated by default to no allow
+ 149|         * usage of schema files that checkstyle do not know
+ 150|         * it is even security problem to allow files from outside.
+ 151|         *
+ 152|         * @param factory factory to be configured with special features
+ 153|         * @throws ParserConfigurationException if an error occurs
+ 154|         * @throws SAXException if an error occurs
+ 155|         */
+ 156|        public static void setFeaturesBySystemProperty(SAXParserFactory factory)
+ 157|                throws SAXException, ParserConfigurationException {
+ 158|
+ 159|            final boolean enableExternalDtdLoad = Boolean.parseBoolean(
+ 160|                System.getProperty(ENABLE_EXTERNAL_DTD_LOAD, "false"));
+ 161|
+ 162|            factory.setFeature(LOAD_EXTERNAL_DTD, enableExternalDtdLoad);
+ 163|            factory.setFeature(EXTERNAL_GENERAL_ENTITIES, enableExternalDtdLoad);
+ 164|            factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, enableExternalDtdLoad);
+ 165|        }
+ 166|
+ 167|    }
+ 168|
+ 169|}
+---END XmlLoader.java
+FILE PropertyCacheFile.java LINES 397
+   1|///////////////////////////////////////////////////////////////////////////////////////////////
+   2|// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+   3|// Copyright (C) 2001-2026 the original author or authors.
+   4|//
+   5|// This library is free software; you can redistribute it and/or
+   6|// modify it under the terms of the GNU Lesser General Public
+   7|// License as published by the Free Software Foundation; either
+   8|// version 2.1 of the License, or (at your option) any later version.
+   9|//
+  10|// This library is distributed in the hope that it will be useful,
+  11|// but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12|// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  13|// Lesser General Public License for more details.
+  14|//
+  15|// You should have received a copy of the GNU Lesser General Public
+  16|// License along with this library; if not, write to the Free Software
+  17|// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  18|///////////////////////////////////////////////////////////////////////////////////////////////
+  19|
+  20|package com.puppycrawl.tools.checkstyle;
+  21|
+  22|import java.io.ByteArrayOutputStream;
+  23|import java.io.IOException;
+  24|import java.io.InputStream;
+  25|import java.io.ObjectOutputStream;
+  26|import java.io.OutputStream;
+  27|import java.io.Serializable;
+  28|import java.math.BigInteger;
+  29|import java.net.URI;
+  30|import java.nio.file.Files;
+  31|import java.nio.file.Path;
+  32|import java.security.MessageDigest;
+  33|import java.security.NoSuchAlgorithmException;
+  34|import java.util.HashSet;
+  35|import java.util.Locale;
+  36|import java.util.Objects;
+  37|import java.util.Properties;
+  38|import java.util.Set;
+  39|
+  40|import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+  41|import com.puppycrawl.tools.checkstyle.api.Configuration;
+  42|import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+  43|import com.puppycrawl.tools.checkstyle.utils.OsSpecificUtil;
+  44|
+  45|/**
+  46| * This class maintains a persistent(on file-system) store of the files
+  47| * that have checked ok(no validation events) and their associated
+  48| * timestamp. It is used to optimize Checkstyle between few launches.
+  49| * It is mostly useful for plugin and extensions of Checkstyle.
+  50| * It uses a property file for storage.  A hashcode of the Configuration is stored in the
+  51| * cache file to ensure the cache is invalidated when the configuration has changed.
+  52| *
+  53| */
+  54|public final class PropertyCacheFile {
+  55|
+  56|    /**
+  57|     * The property key to use for storing the hashcode of the
+  58|     * configuration. To avoid name clashes with the files that are
+  59|     * checked the key is chosen in such a way that it cannot be a valid file name.
+  60|     */
+  61|    public static final String CONFIG_HASH_KEY = "configuration*?";
+  62|
+  63|    /**
+  64|     * The property prefix to use for storing the hashcode of an
+  65|     * external resource. To avoid name clashes with the files that are
+  66|     * checked the prefix is chosen in such a way that it cannot be a
+  67|     * valid file name and makes it clear it is a resource.
+  68|     */
+  69|    public static final String EXTERNAL_RESOURCE_KEY_PREFIX = "module-resource*?:";
+  70|
+  71|    /** Size of default byte array for buffer. */
+  72|    private static final int BUFFER_SIZE = 1024;
+  73|
+  74|    /** Default buffer for reading from streams. */
+  75|    private static final byte[] BUFFER = new byte[BUFFER_SIZE];
+  76|
+  77|    /** Default number for base 16 encoding. */
+  78|    private static final int BASE_16 = 16;
+  79|
+  80|    /** The details on files. */
+  81|    private final Properties details = new Properties();
+  82|
+  83|    /** Configuration object. */
+  84|    private final Configuration config;
+  85|
+  86|    /** File name of cache. */
+  87|    private final String fileName;
+  88|
+  89|    /** Generated configuration hash. */
+  90|    private String configHash;
+  91|
+  92|    /**
+  93|     * Creates a new {@code PropertyCacheFile} instance.
+  94|     *
+  95|     * @param config the current configuration, not null
+  96|     * @param fileName the cache file
+  97|     * @throws IllegalArgumentException when either arguments are null
+  98|     */
+  99|    public PropertyCacheFile(Configuration config, String fileName) {
+ 100|        if (config == null) {
+ 101|            throw new IllegalArgumentException("config can not be null");
+ 102|        }
+ 103|        if (fileName == null) {
+ 104|            throw new IllegalArgumentException("fileName can not be null");
+ 105|        }
+ 106|        this.config = config;
+ 107|        this.fileName = fileName;
+ 108|    }
+ 109|
+ 110|    /**
+ 111|     * Load cached values from file.
+ 112|     *
+ 113|     * @throws IOException when there is a problems with file read
+ 114|     */
+ 115|    public void load() throws IOException {
+ 116|        // get the current config so if the file isn't found
+ 117|        // the first time the hash will be added to output file
+ 118|        configHash = getHashCodeBasedOnObjectContent(config);
+ 119|        final Path path = Path.of(fileName);
+ 120|        if (Files.exists(path)) {
+ 121|            try (InputStream inStream = Files.newInputStream(path)) {
+ 122|                details.load(inStream);
+ 123|                final String cachedConfigHash = details.getProperty(CONFIG_HASH_KEY);
+ 124|                if (!configHash.equals(cachedConfigHash)) {
+ 125|                    // Detected configuration change - clear cache
+ 126|                    reset();
+ 127|                }
+ 128|            }
+ 129|        }
+ 130|        else {
+ 131|            // put the hash in the file if the file is going to be created
+ 132|            reset();
+ 133|        }
+ 134|    }
+ 135|
+ 136|    /**
+ 137|     * Cleans up the object and updates the cache file.
+ 138|     *
+ 139|     * @throws IOException  when there is a problems with file save
+ 140|     */
+ 141|    public void persist() throws IOException {
+ 142|        final Path path = Path.of(fileName);
+ 143|        final Path directory = path.getParent();
+ 144|
+ 145|        if (directory != null) {
+ 146|            OsSpecificUtil.updateDirectory(directory);
+ 147|        }
+ 148|        try (OutputStream out = Files.newOutputStream(path)) {
+ 149|            details.store(out, null);
+ 150|        }
+ 151|    }
+ 152|
+ 153|    /**
+ 154|     * Resets the cache to be empty except for the configuration hash.
+ 155|     */
+ 156|    public void reset() {
+ 157|        details.clear();
+ 158|        details.setProperty(CONFIG_HASH_KEY, configHash);
+ 159|    }
+ 160|
+ 161|    /**
+ 162|     * Checks that file is in cache.
+ 163|     *
+ 164|     * @param uncheckedFileName the file to check
+ 165|     * @param timestamp the timestamp of the file to check
+ 166|     * @return whether the specified file has already been checked ok
+ 167|     */
+ 168|    public boolean isInCache(String uncheckedFileName, long timestamp) {
+ 169|        final String lastChecked = details.getProperty(uncheckedFileName);
+ 170|        return Objects.equals(lastChecked, Long.toString(timestamp));
+ 171|    }
+ 172|
+ 173|    /**
+ 174|     * Records that a file checked ok.
+ 175|     *
+ 176|     * @param checkedFileName name of the file that checked ok
+ 177|     * @param timestamp the timestamp of the file
+ 178|     */
+ 179|    public void put(String checkedFileName, long timestamp) {
+ 180|        details.setProperty(checkedFileName, Long.toString(timestamp));
+ 181|    }
+ 182|
+ 183|    /**
+ 184|     * Retrieves the hash of a specific file.
+ 185|     *
+ 186|     * @param name The name of the file to retrieve.
+ 187|     * @return The has of the file or {@code null}.
+ 188|     */
+ 189|    public String get(String name) {
+ 190|        return details.getProperty(name);
+ 191|    }
+ 192|
+ 193|    /**
+ 194|     * Removed a specific file from the cache.
+ 195|     *
+ 196|     * @param checkedFileName The name of the file to remove.
+ 197|     */
+ 198|    public void remove(String checkedFileName) {
+ 199|        details.remove(checkedFileName);
+ 200|    }
+ 201|
+ 202|    /**
+ 203|     * Returns the cache file name.
+ 204|     *
+ 205|     * @return the cache file name.
+ 206|     */
+ 207|    public String getFileName() {
+ 208|        return fileName;
+ 209|    }
+ 210|
+ 211|    /**
+ 212|     * Calculates the hashcode for the serializable object based on its content.
+ 213|     *
+ 214|     * @param object serializable object.
+ 215|     * @return the hashcode for serializable object.
+ 216|     * @throws IllegalStateException when some unexpected happened.
+ 217|     */
+ 218|    private static String getHashCodeBasedOnObjectContent(Serializable object) {
+ 219|        try {
+ 220|            final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+ 221|            // in-memory serialization of Configuration
+ 222|            serialize(object, outputStream);
+ 223|            // Instead of hexEncoding outputStream.toByteArray() directly we
+ 224|            // use a message digest here to keep the length of the
+ 225|            // hashcode reasonable
+ 226|
+ 227|            final MessageDigest digest = MessageDigest.getInstance("SHA-1");
+ 228|            digest.update(outputStream.toByteArray());
+ 229|
+ 230|            return new BigInteger(1, digest.digest()).toString(BASE_16).toUpperCase(Locale.ROOT);
+ 231|        }
+ 232|        catch (final IOException | NoSuchAlgorithmException exc) {
+ 233|            // rethrow as unchecked exception
+ 234|            throw new IllegalStateException("Unable to calculate hashcode for "
+ 235|                    + object.getClass().getName(), exc);
+ 236|        }
+ 237|    }
+ 238|
+ 239|    /**
+ 240|     * Serializes object to output stream.
+ 241|     *
+ 242|     * @param object object to be serialized
+ 243|     * @param outputStream serialization stream
+ 244|     * @throws IOException if an error occurs
+ 245|     */
+ 246|    private static void serialize(Serializable object,
+ 247|                                  OutputStream outputStream)
+ 248|            throws IOException {
+ 249|        try (ObjectOutputStream oos = new ObjectOutputStream(outputStream)) {
+ 250|            oos.writeObject(object);
+ 251|        }
+ 252|    }
+ 253|
+ 254|    /**
+ 255|     * Puts external resources in cache.
+ 256|     * If at least one external resource changed, clears the cache.
+ 257|     *
+ 258|     * @param locations locations of external resources.
+ 259|     */
+ 260|    public void putExternalResources(Set<String> locations) {
+ 261|        final Set<ExternalResource> resources = loadExternalResources(locations);
+ 262|        if (areExternalResourcesChanged(resources)) {
+ 263|            reset();
+ 264|            fillCacheWithExternalResources(resources);
+ 265|        }
+ 266|    }
+ 267|
+ 268|    /**
+ 269|     * Loads a set of {@link ExternalResource} based on their locations.
+ 270|     *
+ 271|     * @param resourceLocations locations of external configuration resources.
+ 272|     * @return a set of {@code ExternalResource}.
+ 273|     */
+ 274|    private static Set<ExternalResource> loadExternalResources(Set<String> resourceLocations) {
+ 275|        final Set<ExternalResource> resources = new HashSet<>();
+ 276|        for (String location : resourceLocations) {
+ 277|            try {
+ 278|                final byte[] content = loadExternalResource(location);
+ 279|                final String contentHashSum = getHashCodeBasedOnObjectContent(content);
+ 280|                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+ 281|                        contentHashSum));
+ 282|            }
+ 283|            catch (CheckstyleException | IOException exc) {
+ 284|                // if exception happened (configuration resource was not found, connection is not
+ 285|                // available, resource is broken, etc.), we need to calculate hash sum based on
+ 286|                // exception object content in order to check whether problem is resolved later
+ 287|                // and/or the configuration is changed.
+ 288|                final String contentHashSum = getHashCodeBasedOnObjectContent(exc);
+ 289|                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+ 290|                        contentHashSum));
+ 291|            }
+ 292|        }
+ 293|        return resources;
+ 294|    }
+ 295|
+ 296|    /**
+ 297|     * Loads the content of external resource.
+ 298|     *
+ 299|     * @param location external resource location.
+ 300|     * @return array of bytes which represents the content of external resource in binary form.
+ 301|     * @throws CheckstyleException if error while loading occurs.
+ 302|     * @throws IOException if error while loading occurs.
+ 303|     */
+ 304|    private static byte[] loadExternalResource(String location)
+ 305|            throws IOException, CheckstyleException {
+ 306|        final URI uri = CommonUtil.getUriByFilename(location);
+ 307|
+ 308|        try (InputStream is = uri.toURL().openStream()) {
+ 309|            return toByteArray(is);
+ 310|        }
+ 311|    }
+ 312|
+ 313|    /**
+ 314|     * Reads all the contents of an input stream and returns it as a byte array.
+ 315|     *
+ 316|     * @param stream The input stream to read from.
+ 317|     * @return The resulting byte array of the stream.
+ 318|     * @throws IOException if there is an error reading the input stream.
+ 319|     */
+ 320|    private static byte[] toByteArray(InputStream stream) throws IOException {
+ 321|        final ByteArrayOutputStream content = new ByteArrayOutputStream();
+ 322|
+ 323|        while (true) {
+ 324|            final int size = stream.read(BUFFER);
+ 325|            if (size == -1) {
+ 326|                break;
+ 327|            }
+ 328|
+ 329|            content.write(BUFFER, 0, size);
+ 330|        }
+ 331|
+ 332|        return content.toByteArray();
+ 333|    }
+ 334|
+ 335|    /**
+ 336|     * Checks whether the contents of external configuration resources were changed.
+ 337|     *
+ 338|     * @param resources a set of {@link ExternalResource}.
+ 339|     * @return true if the contents of external configuration resources were changed.
+ 340|     */
+ 341|    private boolean areExternalResourcesChanged(Set<ExternalResource> resources) {
+ 342|        return resources.stream().anyMatch(this::isResourceChanged);
+ 343|    }
+ 344|
+ 345|    /**
+ 346|     * Checks whether the resource is changed.
+ 347|     *
+ 348|     * @param resource resource to check.
+ 349|     * @return true if resource is changed.
+ 350|     */
+ 351|    private boolean isResourceChanged(ExternalResource resource) {
+ 352|        boolean changed = false;
+ 353|        if (isResourceLocationInCache(resource.location)) {
+ 354|            final String contentHashSum = resource.contentHashSum;
+ 355|            final String cachedHashSum = details.getProperty(resource.location);
+ 356|            if (!cachedHashSum.equals(contentHashSum)) {
+ 357|                changed = true;
+ 358|            }
+ 359|        }
+ 360|        else {
+ 361|            changed = true;
+ 362|        }
+ 363|        return changed;
+ 364|    }
+ 365|
+ 366|    /**
+ 367|     * Fills cache with a set of {@link ExternalResource}.
+ 368|     * If external resource from the set is already in cache, it will be skipped.
+ 369|     *
+ 370|     * @param externalResources a set of {@code ExternalResource}.
+ 371|     */
+ 372|    private void fillCacheWithExternalResources(Set<ExternalResource> externalResources) {
+ 373|        externalResources
+ 374|            .forEach(resource -> details.setProperty(resource.location, resource.contentHashSum));
+ 375|    }
+ 376|
+ 377|    /**
+ 378|     * Checks whether resource location is in cache.
+ 379|     *
+ 380|     * @param location resource location.
+ 381|     * @return true if resource location is in cache.
+ 382|     */
+ 383|    private boolean isResourceLocationInCache(String location) {
+ 384|        final String cachedHashSum = details.getProperty(location);
+ 385|        return cachedHashSum != null;
+ 386|    }
+ 387|
+ 388|    /**
+ 389|     * Class which represents external resource.
+ 390|     *
+ 391|     * @param location       resource location.
+ 392|     * @param contentHashSum content hash sum.
+ 393|     */
+ 394|    private record ExternalResource(String location, String contentHashSum) {
+ 395|    }
+ 396|
+ 397|}
+---END PropertyCacheFile.java

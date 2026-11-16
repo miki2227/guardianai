@@ -1,0 +1,70 @@
+PATH /workspace/source/src/main/java/com/puppycrawl/tools/checkstyle/ConfigurationLoader.java EXISTS True
+LINES 596
+  51|public final class ConfigurationLoader {
+  56|    public enum IgnoredModulesOptions {
+  70|    /** The new public ID for version 1_3 of the configuration dtd. */
+  71|    public static final String DTD_PUBLIC_CS_ID_1_3 =
+  72|        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN";
+  75|    public static final String DTD_CONFIGURATION_NAME_1_3 =
+  81|    /** The public ID for version 1_0 of the configuration dtd. */
+  82|    private static final String DTD_PUBLIC_ID_1_0 =
+  83|        "-//Puppy Crawl//DTD Check Configuration 1.0//EN";
+  85|    /** The new public ID for version 1_0 of the configuration dtd. */
+  86|    private static final String DTD_PUBLIC_CS_ID_1_0 =
+  87|        "-//Checkstyle//DTD Checkstyle Configuration 1.0//EN";
+  90|    private static final String DTD_CONFIGURATION_NAME_1_0 =
+  93|    /** The public ID for version 1_1 of the configuration dtd. */
+  94|    private static final String DTD_PUBLIC_ID_1_1 =
+  95|        "-//Puppy Crawl//DTD Check Configuration 1.1//EN";
+  97|    /** The new public ID for version 1_1 of the configuration dtd. */
+  98|    private static final String DTD_PUBLIC_CS_ID_1_1 =
+  99|        "-//Checkstyle//DTD Checkstyle Configuration 1.1//EN";
+ 102|    private static final String DTD_CONFIGURATION_NAME_1_1 =
+ 105|    /** The public ID for version 1_2 of the configuration dtd. */
+ 106|    private static final String DTD_PUBLIC_ID_1_2 =
+ 107|        "-//Puppy Crawl//DTD Check Configuration 1.2//EN";
+ 109|    /** The new public ID for version 1_2 of the configuration dtd. */
+ 110|    private static final String DTD_PUBLIC_CS_ID_1_2 =
+ 111|        "-//Checkstyle//DTD Checkstyle Configuration 1.2//EN";
+ 114|    private static final String DTD_CONFIGURATION_NAME_1_2 =
+ 117|    /** The public ID for version 1_3 of the configuration dtd. */
+ 118|    private static final String DTD_PUBLIC_ID_1_3 =
+ 119|        "-//Puppy Crawl//DTD Check Configuration 1.3//EN";
+ 130|    /** Static map of DTD IDs to resource names. */
+ 132|        Map.entry(DTD_PUBLIC_ID_1_0, DTD_CONFIGURATION_NAME_1_0),
+ 133|        Map.entry(DTD_PUBLIC_ID_1_1, DTD_CONFIGURATION_NAME_1_1),
+ 134|        Map.entry(DTD_PUBLIC_ID_1_2, DTD_CONFIGURATION_NAME_1_2),
+ 135|        Map.entry(DTD_PUBLIC_ID_1_3, DTD_CONFIGURATION_NAME_1_3),
+ 136|        Map.entry(DTD_PUBLIC_CS_ID_1_0, DTD_CONFIGURATION_NAME_1_0),
+ 137|        Map.entry(DTD_PUBLIC_CS_ID_1_1, DTD_CONFIGURATION_NAME_1_1),
+ 138|        Map.entry(DTD_PUBLIC_CS_ID_1_2, DTD_CONFIGURATION_NAME_1_2),
+ 139|        Map.entry(DTD_PUBLIC_CS_ID_1_3, DTD_CONFIGURATION_NAME_1_3)
+ 197|    public static Configuration loadConfiguration(String config,
+ 212|    public static Configuration loadConfiguration(String config,
+ 229|    public static Configuration loadConfiguration(String config,
+ 249|    public static Configuration loadConfiguration(InputSource configSource,
+ 268|    public static Configuration loadConfiguration(String config,
+ 292|    public static Configuration loadConfiguration(InputSource configSource,
+ 317|     * appear in the public API of the ConfigurationLoader.
+ 319|    private final class InternalLoader extends XmlLoader {
+ 481|        public void startElement(String uri,
+ 544|        public void endElement(String uri,
+---
+PATH /workspace/source/src/main/java/com/puppycrawl/tools/checkstyle/utils/OsSpecificUtil.java EXISTS True
+LINES 65
+  29|public final class OsSpecificUtil {
+  32|     * Hiding public and default constructor.
+  48|    public static void updateDirectory(Path directory) throws IOException {
+---
+PATH /workspace/source/src/test/java/com/puppycrawl/tools/checkstyle/XmlLoaderTest.java EXISTS True
+LINES 84
+  36|public class XmlLoaderTest {
+  39|    public void testParserConfiguredSuccessfully() throws Exception {
+  48|    public void testIsProperUtilsClass() throws ReflectiveOperationException {
+  51|                        XmlLoader.LoadExternalDtdFeatureProvider.class))
+  56|    public void testResolveEntityDefault() throws Exception {
+  66|    public void testResolveEntityMap() throws Exception {
+  75|    private static final class DummyLoader extends XmlLoader {
+  77|        private DummyLoader(Map<String, String> publicIdToResourceNameMap)
+  79|            super(publicIdToResourceNameMap);
+---

@@ -1,0 +1,205 @@
+---PCF 280-397
+280:                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+281:                        contentHashSum));
+282:            }
+283:            catch (CheckstyleException | IOException exc) {
+284:                // if exception happened (configuration resource was not found, connection is not
+285:                // available, resource is broken, etc.), we need to calculate hash sum based on
+286:                // exception object content in order to check whether problem is resolved later
+287:                // and/or the configuration is changed.
+288:                final String contentHashSum = getHashCodeBasedOnObjectContent(exc);
+289:                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+290:                        contentHashSum));
+291:            }
+292:        }
+293:        return resources;
+294:    }
+295:
+296:    /**
+297:     * Loads the content of external resource.
+298:     *
+299:     * @param location external resource location.
+300:     * @return array of bytes which represents the content of external resource in binary form.
+301:     * @throws CheckstyleException if error while loading occurs.
+302:     * @throws IOException if error while loading occurs.
+303:     */
+304:    private static byte[] loadExternalResource(String location)
+305:            throws IOException, CheckstyleException {
+306:        final URI uri = CommonUtil.getUriByFilename(location);
+307:
+308:        try (InputStream is = uri.toURL().openStream()) {
+309:            return toByteArray(is);
+310:        }
+311:    }
+312:
+313:    /**
+314:     * Reads all the contents of an input stream and returns it as a byte array.
+315:     *
+316:     * @param stream The input stream to read from.
+317:     * @return The resulting byte array of the stream.
+318:     * @throws IOException if there is an error reading the input stream.
+319:     */
+320:    private static byte[] toByteArray(InputStream stream) throws IOException {
+321:        final ByteArrayOutputStream content = new ByteArrayOutputStream();
+322:
+323:        while (true) {
+324:            final int size = stream.read(BUFFER);
+325:            if (size == -1) {
+326:                break;
+327:            }
+328:
+329:            content.write(BUFFER, 0, size);
+330:        }
+331:
+332:        return content.toByteArray();
+333:    }
+334:
+335:    /**
+336:     * Checks whether the contents of external configuration resources were changed.
+337:     *
+338:     * @param resources a set of {@link ExternalResource}.
+339:     * @return true if the contents of external configuration resources were changed.
+340:     */
+341:    private boolean areExternalResourcesChanged(Set<ExternalResource> resources) {
+342:        return resources.stream().anyMatch(this::isResourceChanged);
+343:    }
+344:
+345:    /**
+346:     * Checks whether the resource is changed.
+347:     *
+348:     * @param resource resource to check.
+349:     * @return true if resource is changed.
+350:     */
+351:    private boolean isResourceChanged(ExternalResource resource) {
+352:        boolean changed = false;
+353:        if (isResourceLocationInCache(resource.location)) {
+354:            final String contentHashSum = resource.contentHashSum;
+355:            final String cachedHashSum = details.getProperty(resource.location);
+356:            if (!cachedHashSum.equals(contentHashSum)) {
+357:                changed = true;
+358:            }
+359:        }
+360:        else {
+361:            changed = true;
+362:        }
+363:        return changed;
+364:    }
+365:
+366:    /**
+367:     * Fills cache with a set of {@link ExternalResource}.
+368:     * If external resource from the set is already in cache, it will be skipped.
+369:     *
+370:     * @param externalResources a set of {@code ExternalResource}.
+371:     */
+372:    private void fillCacheWithExternalResources(Set<ExternalResource> externalResources) {
+373:        externalResources
+374:            .forEach(resource -> details.setProperty(resource.location, resource.contentHashSum));
+375:    }
+376:
+377:    /**
+378:     * Checks whether resource location is in cache.
+379:     *
+380:     * @param location resource location.
+381:     * @return true if resource location is in cache.
+382:     */
+383:    private boolean isResourceLocationInCache(String location) {
+384:        final String cachedHashSum = details.getProperty(location);
+385:        return cachedHashSum != null;
+386:    }
+387:
+388:    /**
+389:     * Class which represents external resource.
+390:     *
+391:     * @param location       resource location.
+392:     * @param contentHashSum content hash sum.
+393:     */
+394:    private record ExternalResource(String location, String contentHashSum) {
+395:    }
+396:
+397:}
+TEST_EXISTS True
+TEST_N 84
+1:///////////////////////////////////////////////////////////////////////////////////////////////
+2:// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+3:// Copyright (C) 2001-2026 the original author or authors.
+4://
+5:// This library is free software; you can redistribute it and/or
+6:// modify it under the terms of the GNU Lesser General Public
+7:// License as published by the Free Software Foundation; either
+8:// version 2.1 of the License, or (at your option) any later version.
+9://
+10:// This library is distributed in the hope that it will be useful,
+11:// but WITHOUT ANY WARRANTY; without even the implied warranty of
+12:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+13:// Lesser General Public License for more details.
+14://
+15:// You should have received a copy of the GNU Lesser General Public
+16:// License along with this library; if not, write to the Free Software
+17:// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+18:///////////////////////////////////////////////////////////////////////////////////////////////
+19:
+20:package com.puppycrawl.tools.checkstyle;
+21:
+22:import static com.google.common.truth.Truth.assertWithMessage;
+23:import static com.puppycrawl.tools.checkstyle.internal.utils.TestUtil.isUtilsClassHasPrivateConstructor;
+24:
+25:import java.util.HashMap;
+26:import java.util.Map;
+27:
+28:import javax.xml.parsers.ParserConfigurationException;
+29:
+30:import org.junit.jupiter.api.Test;
+31:import org.xml.sax.SAXException;
+32:import org.xml.sax.XMLReader;
+33:
+34:import com.puppycrawl.tools.checkstyle.internal.utils.TestUtil;
+35:
+36:public class XmlLoaderTest {
+37:
+38:    @Test
+39:    public void testParserConfiguredSuccessfully() throws Exception {
+40:        final DummyLoader dummyLoader = new DummyLoader(new HashMap<>(1));
+41:        final XMLReader parser = TestUtil.getInternalState(dummyLoader, "parser", XMLReader.class);
+42:        assertWithMessage("Invalid entity resolver")
+43:            .that(parser.getEntityResolver())
+44:            .isEqualTo(dummyLoader);
+45:    }
+46:
+47:    @Test
+48:    public void testIsProperUtilsClass() throws ReflectiveOperationException {
+49:        assertWithMessage("Constructor is not private")
+50:                .that(isUtilsClassHasPrivateConstructor(
+51:                        XmlLoader.LoadExternalDtdFeatureProvider.class))
+52:                .isTrue();
+53:    }
+54:
+55:    @Test
+56:    public void testResolveEntityDefault() throws Exception {
+57:        final Map<String, String> map = new HashMap<>();
+58:        map.put("predefined", "/google.xml");
+59:        final DummyLoader dummyLoader = new DummyLoader(map);
+60:        assertWithMessage("Invalid entity")
+61:            .that(dummyLoader.resolveEntity("notPredefined", "BAD"))
+62:            .isNull();
+63:    }
+64:
+65:    @Test
+66:    public void testResolveEntityMap() throws Exception {
+67:        final Map<String, String> map = new HashMap<>();
+68:        map.put("predefined", "/google.xml");
+69:        final DummyLoader dummyLoader = new DummyLoader(map);
+70:        assertWithMessage("Invalid entity")
+71:            .that(dummyLoader.resolveEntity("predefined", "BAD"))
+72:            .isNotNull();
+73:    }
+74:
+75:    private static final class DummyLoader extends XmlLoader {
+76:
+77:        private DummyLoader(Map<String, String> publicIdToResourceNameMap)
+78:                throws SAXException, ParserConfigurationException {
+79:            super(publicIdToResourceNameMap);
+80:        }
+81:
+82:    }
+83:
+84:}

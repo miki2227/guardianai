@@ -1,5 +1,6 @@
 """Launch one existing Grok CLI with only MCP tools and stop it on scope revocation."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -8,6 +9,15 @@ import time
 import uuid
 
 from agent_observer import AgentObserver
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate JSON key')
+        result[key] = value
+    return result
 
 
 def observe_message(observer, item):
@@ -19,8 +29,33 @@ def observe_message(observer, item):
         return not exposed or observer.observe('emitted_assistant_message', exposed)
     if item.get('type') == 'user':
         exposed = [block for block in blocks if block.get('type') == 'tool_result']
+        exposed = [decode_tool_result(block) for block in exposed]
         return not exposed or observer.observe('delivered_tool_result', exposed)
     return True
+
+
+def decode_tool_result(block):
+    """Decode known CLI JSON envelopes; raw bytes remain in the captured JSONL."""
+    raw = block.get('content')
+    if not isinstance(raw, str):
+        return block
+    try:
+        content = json.loads(raw, object_pairs_hook=unique_object)
+    except ValueError:
+        return block
+    if not isinstance(content, dict) or content.get('type') != 'MCP' or not isinstance(content.get('output'), dict):
+        return block
+    content = dict(content)
+    content['output'] = dict(content['output'])
+    for name in ('OkayOutput', 'Error'):
+        value = content['output'].get(name)
+        if isinstance(value, str):
+            try:
+                content['output'][name] = json.loads(value, object_pairs_hook=unique_object)
+            except ValueError:
+                pass
+    return {**block, 'content': content, 'cli_content_sha256': hashlib.sha256(raw.encode()).hexdigest(),
+            'cli_content_encoding': 'Decoded MCP JSON envelope; exact original string retained in stdout.jsonl.'}
 
 
 def main():
@@ -73,6 +108,7 @@ def main():
                 'information_flow': state.get('information_flow', {'mode': 'untracked'}),
                 'identity_at_start': state.get('identity_at_start'),
                 'client_binding': state.get('client_binding'),
+                'runtime_alias': state.get('runtime_alias'),
                 'recent_calls': [{key: call[key] for key in ('execution', 'verdict', 'returncode', 'reason') if key in call}
                                  for call in state['calls'][-4:]],
                 'earlier_calls_omitted': max(0, len(state['calls']) - 4)}

@@ -90,6 +90,15 @@ exit are separate observations. See the [completed v2 run](research/OBSERVER_COR
 
 ## What visibility actually means
 
+Runtime backpressure now holds the worker process group during pending decisions;
+it is not a complete namespace freeze. The runtime response cap is 45 seconds,
+covering the existing two-call transport contract. Security rules and execution
+deadlines remain independent. Native stack records are submitted after their
+bounded frame sequence closes, avoiding repeated judgments of growing fragments.
+The Checkstyle Java profile uses a host-selected read-only runtime alias; its raw
+syscalls remain retained. Complete content reviews fall back to recorded
+overlapping parts when needed, with no claim of simultaneous full-message context.
+
 The host observer runs after a complete JSONL message becomes available. Tools
 can already have been dispatched by that time; command gating inside MCP is the
 separate pre-execution boundary. This is not token-by-token provider interception.

@@ -144,7 +144,7 @@ def identity_lease(path, workspace, session):
 
 
 class CodingSession:
-    def __init__(self, task, workspace, session, sensor, command_timeout=30, *, flow_manifest=None, identity_ledger=None, expected_conversation=None):
+    def __init__(self, task, workspace, session, sensor, command_timeout=30, *, flow_manifest=None, identity_ledger=None, expected_conversation=None, runtime_subdir=None):
         if sys.platform != 'linux' or not os.environ.get('TYPESAFE_API_KEY'):
             raise RuntimeError('Linux and the trusted supervisor credential are required')
         if not math.isfinite(command_timeout) or not 0 < command_timeout <= 600:
@@ -162,9 +162,12 @@ class CodingSession:
         session.mkdir(parents=True, exist_ok=False)
         self.root, self.task, self.sensor = session, task, sensor
         self.command_timeout = command_timeout
+        if runtime_subdir is not None and (not runtime_subdir or Path(runtime_subdir).is_absolute() or '..' in Path(runtime_subdir).parts):
+            raise ValueError('Runtime subdirectory must stay inside public source')
         self.public = session / 'public'
         self.public.mkdir()
         shutil.copytree(workspace, self.public / 'source', symlinks=True)
+        self.runtime_directory = None if runtime_subdir is None else self.public / 'source' / runtime_subdir
         (self.public / 'results').mkdir()
         self.evidence = session / 'evidence'
         self.evidence.mkdir()
@@ -229,6 +232,9 @@ class CodingSession:
             context = self.observer._context()
         if self.flow is not None:
             context['information_flow'] = self.flow.context('coding-worker', 'coding-client')
+        if self.runtime_directory is not None:
+            context['runtime_alias'] = {'path': '/runtime', 'read_only': True,
+                'source': 'Host-selected subset of the already public source snapshot; no new host access. Runtime reads are permitted; writes are not.'}
         return context
 
     def save(self):
@@ -237,6 +243,7 @@ class CodingSession:
                 state = {'task': self.task, 'calls': [dict(call) for call in self.calls],
                          'scope_stopped': self.broker.stop_event.is_set(), 'closed': self.closed,
                          'command_timeout_seconds': self.command_timeout,
+                         'runtime_alias': None if self.runtime_directory is None else {'path': '/runtime', 'read_only': True},
                          'broker_audit': copy.deepcopy(self.broker.audit),
                          'identity_ledger': None if self.identity_ledger is None else str(self.identity_ledger),
                          'identity_at_start': self.identity_at_start,
@@ -330,7 +337,7 @@ class CodingSession:
                 return dict(call)
             report = run_worker(self.task, self.public, argv, output=output, evidence=evidence,
                                 sensor=self.sensor, broker=self.broker, principal=name,
-                                launcher=self.launcher, timeout=self.command_timeout,
+                                launcher=self.launcher, timeout=self.command_timeout, runtime_directory=self.runtime_directory,
                                 observer=lambda task, events: self.observer.observe(name, task, events))
             call.update(verdict=report['verdict'], returncode=report['runtime']['returncode'],
                         evidence_status=report['runtime']['evidence_status'])
@@ -493,6 +500,7 @@ def main():
     for name in ('task', 'workspace', 'session'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--sensor', default='strace')
+    parser.add_argument('--runtime-subdir', help='Trusted public source subdirectory also mounted read-only at /runtime; reads are runtime activity')
     parser.add_argument('--flow-manifest', help='Trusted protected-resource paths, labels and worker/client clearances; see FLOW.md')
     parser.add_argument('--identity-ledger', help='Host-owned absolute ledger retained across sessions; requires --flow-manifest and explicit finish')
     parser.add_argument('--expected-conversation', help='Require launcher approval of this CLI session ID before executing commands')
@@ -507,7 +515,7 @@ def main():
     with identity_lease(args.identity_ledger, args.workspace, args.session) as ledger:
         serve(CodingSession(args.task, args.workspace, args.session, args.sensor, args.command_timeout,
                             flow_manifest=args.flow_manifest, identity_ledger=ledger,
-                            expected_conversation=args.expected_conversation))
+                            expected_conversation=args.expected_conversation, runtime_subdir=args.runtime_subdir))
 
 
 if __name__ == '__main__':

@@ -12,6 +12,11 @@ SENSOR = "/home/pratz/guardianai-tools/unpacked/usr/bin/strace"
 
 
 class RuntimeParserTests(unittest.TestCase):
+    def test_runtime_alias_reads_are_runtime_but_writes_are_violations(self):
+        self.assertIsNone(event_from_line('1.0 openat(AT_FDCWD, "/runtime/lib.jar", O_RDONLY) = 3', 'trace.1'))
+        event = event_from_line('1.0 openat(AT_FDCWD, "/runtime/lib.jar", O_WRONLY) = -1 EROFS', 'trace.1')
+        self.assertTrue(event['rule_violation'])
+
     def test_stdout_cannot_forge_kernel_path_event(self):
         self.assertIsNone(event_from_line('1.0 write(1, "unlink(/workspace/input)", 24) = 24', "trace.1"))
 
@@ -27,6 +32,26 @@ class RuntimeParserTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == "linux" and shutil.which("bwrap") and Path(SENSOR).exists(), "requires native Linux sensor")
 class RuntimeKernelTests(unittest.TestCase):
+    def test_runtime_alias_cannot_mount_outside_public_input(self):
+        from guardian import sandbox_argv
+        root = Path(self.temp.name)
+        source, output, outside = root / 'source', root / 'output', root / 'outside'
+        for p in (source, output, outside): p.mkdir()
+        with self.assertRaises(ValueError):
+            sandbox_argv(source, ['/usr/bin/true'], output=output, runtime_directory=outside)
+
+    def test_runtime_alias_write_attempt_is_stopped(self):
+        root = Path(self.temp.name)
+        source, output = root / 'source', root / 'output'
+        source.mkdir(); output.mkdir(); (source / 'item').write_text('unchanged')
+        code = "from pathlib import Path\nimport time\ntry: Path('/runtime/item').write_text('bad')\nexcept OSError: pass\ntime.sleep(1)\nPath('/output/late').write_text('bad')\n"
+        report = supervise('Use the read-only runtime', source, ['/usr/bin/python3', '-c', code],
+                           output=output, evidence=root / 'evidence', sensor=SENSOR,
+                           observer=lambda task, events: {'probability': 0.0}, runtime_directory=source)
+        self.assertEqual(report['verdict'], 'violation')
+        self.assertEqual((source / 'item').read_text(), 'unchanged')
+        self.assertFalse((output / 'late').exists())
+
     def run_case(self, code, observer=lambda task, events: {"probability": 0.0}, *, native_stacks=False, arguments=()):
         root = Path(self.temp.name)
         source, output = root / "input", root / "output"
@@ -127,9 +152,11 @@ Path('/output/late').write_text('bad')
     def test_observer_deadline_terminates_namespace(self):
         def slow(task, events):
             import time
-            time.sleep(2.5)
+            time.sleep(.4)
             return {"probability": 0.0}
-        report, output = self.run_case("from pathlib import Path\nimport time\nPath('/output/trigger').write_text('ok')\ntime.sleep(4)\nPath('/output/late').write_text('bad')\n", slow)
+        from unittest.mock import patch
+        with patch('runtime_supervisor.OBSERVER_DEADLINE_SECONDS', .2):
+            report, output = self.run_case("from pathlib import Path\nimport time\nPath('/output/trigger').write_text('ok')\ntime.sleep(1)\nPath('/output/late').write_text('bad')\n", slow)
         self.assertEqual(report["verdict"], "abstain", report)
         self.assertTrue(report["termination_requested"])
         self.assertFalse((output / "late").exists())

@@ -18,10 +18,11 @@ import time
 import urllib.error
 
 from guardian import POLICY, query_jev, sandbox_argv
-from monitor import LINE, MUTATIONS, PATH_CALLS, QUOTED, missing_nscd_lookup, relative_path_base, sha256, summarize
+from monitor import EXIT_PENDING, LINE, MUTATIONS, PATH_CALLS, QUOTED, missing_nscd_lookup, relative_path_base, sha256, summarize
 
 
-OBSERVER_DEADLINE_SECONDS = 2.0
+# Initial and contextual decisions each have a 20-second transport timeout.
+OBSERVER_DEADLINE_SECONDS = 45.0
 
 
 def observe(task, events):
@@ -48,10 +49,11 @@ def event_from_line(line, source, *, nscd_emulation=False):
                     raise ValueError("Unresolved relative mutation")
             if path.startswith("/"):
                 paths.append(posixpath.normpath(path))
-    if call not in {"connect", "ptrace"} and not any(p.startswith(("/workspace/", "/output/", "/protected/")) for p in paths):
-        return None
     write = call in MUTATIONS or (call in {"open", "openat", "openat2"} and
                                   any(flag in arguments for flag in ("O_WRONLY", "O_RDWR", "O_CREAT", "O_TRUNC")))
+    if call not in {"connect", "ptrace"} and not any(p.startswith(("/workspace/", "/output/", "/protected/"))
+            or (write and (p == '/runtime' or p.startswith('/runtime/'))) for p in paths):
+        return None
     failure = re.match(r"-1 ([A-Z][A-Z0-9_]*)", result)
     error = failure[1] if failure else None
     local_service = missing_nscd_lookup(arguments, result) if call == 'connect' and nscd_emulation else None
@@ -59,14 +61,14 @@ def event_from_line(line, source, *, nscd_emulation=False):
             "paths": paths, "write": write, "denied": result.startswith("-1 "),
             "errno": error, "permission_denied": error in {"EPERM", "EACCES", "EROFS"},
             "rule_violation": call == 'ptrace' or (call == 'connect' and local_service is None)
-                              or (write and any(p.startswith("/workspace/") for p in paths))}
+                              or (write and any(p.startswith(("/workspace/", "/runtime/")) or p == '/runtime' for p in paths))}
     if local_service is not None:
         event.update(connect_disposition='emulated_missing_nscd', local_service_path=local_service)
     return event
 
 
 def supervise(task, workspace, command, *, output, evidence, sensor="strace", observer=observe, timeout=30,
-              broker_channel=None, stop_event=None, native_stacks=False, trusted_launcher=None):
+              broker_channel=None, stop_event=None, native_stacks=False, trusted_launcher=None, runtime_directory=None):
     """Contain before launch; react to observed events while the workload runs.
 
     The trusted supervisor owns sensor files. Model latency is an exposure window;
@@ -77,7 +79,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
         if not trusted_launcher.is_file() or not os.access(trusted_launcher, os.X_OK) or broker_channel is None:
             raise ValueError("Trusted launcher requires an executable file and protected channel")
         command = ["/guardian/notify-launch", *command]
-    argv = sandbox_argv(workspace, command, output=output)
+    argv = sandbox_argv(workspace, command, output=output, runtime_directory=runtime_directory)
     if trusted_launcher is not None:
         separator = argv.index("--")
         argv[separator:separator] = ["--ro-bind", str(trusted_launcher), "/guardian/notify-launch"]
@@ -214,10 +216,12 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                         if previous is not None and len(previous["native_stack"]) < 32:
                             previous["native_stack"].append(line.strip()[:500])
                         continue
+                    if native_stacks:
+                        last_event.pop(source, None)  # A non-frame line closes the preceding stack.
                     match = LINE.match(line)
                     if payload_start is None:
                         continue
-                    if "unfinished ..." in line or "resumed>" in line:
+                    if not match and ("unfinished ..." in line or "resumed>" in line) and not EXIT_PENDING.match(line):
                         raise ValueError("Split syscall evidence unsupported")
                     if not match or float(match[1]) < payload_start:
                         continue
@@ -255,7 +259,9 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                     future = None
                 if len(events) - consumed > 256:
                     raise RuntimeError("Observer backlog exceeded")
-                if not paused and len(events) - consumed >= 64:
+                if not paused and (len(events) - consumed >= 64 or (not future and any(
+                        i not in submitted_frames or len(e.get('native_stack', [])) != submitted_frames[i]
+                        for i, e in enumerate(events)))):
                     try:
                         if os.getpgid(payload_pid) != payload_pid:
                             raise RuntimeError("Worker process group changed before backpressure")
@@ -268,8 +274,12 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                 if future and time.monotonic() - pending_since > OBSERVER_DEADLINE_SECONDS:
                     timeout_kind = "observer_response"
                     raise TimeoutError("Observer deadline")
+                open_events = {id(event) for event in last_event.values() if event is not None}
+                if tracer_exited and trace_drained:
+                    open_events.clear()
                 pending = [(i, event) for i, event in enumerate(events)
-                           if i not in submitted_frames or len(event.get("native_stack", [])) != submitted_frames[i]]
+                           if id(event) not in open_events and (i not in submitted_frames
+                           or len(event.get("native_stack", [])) != submitted_frames[i])]
                 if not future and pending:
                     selected, batch_bytes = [], 2
                     for index, event in pending:
@@ -299,7 +309,7 @@ def supervise(task, workspace, command, *, output, evidence, sensor="strace", ob
                                          "runtime_observer_input_sha256": observer_inputs[-1]["sha256"]}
                     pending_since = time.monotonic()
                     future = executor.submit(timed_observer, snapshot)
-                if paused and not future and not pending and trace_drained:
+                if paused and not future and not pending and not open_events and trace_drained:
                     os.killpg(payload_pid, signal.SIGCONT)
                     paused = False
                     actions.append({"action": "observer_backpressure_resume", "elapsed": time.monotonic() - start})

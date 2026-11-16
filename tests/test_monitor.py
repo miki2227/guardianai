@@ -8,6 +8,15 @@ import monitor
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_nonreturning_exit_requires_terminal_but_other_unfinished_calls_abstain(self):
+        for call, terminal, expected in [('exit(0 <unfinished ...>', True, 'recorded'),
+                                         ('exit_group(-2 <unfinished ...>', True, 'recorded'),
+                                         ('exit(0 <unfinished ...>', False, 'incomplete'),
+                                         ('openat(AT_FDCWD, "/workspace/item", O_RDONLY <unfinished ...>', True, 'incomplete')]:
+            with self.subTest(call=call, terminal=terminal), tempfile.TemporaryDirectory() as directory:
+                self.fixture(directory, call, terminal=terminal)
+                self.assertEqual(monitor.summarize(directory)['evidence_status'], expected)
+
     def fixture(self, directory, syscall, terminal=True):
         path = Path(directory) / "trace.123"
         body = "1000.1 " + syscall + "\n"

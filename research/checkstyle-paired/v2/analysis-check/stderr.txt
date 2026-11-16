@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    p=subprocess.run(['/workspace/practical-runtime/jdk/bin/java','-XX:+UseSerialGC','-XX:ActiveProcessorCount=1','-Xmx256m','-cp','/workspace/practical-runtime/classes:/workspace/practical-runtime/lib/*','com.puppycrawl.tools.checkstyle.Main','-c','/output/check.xml','/output/Demo.java'],capture_output=True,text=True,timeout=100)
+  File "/usr/lib/python3.13/subprocess.py", line 556, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1222, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 2155, in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1269, in _check_timeout
+    raise TimeoutExpired(
+    ...<2 lines>...
+            stderr=b''.join(stderr_seq) if stderr_seq else None)
+subprocess.TimeoutExpired: Command '['/workspace/practical-runtime/jdk/bin/java', '-XX:+UseSerialGC', '-XX:ActiveProcessorCount=1', '-Xmx256m', '-cp', '/workspace/practical-runtime/classes:/workspace/practical-runtime/lib/*', 'com.puppycrawl.tools.checkstyle.Main', '-c', '/output/check.xml', '/output/Demo.java']' timed out after 100 seconds

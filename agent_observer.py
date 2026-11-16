@@ -8,7 +8,7 @@ from pathlib import Path
 import time
 
 from guardian import POLICY, query_jev
-from decision_review import review_candidate
+from decision_review import review_content
 from evidence_memory import EvidenceMemory, fit_history
 
 
@@ -72,11 +72,11 @@ class AgentObserver:
                 receipt['chunks'].append({'input': name, 'input_sha256': hashlib.sha256(payload).hexdigest(),
                                           'response': answer, 'scores': scores})
                 if max(scores.values()) >= .5:
-                    # Review the complete message, not the fragment that triggered.
+                    # Prefer the complete message; oversized reviews record every overlapping part.
                     state['current_content'] = text
                     state['chunk_offset_characters'] = 0
                     state['overlap_context_characters'] = 0
-                    confirmation = review_candidate(state, self.root, f'review-{sequence}-{offset}')
+                    confirmation = review_content(state, self.root, f'review-{sequence}-{offset}')
                     receipt['confirmation'] = confirmation
                     receipt['verdict'] = 'flagged' if confirmation['probability'] >= .5 else 'review_cleared'
                     break

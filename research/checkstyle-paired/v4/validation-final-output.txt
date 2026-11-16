@@ -1,0 +1,32 @@
+............rm: cannot remove '/workspace/preserve.txt': Read-only file system
+....................................................FF.........
+======================================================================
+FAIL: test_old_launcher_policy_is_rejected_before_workload_execution (test_seccomp_gate.SeccompKernelTests.test_old_launcher_policy_is_rejected_before_workload_execution) (value={'notif_size': 80, 'response_size': 24})
+----------------------------------------------------------------------
+RuntimeError: Unsupported seccomp notification ABI, policy or launch guard version
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/pratz/guardianai-checkstyle-paired-v4/validation/tests/test_seccomp_gate.py", line 98, in test_old_launcher_policy_is_rejected_before_workload_execution
+    with self.assertRaisesRegex(RuntimeError, 'policy version'):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "policy version" does not match "Unsupported seccomp notification ABI, policy or launch guard version"
+
+======================================================================
+FAIL: test_old_launcher_policy_is_rejected_before_workload_execution (test_seccomp_gate.SeccompKernelTests.test_old_launcher_policy_is_rejected_before_workload_execution) (value={'policy_version': 2, 'notif_size': 80, 'response_size': 24})
+----------------------------------------------------------------------
+RuntimeError: Unsupported seccomp notification ABI, policy or launch guard version
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/pratz/guardianai-checkstyle-paired-v4/validation/tests/test_seccomp_gate.py", line 98, in test_old_launcher_policy_is_rejected_before_workload_execution
+    with self.assertRaisesRegex(RuntimeError, 'policy version'):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "policy version" does not match "Unsupported seccomp notification ABI, policy or launch guard version"
+
+----------------------------------------------------------------------
+Ran 74 tests in 6.809s
+
+FAILED (failures=2)

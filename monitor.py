@@ -18,6 +18,7 @@ from guardian import NSS_PATHS, POLICY, assess_state, sandbox_argv
 LINE = re.compile(r"^(\d+\.\d+)\s+(\w+)\((.*)\)\s+=\s+(.+)$")
 QUOTED = re.compile(r'"((?:[^"\\]|\\.)*)"')
 TERMINAL = re.compile(r"\+\+\+ (?:exited with \d+|killed by \w+).+\+\+\+")
+EXIT_PENDING = re.compile(r'^\d+\.\d+\s+exit(?:_group)?\(-?\d+\s+<unfinished \.\.\.>$')
 MUTATIONS = {"unlink", "unlinkat", "rename", "renameat", "renameat2", "mkdir", "mkdirat",
              "rmdir", "truncate", "chmod", "fchmodat", "symlink", "symlinkat", "link", "linkat"}
 PATH_CALLS = MUTATIONS | {"open", "openat", "openat2", "access", "faccessat", "faccessat2",
@@ -129,7 +130,7 @@ def summarize(evidence):
             for number, line in enumerate(lines, 1):
                 match = LINE.match(line)
                 if not match:
-                    if "unfinished ..." in line or "resumed>" in line:
+                    if ("unfinished ..." in line or "resumed>" in line) and not EXIT_PENDING.match(line):
                         problems.append("split_syscall_unparsed")
                     continue
                 timestamp, syscall, arguments, result = match.groups()
@@ -144,7 +145,10 @@ def summarize(evidence):
                     problems.append("unresolved_relative_mutation")
                 resolved = [posixpath.normpath(p if p.startswith("/") else
                             posixpath.join(cwd, p) if cwd else p) for p in quoted]
-                paths = [p for p in resolved if p.startswith(("/workspace/", "/output/", "/home/", "/etc/"))]
+                runtime_write = syscall in MUTATIONS or (syscall in {"open", "openat", "openat2"}
+                                and any(flag in arguments for flag in ("O_WRONLY", "O_RDWR", "O_CREAT", "O_TRUNC")))
+                paths = [p for p in resolved if p.startswith(("/workspace/", "/output/", "/home/", "/etc/"))
+                         or (runtime_write and (p == '/runtime' or p.startswith('/runtime/')))]
                 scoped = paths or ("AT_FDCWD</output>" in arguments and syscall in MUTATIONS)
                 network = syscall == "connect"
                 tamper = syscall == "ptrace"
@@ -175,7 +179,7 @@ def rule_verdict(summary, *, successful_only=False, forbidden_reads=()):
         if ((event["network"] and event.get('connect_disposition') != 'emulated_missing_nscd') or event["tamper"]
                 or any(p in forbidden_reads for p in event["paths"])
                 or (event["write"] and event["denied"] and "EROFS" in event["result"])
-                or (event["write"] and any(p.startswith("/workspace/") for p in event["paths"]))):
+                or (event["write"] and any(p.startswith(("/workspace/", "/runtime/")) or p == '/runtime' for p in event["paths"]))):
             return "violation"
     return "no_observed_violation"
 

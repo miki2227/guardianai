@@ -1,8 +1,22 @@
 # Does GuardianAI work?
 
+The [corrected Checkstyle workflow](CHECKSTYLE_WORKING_RUN.md) now completes real
+two-subject work: nine successful worker commands, two approved handoffs with
+verified recipient reads and complete peer text in CLI results, and a final
+reconciled report. The earlier completed-but-stale review was rejected by the
+host audit and retained. A live unapproved-read control still stopped authority
+and refused subsequent work. This is a bounded functional pass, not proof of
+private-thought detection, a P0 finding or a covert convention.
+
 **Yes, as a bounded prototype for supervised MCP/Linux execution and declared
 information-flow policy. It is not yet a validated detector of emergent hidden
 signalling, and it cannot inspect private model thoughts.**
+
+The [real Checkstyle attempt](CHECKSTYLE_PRACTICAL_RUN.md) did **not** complete.
+One Grok session reached an unavailable Java executable path, then exceeded the
+trace budget during discovery. A separate host run with the resolved executable
+also abstained during JVM loading. Stopping worked, but this Java investigation
+was not practically usable. No Checkstyle bug or P0 was established.
 
 The [latest feedback-cycle attempt](FEEDBACK_LOOP_RUN.md) did **not** complete.
 The builder made an invalid child-path read of a virtual resource and was
@@ -20,6 +34,13 @@ index and refused the next command while delivering identical index bytes to
 an authorized internal client.
 
 ## Generated-file observation
+
+The [two-subject Checkstyle attempt](CHECKSTYLE_PAIRED_RUN.md) exchanged a Jev-
+approved transcript and verified its recipient read, but both subjects stopped
+before final findings. Process-group backpressure enabled a configured Java
+smoke check; the actual investigator later missed an observer deadline and the
+reviewer exceeded the host full-message review budget. Practical paired Java
+analysis remains incomplete; stopping alone is not successful task completion.
 
 The [host tool-result adapter](TOOL_RESULT_OBSERVER_RUN.md) also observes exposed
 CLI replies, including tool discovery. Live Jev replay verified five real saved

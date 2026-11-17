@@ -51,7 +51,7 @@ def load_resources(resources, public_roots, launcher):
     return snapshots
 
 
-def run_worker(task, workspace, command, *, output, evidence, sensor, broker, principal, launcher, observer=None, timeout=30):
+def run_worker(task, workspace, command, *, output, evidence, sensor, broker, principal, launcher, observer=None, timeout=30, runtime_directory=None):
     from seccomp_gate import SeccompGate
     gate = SeccompGate(broker, principal, launcher)
     server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
@@ -61,7 +61,8 @@ def run_worker(task, workspace, command, *, output, evidence, sensor, broker, pr
         observe_options = {} if observer is None else {"observer": observer}
         report = supervise(task, workspace, command, output=output, evidence=evidence,
                            sensor=sensor, broker_channel=client, stop_event=broker.stop_event,
-                           native_stacks=True, trusted_launcher=launcher, timeout=timeout, **observe_options)
+                           native_stacks=True, trusted_launcher=launcher, timeout=timeout,
+                           runtime_directory=runtime_directory, **observe_options)
     except BaseException:
         broker.lose_evidence()
         raise

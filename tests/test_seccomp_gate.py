@@ -95,7 +95,7 @@ Path('/output/result.json').write_text(json.dumps({'value':value.decode(),'fds':
         for value in ({'notif_size': 80, 'response_size': 24},
                       {'policy_version': 2, 'notif_size': 80, 'response_size': 24}):
             with self.subTest(value=value), patch('seccomp_gate.subprocess.check_output', return_value=json.dumps(value).encode()):
-                with self.assertRaisesRegex(RuntimeError, 'policy version'):
+                with self.assertRaisesRegex(RuntimeError, 'policy.*version'):
                     SeccompGate(broker, 'A', LAUNCHER)
 
     def test_worker_cannot_stack_a_filter_that_suppresses_ptrace_notifications(self):

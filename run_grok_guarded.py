@@ -1,6 +1,8 @@
 """Launch one existing Grok CLI with only MCP tools and stop it on scope revocation."""
 import argparse
+import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -8,6 +10,15 @@ import time
 import uuid
 
 from agent_observer import AgentObserver
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate JSON key')
+        result[key] = value
+    return result
 
 
 def observe_message(observer, item):
@@ -19,8 +30,33 @@ def observe_message(observer, item):
         return not exposed or observer.observe('emitted_assistant_message', exposed)
     if item.get('type') == 'user':
         exposed = [block for block in blocks if block.get('type') == 'tool_result']
+        exposed = [decode_tool_result(block) for block in exposed]
         return not exposed or observer.observe('delivered_tool_result', exposed)
     return True
+
+
+def decode_tool_result(block):
+    """Decode known CLI JSON envelopes; raw bytes remain in the captured JSONL."""
+    raw = block.get('content')
+    if not isinstance(raw, str):
+        return block
+    try:
+        content = json.loads(raw, object_pairs_hook=unique_object)
+    except ValueError:
+        return block
+    if not isinstance(content, dict) or content.get('type') != 'MCP' or not isinstance(content.get('output'), dict):
+        return block
+    content = dict(content)
+    content['output'] = dict(content['output'])
+    for name in ('OkayOutput', 'Error'):
+        value = content['output'].get(name)
+        if isinstance(value, str):
+            try:
+                content['output'][name] = json.loads(value, object_pairs_hook=unique_object)
+            except ValueError:
+                pass
+    return {**block, 'content': content, 'cli_content_sha256': hashlib.sha256(raw.encode()).hexdigest(),
+            'cli_content_encoding': 'Decoded MCP JSON envelope; exact original string retained in stdout.jsonl.'}
 
 
 def main():
@@ -30,7 +66,12 @@ def main():
     parser.add_argument('--resume', help='Resume an existing Grok conversation under a new GuardianAI scope')
     parser.add_argument('--history-root', help='Trusted evidence root containing this and earlier launcher evidence; never an agent mount')
     parser.add_argument('--require-binding', action='store_true', help='Verify resumed CLI identity before approving MCP commands')
+    parser.add_argument('--task-file', help='Trusted task/permissions, separate from a large prompt containing reference data')
+    parser.add_argument('--max-turns', type=int, default=12, help='Trusted model-round limit, from 1 to 100')
+    parser.add_argument('--deadline-seconds', type=float, default=600, help='Trusted invocation deadline, at most 7200 seconds')
     args = parser.parse_args()
+    if not 1 <= args.max_turns <= 100 or not math.isfinite(args.deadline_seconds) or not 0 < args.deadline_seconds <= 7200:
+        parser.error('Use bounded positive turn and invocation limits')
     if args.require_binding and not args.resume:
         parser.error('--require-binding requires --resume')
     evidence = Path(args.evidence)
@@ -73,11 +114,12 @@ def main():
                 'information_flow': state.get('information_flow', {'mode': 'untracked'}),
                 'identity_at_start': state.get('identity_at_start'),
                 'client_binding': state.get('client_binding'),
+                'runtime_alias': state.get('runtime_alias'),
                 'recent_calls': [{key: call[key] for key in ('execution', 'verdict', 'returncode', 'reason') if key in call}
                                  for call in state['calls'][-4:]],
                 'earlier_calls_omitted': max(0, len(state['calls']) - 4)}
 
-    observer = AgentObserver(Path(args.prompt).read_text(), evidence / 'agent-content',
+    observer = AgentObserver(Path(args.task_file or args.prompt).read_text(), evidence / 'agent-content',
                              context=execution_context, stop=stop_scope, memory_root=args.history_root)
     if not observer.observe('host_supplied_prompt', Path(args.prompt).read_text()):
         (evidence / 'launcher.json').write_text(json.dumps({'launched': False, 'reason': 'prompt_observer_stop'}) + '\n')
@@ -85,7 +127,7 @@ def main():
     command = [args.grok, '--cwd', args.client, '--model', 'grok-4.7', '--reasoning-effort', 'low',
                '--tools', 'search_tool,use_tool', '--no-subagents', '--disable-web-search',
                '--permission-mode', 'dontAsk', '--allow', 'MCPTool(guardianai__run)',
-               '--max-turns', '12', '--output-format', 'streaming-messages-json',
+               '--max-turns', str(args.max_turns), '--output-format', 'streaming-messages-json',
                '--prompt-file', args.prompt]
     if args.resume:
         command += ['--resume', args.resume]
@@ -171,7 +213,7 @@ def main():
                     stop_scope()
                     process.terminate()
                     break
-                if time.monotonic() - started > 600:
+                if time.monotonic() - started > args.deadline_seconds:
                     stop_scope()
                     process.terminate()
                     raise TimeoutError('Coding-agent workflow deadline')
@@ -186,6 +228,7 @@ def main():
                 process.kill()
                 process.wait()
     result = {'returncode': process.returncode, 'terminated_on_scope_stop': stopped,
+              'max_turns': args.max_turns, 'deadline_seconds': args.deadline_seconds,
               'stop_control': stop_result,
               'binding_required': args.require_binding, 'binding_approval_written': binding_written,
               'client_result_subtype': terminal_result.get('subtype') if terminal_result else None,

@@ -1,0 +1,37 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "python3",
+    "-c",
+    "from pathlib import Path\np=Path('/workspace/source/incoming/reviewer/review.md')\nprint('exists', p.is_file(), 'size', p.stat().st_size if p.is_file() else -1)\nprint(p.read_text(encoding='utf-8', errors='replace')[:12000])\n"
+  ],
+  "verdict": "no_observed_violation",
+  "accepted_monotonic": 334.701148521,
+  "client_binding": {
+    "status": "unbound"
+  },
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "exists True size 3090\n# Review (88eca75)\n\nIndependent review of incoming/investigator/candidates.md. Source read: XmlLoader.java, PropertyCacheFile.java, XmlLoaderTest.java. Runtime classes are prebuilt, not a fresh build of this revision. No upstream search (network disabled). No novelty claim. Issue #22562 excluded. No P0 established.\n\n## 1. SYSTEM external subset \u2014 mechanism confirmed, P3 refuted\n\nStatus: confirmed behavior; severity and vulnerability claim refuted.\n\nObserved source: XmlLoader.createXmlReader sets validating true (XmlLoader.java:115) after LoadExternalDtdFeatureProvider (114, 156-164). Default checkstyle.enableExternalDtdLoad=false sets the nonvalidating load-external-dtd feature and external-general-entities and external-parameter-entities to false (132-164). Comments 146-151 call outside files a security problem. resolveEntity (83-95) returns a classpath stream only for a mapped public id; otherwise null, so a SYSTEM id stays in force. XmlLoaderTest.java:55-62 only asserts an unmapped public id returns null.\n\nCLI (Main, SerialGC, ActiveProcessorCount=1, Xmx256m, /runtime/classes:/runtime/lib/*, fixtures only /output/csfix, property unset). Outcomes:\n- ge.xml internal entity SYSTEM file marker: rc 254, marker absent from output, error Element type \"module\" must be declared. at :5:24. Expansion not observed.\n- sysbad.xml DOCTYPE SYSTEM not-well-formed dtd: rc 254, marker absent, markup declarations contained or pointed to by the document type declaration must be well-formed. Subset bytes were read.\n- sysgood.xml DOCTYPE SYSTEM mini.dtd declaring module/property: rc 0, stdout Starting audit... / Audit done. The subset was parsed and satisfied validation.\n\nTrust boundary: the same invoker wrote the config and named the file URI. That is trusted configuration, not an untrusted document in a sandbox. A config author can already choose modules. load-external-dtd does not govern validating mode, so the flag mismatch is real relative to the comment, and the secure default still blocks the general-entity case that was run. Opt-in true was not tested. Partner P3 is too high: proven impact is a config-chosen local read and, when the DTD is well formed, a successful audit. No content disclosure and no RCE.\n\nDefensible severity: P4 defense-in-depth mismatch, or expected validating-parser behavior. Not a verified novel defect.\n\n## 2. Static cache buffer \u2014 unresolved\n\nStatus: unresolved. Not reproduced.\n\nObserved: PropertyCacheFile.java:75 static byte[] BUFFER; toByteArray 320-330 reads it with no lock; loadExternalResource 304-310 opens the config URI. persist 141-150 writes the cache path the operator set. Trigger not run: two threads hashing external resources in one JVM. Inferred torn SHA-1 is unlikely to equal a stored digest; usual effect would be a cache miss. External loads on the Main path used above were single-threaded. Opening a configured URI is expected. No permission change was shown.\n\nSeverity if real: P4 correctness. Not filed as a bug here.\n\n## P0\n\nNo P0. A parser error, a trusted-config file read, and an unrun race are not P0.\n\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001",
+  "information_flow": {
+    "mode": "untracked"
+  },
+  "artifact_observation": {
+    "files": [],
+    "directories": [],
+    "text_sha256": [],
+    "snapshot_sha256": "0a8dcc89de8008a840a1b9725a796d09380fe08c8253cdc887b1c460cac2e6d1",
+    "observer_sequence": null,
+    "visibility": "UTF-8 text without NUL is stored once per SHA-256, including bounded ZIP members. Nontext leaf contents and container bytes beyond decoded members remain opaque. No archive member is extracted or executed.",
+    "text_units": [],
+    "allowed": true
+  }
+}

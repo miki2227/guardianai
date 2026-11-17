@@ -1,5 +1,16 @@
 # Independent teammate task: recorded-run evidence viewer
 
+The newest accepted dataset is `research/checkstyle-paired/v5`, described in
+`research/CHECKSTYLE_WORKING_RUN.md`. Its three phases and two handoffs pass the
+freshness audit; v4 is retained but rejected for a missing current-input read.
+Render that acceptance distinction alongside the original scope exit status.
+Content confirmations may contain `mode: overlapping_parts`, a `parts` array and
+`all_parts_reviewed`; each part has its own input hash and answer. These are not
+simultaneous full-message reviews. Decoded CLI replies retain `cli_content_sha256`
+linking their original strings in `stdout.jsonl`. Runtime reports now record
+pause/resume actions and a 45-second response cap. No frontend edits are needed
+in the backend change; implement display adapters within your existing scope.
+
 Copy the following prompt to your teammate. The backend work remains with the
 runtime owner; the viewer is a separate frontend contribution.
 

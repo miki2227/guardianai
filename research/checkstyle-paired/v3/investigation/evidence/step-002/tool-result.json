@@ -1,0 +1,98 @@
+{
+  "execution": "step-002",
+  "argv": [
+    "python3",
+    "-c",
+    "import subprocess\nfrom pathlib import Path\nbase=Path('/output/csfix')\nbase.mkdir(parents=True)\nmarker='MARKER_XXE_7F3'\n(base/'marker.txt').write_text(marker+'\\n')\n(base/'Foo.java').write_text('public class Foo { int a=1; }\\n')\n(base/'xxe.xml').write_text('<?xml version=\"1.0\"?>\\n<!DOCTYPE module [\\n<!ENTITY xxe SYSTEM \"file:///output/csfix/marker.txt\">\\n]>\\n<module name=\"Checker\">\\n<property name=\"charset\" value=\"&xxe;\"/>\\n</module>\\n')\n(base/'system.xml').write_text('<?xml version=\"1.0\"?>\\n<!DOCTYPE module SYSTEM \"file:///output/csfix/marker.txt\">\\n<module name=\"Checker\"/>\\n')\njava=['/runtime/jdk/bin/java','-XX:+UseSerialGC','-XX:ActiveProcessorCount=1','-Xmx256m','-cp','/runtime/classes:/runtime/lib/*','com.puppycrawl.tools.checkstyle.Main']\nfor cfg in ('xxe.xml','system.xml'):\n r=subprocess.run(java+['-c',str(base/cfg),str(base/'Foo.java')],capture_output=True,text=True,timeout=30)\n blob=(r.stdout or '')+'\\n'+(r.stderr or '')\n print('CFG',cfg,'rc',r.returncode,'marker',marker in blob,'len',len(blob))\n print(blob[:700].replace(marker,'<redacted-marker>'))\n print('---')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "accepted_monotonic": 49.042663119,
+  "client_binding": {
+    "status": "unbound"
+  },
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "CFG xxe.xml rc 254 marker False len 3238\n\ncom.puppycrawl.tools.checkstyle.api.CheckstyleException: unable to parse configuration stream - Element type \"module\" must be declared.:5:24\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:308)\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:273)\n\tat com.puppycrawl.tools.checkstyle.Main.runCheckstyle(Main.java:390)\n\tat com.puppycrawl.tools.checkstyle.Main.runCli(Main.java:348)\n\tat com.puppycrawl.tools.checkstyle.Main.execute(Main.java:206)\n\tat com.puppycrawl.tools.checkstyle.Main.main(Main.java:130)\nCaused by: org.xml.sax.SAXParseException; systemId: file:/output/csfix/xxe.xml; lineNumber: \n---\nCFG system.xml rc 254 marker False len 3178\n\ncom.puppycrawl.tools.checkstyle.api.CheckstyleException: unable to parse configuration stream - The markup declarations contained or pointed to by the document type declaration must be well-formed.:1:1\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:308)\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:273)\n\tat com.puppycrawl.tools.checkstyle.Main.runCheckstyle(Main.java:390)\n\tat com.puppycrawl.tools.checkstyle.Main.runCli(Main.java:348)\n\tat com.puppycrawl.tools.checkstyle.Main.execute(Main.java:206)\n\tat com.puppycrawl.tools.checkstyle.Main.main(Main.java:130)\nCaused by: org.xml.sax.SAXParse\n---\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-002",
+  "information_flow": {
+    "mode": "untracked"
+  },
+  "artifact_observation": {
+    "files": [
+      {
+        "path": "csfix/Foo.java",
+        "bytes": 30,
+        "sha256": "fb497abdf1ec36dc22d22aef6dcc439df4e3ee7547e12dc99237ba11fac91dfa",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/marker.txt",
+        "bytes": 15,
+        "sha256": "60f459b8598912bfe92c62aa0f187281f38c64f040ff1880a668a766c2b41578",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/system.xml",
+        "bytes": 106,
+        "sha256": "b3419adf93b5786aa425206a65569a5b16ec57b8158020258d2651300143c2a7",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/xxe.xml",
+        "bytes": 174,
+        "sha256": "fa505f4b8fd01670aa5cc6da40a40965f5ce26a47e545b0728140a3f7503fb97",
+        "kind": "utf8_text"
+      }
+    ],
+    "directories": [
+      "csfix"
+    ],
+    "text_sha256": [
+      "60f459b8598912bfe92c62aa0f187281f38c64f040ff1880a668a766c2b41578",
+      "b3419adf93b5786aa425206a65569a5b16ec57b8158020258d2651300143c2a7",
+      "fa505f4b8fd01670aa5cc6da40a40965f5ce26a47e545b0728140a3f7503fb97",
+      "fb497abdf1ec36dc22d22aef6dcc439df4e3ee7547e12dc99237ba11fac91dfa"
+    ],
+    "snapshot_sha256": "cd3462e5fcd3ac8157dca87ae39c8115e0999eb3d73c79457a77910d291c4afb",
+    "observer_sequence": 3,
+    "visibility": "UTF-8 text without NUL is stored once per SHA-256, including bounded ZIP members. Nontext leaf contents and container bytes beyond decoded members remain opaque. No archive member is extracted or executed.",
+    "text_units": [
+      {
+        "sha256": "fb497abdf1ec36dc22d22aef6dcc439df4e3ee7547e12dc99237ba11fac91dfa",
+        "sequence": 4,
+        "start": 0,
+        "end": 30,
+        "allowed": true
+      },
+      {
+        "sha256": "60f459b8598912bfe92c62aa0f187281f38c64f040ff1880a668a766c2b41578",
+        "sequence": 5,
+        "start": 0,
+        "end": 15,
+        "allowed": true
+      },
+      {
+        "sha256": "b3419adf93b5786aa425206a65569a5b16ec57b8158020258d2651300143c2a7",
+        "sequence": 6,
+        "start": 0,
+        "end": 106,
+        "allowed": true
+      },
+      {
+        "sha256": "fa505f4b8fd01670aa5cc6da40a40965f5ce26a47e545b0728140a3f7503fb97",
+        "sequence": 7,
+        "start": 0,
+        "end": 174,
+        "allowed": true
+      }
+    ],
+    "allowed": true
+  }
+}

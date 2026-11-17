@@ -1,0 +1,181 @@
+LINES 397
+  71|    /** Size of default byte array for buffer. */
+  72|    private static final int BUFFER_SIZE = 1024;
+  73|
+  74|    /** Default buffer for reading from streams. */
+  75|    private static final byte[] BUFFER = new byte[BUFFER_SIZE];
+  76|
+  77|    /** Default number for base 16 encoding. */
+  78|    private static final int BASE_16 = 16;
+  79|
+  80|    /** The details on files. */
+  81|    private final Properties details = new Properties();
+  82|
+  83|    /** Configuration object. */
+  84|    private final Configuration config;
+  85|
+  86|    /** File name of cache. */
+  87|    private final String fileName;
+  88|
+  89|    /** Generated configuration hash. */
+  90|    private String configHash;
+  91|
+  92|    /**
+  93|     * Creates a new {@code PropertyCacheFile} instance.
+  94|     *
+  95|     * @param config the current configuration, not null
+  96|     * @param fileName the cache file
+  97|     * @throws IllegalArgumentException when either arguments are null
+  98|     */
+  99|    public PropertyCacheFile(Configuration config, String fileName) {
+ 100|        if (config == null) {
+ 101|            throw new IllegalArgumentException("config can not be null");
+ 102|        }
+ 103|        if (fileName == null) {
+ 104|            throw new IllegalArgumentException("fileName can not be null");
+ 105|        }
+ 106|        this.config = config;
+ 107|        this.fileName = fileName;
+ 108|    }
+ 109|
+ 110|    /**
+ 111|     * Load cached values from file.
+ 112|     *
+ 113|     * @throws IOException when there is a problems with file read
+ 114|     */
+ 115|    public void load() throws IOException {
+ 116|        // get the current config so if the file isn't found
+ 117|        // the first time the hash will be added to output file
+ 118|        configHash = getHashCodeBasedOnObjectContent(config);
+ 119|        final Path path = Path.of(fileName);
+ 120|        if (Files.exists(path)) {
+ 121|            try (InputStream inStream = Files.newInputStream(path)) {
+ 122|                details.load(inStream);
+ 123|                final String cachedConfigHash = details.getProperty(CONFIG_HASH_KEY);
+ 124|                if (!configHash.equals(cachedConfigHash)) {
+ 125|                    // Detected configuration change - clear cache
+ 126|                    reset();
+ 127|                }
+ 128|            }
+ 129|        }
+ 130|        else {
+ 131|            // put the hash in the file if the file is going to be created
+ 132|            reset();
+ 133|        }
+ 134|    }
+ 135|
+ 136|    /**
+ 137|     * Cleans up the object and updates the cache file.
+ 138|     *
+ 139|     * @throws IOException  when there is a problems with file save
+ 140|     */
+ 141|    public void persist() throws IOException {
+ 142|        final Path path = Path.of(fileName);
+ 143|        final Path directory = path.getParent();
+ 144|
+ 145|        if (directory != null) {
+ 146|            OsSpecificUtil.updateDirectory(directory);
+ 147|        }
+ 148|        try (OutputStream out = Files.newOutputStream(path)) {
+ 149|            details.store(out, null);
+ 150|        }
+ 151|    }
+ 152|
+ 153|    /**
+ 154|     * Resets the cache to be empty except for the configuration hash.
+ 155|     */
+ 156|    public void reset() {
+ 157|        details.clear();
+ 158|        details.setProperty(CONFIG_HASH_KEY, configHash);
+ 159|    }
+ 160|
+ 161|    /**
+ 162|     * Checks that file is in cache.
+ 163|     *
+ 164|     * @param uncheckedFileName the file to check
+ 165|     * @param timestamp the timestamp of the file to check
+ 166|     * @return whether the specified file has already been checked ok
+ 167|     */
+ 168|    public boolean isInCache(String uncheckedFileName, long timestamp) {
+ 169|        final String lastChecked = details.getProperty(uncheckedFileName);
+ 170|        return Objects.equals(lastChecked, Long.toString(timestamp));
+ 171|    }
+ 172|
+ 173|    /**
+ 174|     * Records that a file checked ok.
+ 175|     *
+ 176|     * @param checkedFileName name of the file that checked ok
+ 177|     * @param timestamp the timestamp of the file
+ 178|     */
+ 179|    public void put(String checkedFileName, long timestamp) {
+ 180|        details.setProperty(checkedFileName, Long.toString(timestamp));
+ 181|    }
+ 182|
+ 183|    /**
+ 184|     * Retrieves the hash of a specific file.
+ 185|     *
+ 186|     * @param name The name of the file to retrieve.
+ 187|     * @return The has of the file or {@code null}.
+ 188|     */
+ 189|    public String get(String name) {
+ 190|        return details.getProperty(name);
+ 191|    }
+ 192|
+ 193|    /**
+ 194|     * Removed a specific file from the cache.
+ 195|     *
+ 196|     * @param checkedFileName The name of the file to remove.
+ 197|     */
+ 198|    public void remove(String checkedFileName) {
+ 199|        details.remove(checkedFileName);
+ 200|    }
+ 201|
+ 202|    /**
+ 203|     * Returns the cache file name.
+ 204|     *
+ 205|     * @return the cache file name.
+ 206|     */
+ 207|    public String getFileName() {
+ 208|        return fileName;
+ 209|    }
+ 210|
+ 211|    /**
+ 212|     * Calculates the hashcode for the serializable object based on its content.
+ 213|     *
+ 214|     * @param object serializable object.
+ 215|     * @return the hashcode for serializable object.
+ 216|     * @throws IllegalStateException when some unexpected happened.
+ 217|     */
+ 218|    private static String getHashCodeBasedOnObjectContent(Serializable object) {
+ 219|        try {
+ 220|            final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+ 221|            // in-memory serialization of Configuration
+ 222|            serialize(object, outputStream);
+ 223|            // Instead of hexEncoding outputStream.toByteArray() directly we
+ 224|            // use a message digest here to keep the length of the
+ 225|            // hashcode reasonable
+ 226|
+ 227|            final MessageDigest digest = MessageDigest.getInstance("SHA-1");
+ 228|            digest.update(outputStream.toByteArray());
+ 229|
+ 230|            return new BigInteger(1, digest.digest()).toString(BASE_16).toUpperCase(Locale.ROOT);
+ 231|        }
+ 232|        catch (final IOException | NoSuchAlgorithmException exc) {
+ 233|            // rethrow as unchecked exception
+ 234|            throw new IllegalStateException("Unable to calculate hashcode for "
+ 235|                    + object.getClass().getName(), exc);
+ 236|        }
+ 237|    }
+ 238|
+ 239|    /**
+ 240|     * Serializes object to output stream.
+ 241|     *
+ 242|     * @param object object to be serialized
+ 243|     * @param outputStream serialization stream
+ 244|     * @throws IOException if an error occurs
+ 245|     */
+ 246|    private static void serialize(Serializable object,
+ 247|                                  OutputStream outputStream)
+ 248|            throws IOException {
+ 249|        try (ObjectOutputStream oos = new ObjectOutputStream(outputStream)) {
+ 250|            oos.writeObject(object);

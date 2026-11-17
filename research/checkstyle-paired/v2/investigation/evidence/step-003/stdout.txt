@@ -1,0 +1,149 @@
+ 250|            oos.writeObject(object);
+ 251|        }
+ 252|    }
+ 253|
+ 254|    /**
+ 255|     * Puts external resources in cache.
+ 256|     * If at least one external resource changed, clears the cache.
+ 257|     *
+ 258|     * @param locations locations of external resources.
+ 259|     */
+ 260|    public void putExternalResources(Set<String> locations) {
+ 261|        final Set<ExternalResource> resources = loadExternalResources(locations);
+ 262|        if (areExternalResourcesChanged(resources)) {
+ 263|            reset();
+ 264|            fillCacheWithExternalResources(resources);
+ 265|        }
+ 266|    }
+ 267|
+ 268|    /**
+ 269|     * Loads a set of {@link ExternalResource} based on their locations.
+ 270|     *
+ 271|     * @param resourceLocations locations of external configuration resources.
+ 272|     * @return a set of {@code ExternalResource}.
+ 273|     */
+ 274|    private static Set<ExternalResource> loadExternalResources(Set<String> resourceLocations) {
+ 275|        final Set<ExternalResource> resources = new HashSet<>();
+ 276|        for (String location : resourceLocations) {
+ 277|            try {
+ 278|                final byte[] content = loadExternalResource(location);
+ 279|                final String contentHashSum = getHashCodeBasedOnObjectContent(content);
+ 280|                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+ 281|                        contentHashSum));
+ 282|            }
+ 283|            catch (CheckstyleException | IOException exc) {
+ 284|                // if exception happened (configuration resource was not found, connection is not
+ 285|                // available, resource is broken, etc.), we need to calculate hash sum based on
+ 286|                // exception object content in order to check whether problem is resolved later
+ 287|                // and/or the configuration is changed.
+ 288|                final String contentHashSum = getHashCodeBasedOnObjectContent(exc);
+ 289|                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+ 290|                        contentHashSum));
+ 291|            }
+ 292|        }
+ 293|        return resources;
+ 294|    }
+ 295|
+ 296|    /**
+ 297|     * Loads the content of external resource.
+ 298|     *
+ 299|     * @param location external resource location.
+ 300|     * @return array of bytes which represents the content of external resource in binary form.
+ 301|     * @throws CheckstyleException if error while loading occurs.
+ 302|     * @throws IOException if error while loading occurs.
+ 303|     */
+ 304|    private static byte[] loadExternalResource(String location)
+ 305|            throws IOException, CheckstyleException {
+ 306|        final URI uri = CommonUtil.getUriByFilename(location);
+ 307|
+ 308|        try (InputStream is = uri.toURL().openStream()) {
+ 309|            return toByteArray(is);
+ 310|        }
+ 311|    }
+ 312|
+ 313|    /**
+ 314|     * Reads all the contents of an input stream and returns it as a byte array.
+ 315|     *
+ 316|     * @param stream The input stream to read from.
+ 317|     * @return The resulting byte array of the stream.
+ 318|     * @throws IOException if there is an error reading the input stream.
+ 319|     */
+ 320|    private static byte[] toByteArray(InputStream stream) throws IOException {
+ 321|        final ByteArrayOutputStream content = new ByteArrayOutputStream();
+ 322|
+ 323|        while (true) {
+ 324|            final int size = stream.read(BUFFER);
+ 325|            if (size == -1) {
+ 326|                break;
+ 327|            }
+ 328|
+ 329|            content.write(BUFFER, 0, size);
+ 330|        }
+ 331|
+ 332|        return content.toByteArray();
+ 333|    }
+ 334|
+ 335|    /**
+ 336|     * Checks whether the contents of external configuration resources were changed.
+ 337|     *
+ 338|     * @param resources a set of {@link ExternalResource}.
+ 339|     * @return true if the contents of external configuration resources were changed.
+ 340|     */
+ 341|    private boolean areExternalResourcesChanged(Set<ExternalResource> resources) {
+ 342|        return resources.stream().anyMatch(this::isResourceChanged);
+ 343|    }
+ 344|
+ 345|    /**
+ 346|     * Checks whether the resource is changed.
+ 347|     *
+ 348|     * @param resource resource to check.
+ 349|     * @return true if resource is changed.
+ 350|     */
+ 351|    private boolean isResourceChanged(ExternalResource resource) {
+ 352|        boolean changed = false;
+ 353|        if (isResourceLocationInCache(resource.location)) {
+ 354|            final String contentHashSum = resource.contentHashSum;
+ 355|            final String cachedHashSum = details.getProperty(resource.location);
+ 356|            if (!cachedHashSum.equals(contentHashSum)) {
+ 357|                changed = true;
+ 358|            }
+ 359|        }
+ 360|        else {
+ 361|            changed = true;
+ 362|        }
+ 363|        return changed;
+ 364|    }
+ 365|
+ 366|    /**
+ 367|     * Fills cache with a set of {@link ExternalResource}.
+ 368|     * If external resource from the set is already in cache, it will be skipped.
+ 369|     *
+ 370|     * @param externalResources a set of {@code ExternalResource}.
+ 371|     */
+ 372|    private void fillCacheWithExternalResources(Set<ExternalResource> externalResources) {
+ 373|        externalResources
+ 374|            .forEach(resource -> details.setProperty(resource.location, resource.contentHashSum));
+ 375|    }
+ 376|
+ 377|    /**
+ 378|     * Checks whether resource location is in cache.
+ 379|     *
+ 380|     * @param location resource location.
+ 381|     * @return true if resource location is in cache.
+ 382|     */
+ 383|    private boolean isResourceLocationInCache(String location) {
+ 384|        final String cachedHashSum = details.getProperty(location);
+ 385|        return cachedHashSum != null;
+ 386|    }
+ 387|
+ 388|    /**
+ 389|     * Class which represents external resource.
+ 390|     *
+ 391|     * @param location       resource location.
+ 392|     * @param contentHashSum content hash sum.
+ 393|     */
+ 394|    private record ExternalResource(String location, String contentHashSum) {
+ 395|    }
+ 396|
+ 397|}
+---OS---

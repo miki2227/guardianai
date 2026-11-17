@@ -1,0 +1,108 @@
+XL 169
+RANGE 83 96
+83|    @Override
+84|    public InputSource resolveEntity(String publicId, String systemId) {
+85|        InputSource inputSource = null;
+86|        if (publicId != null) {
+87|            final String dtdResourceName = publicIdToResourceNameMap.get(publicId);
+88|
+89|            if (dtdResourceName != null) {
+90|                final ClassLoader loader = getClass().getClassLoader();
+91|                final InputStream dtdIs = loader.getResourceAsStream(dtdResourceName);
+92|                inputSource = new InputSource(dtdIs);
+93|            }
+94|        }
+95|        return inputSource;
+96|    }
+RANGE 111 121
+111|    private static XMLReader createXmlReader(DefaultHandler handler)
+112|            throws SAXException, ParserConfigurationException {
+113|        final SAXParserFactory factory = SAXParserFactory.newInstance();
+114|        LoadExternalDtdFeatureProvider.setFeaturesBySystemProperty(factory);
+115|        factory.setValidating(true);
+116|        final XMLReader xmlReader = factory.newSAXParser().getXMLReader();
+117|        xmlReader.setContentHandler(handler);
+118|        xmlReader.setEntityResolver(handler);
+119|        xmlReader.setErrorHandler(handler);
+120|        return xmlReader;
+121|    }
+RANGE 146 165
+146|        /**
+147|         * Configures SAXParserFactory with features required
+148|         * to use external DTD file loading, this is not activated by default to no allow
+149|         * usage of schema files that checkstyle do not know
+150|         * it is even security problem to allow files from outside.
+151|         *
+152|         * @param factory factory to be configured with special features
+153|         * @throws ParserConfigurationException if an error occurs
+154|         * @throws SAXException if an error occurs
+155|         */
+156|        public static void setFeaturesBySystemProperty(SAXParserFactory factory)
+157|                throws SAXException, ParserConfigurationException {
+158|
+159|            final boolean enableExternalDtdLoad = Boolean.parseBoolean(
+160|                System.getProperty(ENABLE_EXTERNAL_DTD_LOAD, "false"));
+161|
+162|            factory.setFeature(LOAD_EXTERNAL_DTD, enableExternalDtdLoad);
+163|            factory.setFeature(EXTERNAL_GENERAL_ENTITIES, enableExternalDtdLoad);
+164|            factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, enableExternalDtdLoad);
+165|        }
+PF 397
+71|    /** Size of default byte array for buffer. */
+72|    private static final int BUFFER_SIZE = 1024;
+73|
+74|    /** Default buffer for reading from streams. */
+75|    private static final byte[] BUFFER = new byte[BUFFER_SIZE];
+141|    public void persist() throws IOException {
+142|        final Path path = Path.of(fileName);
+143|        final Path directory = path.getParent();
+144|
+145|        if (directory != null) {
+146|            OsSpecificUtil.updateDirectory(directory);
+147|        }
+148|        try (OutputStream out = Files.newOutputStream(path)) {
+149|            details.store(out, null);
+150|        }
+304|    private static byte[] loadExternalResource(String location)
+305|            throws IOException, CheckstyleException {
+306|        final URI uri = CommonUtil.getUriByFilename(location);
+307|
+308|        try (InputStream is = uri.toURL().openStream()) {
+309|            return toByteArray(is);
+310|        }
+311|    }
+312|
+313|    /**
+314|     * Reads all the contents of an input stream and returns it as a byte array.
+315|     *
+316|     * @param stream The input stream to read from.
+317|     * @return The resulting byte array of the stream.
+318|     * @throws IOException if there is an error reading the input stream.
+319|     */
+320|    private static byte[] toByteArray(InputStream stream) throws IOException {
+321|        final ByteArrayOutputStream content = new ByteArrayOutputStream();
+322|
+323|        while (true) {
+324|            final int size = stream.read(BUFFER);
+325|            if (size == -1) {
+326|                break;
+327|            }
+328|
+329|            content.write(BUFFER, 0, size);
+330|        }
+OS 65
+48|    public static void updateDirectory(Path directory) throws IOException {
+49|        Path targetDirectory = directory;
+50|
+51|        if (Files.isSymbolicLink(directory)) {
+52|            final Path actualDir = directory.toRealPath();
+53|
+54|            if (Files.isDirectory(actualDir)) {
+55|                targetDirectory = actualDir;
+56|            }
+57|            else {
+58|                throw new IOException("Resolved symbolic link "
+59|                        + directory + " is not a directory.");
+60|            }
+61|        }
+62|        Files.createDirectories(targetDirectory);

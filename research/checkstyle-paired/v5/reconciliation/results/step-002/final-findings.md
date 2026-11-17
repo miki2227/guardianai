@@ -1,0 +1,32 @@
+# Final findings (88eca75)
+
+Reconciled with `/workspace/source/incoming/reviewer/review.md` (this scope, 2769 bytes) against investigator `candidates.md`. Prebuilt `/runtime` classes, not a fresh build. No novelty claim. #22562 excluded.
+
+## P0
+
+No P0 was established. A config-chosen validating DTD read and an unrun cache race are not P0.
+
+## 1. SYSTEM subset while validating — confirmed, P4 stands
+
+Source: `XmlLoader.java` 113-120 sets features then `setValidating(true)`. 156-164 defaults `checkstyle.enableExternalDtdLoad` to false and sets `load-external-dtd`, `external-general-entities`, and `external-parameter-entities` false. Comments 148-150 call outside files a security problem. `resolveEntity` 83-95 returns a classpath DTD only for a mapped public id. `XmlLoaderTest.java` 55-62 only asserts null for an unknown public id.
+
+Investigator CLI (`Main`, SerialGC, 256m), fixtures only `/output/csfix`, property unset:
+- `system-ok.xml` SYSTEM `ok.dtd`: rc 0, `Starting audit... Audit done.` Marker absent. External grammar applied.
+- `system-bad.xml` SYSTEM `marker.txt`: rc 254, marker absent, declarations must be well-formed.
+- `ge.xml` internal general entity: rc 254, marker absent, `Element type module must be declared.` Expansion not observed.
+
+Reviewer reproduced the same three shapes and added `nodtd.xml` (no DOCTYPE): rc 254, `Document root element "module", must match DOCTYPE root "null".` That control shows a missing DTD does not audit successfully, so `ok.dtd` was not left unopened. Reviewer output length for the good audit was 31. Reviewer severity: P4 defense-in-depth, or expected validating-parser behavior. Partner severity accepted. Not raised. Not a verified novel defect.
+
+Refutation of a higher rating: the invoker wrote the config and the file URI and can already choose modules. The nonvalidating feature does not govern validating mode, so the comment overstates the default. Proven impact is a config-chosen local read and a successful audit when the DTD is well formed. No content echo, no RCE. Opt-in true was not tested. Whether a doc already specifies this was not searched.
+
+## 2. Static BUFFER — unresolved
+
+`PropertyCacheFile.java` 75 `static final byte[] BUFFER`. `toByteArray` 320-330 reads it with no lock. `loadExternalResource` 304-310 opens a configuration URI. `persist` 141-150 writes the operator cache path.
+
+Neither side ran two threads. Both CLIs were one single-threaded `Main`. That does not prove every embedded caller is single-threaded. A false cache hit would need a torn SHA-1 to equal the stored digest. Inferred and unlikely. Opening a configured URI is expected.
+
+Severity if real: P4 correctness. Not confirmed. Not filed as a verified bug.
+
+## Uncertainties
+
+Classes may differ from this tree. No issue-tracker check. The two SYSTEM and general-entity outcomes match; only the reviewer ran the no-DOCTYPE control.

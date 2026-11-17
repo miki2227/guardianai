@@ -1,5 +1,33 @@
 # Existing coding agents through GuardianAI
 
+The [accepted Checkstyle workflow](research/CHECKSTYLE_WORKING_RUN.md) uses two
+continuing Grok 4.7 low-effort subjects. Its reference controller verifies a read
+of the current incoming artifact before accepting a peer phase. The evidence
+auditor also checks the complete peer text in the receiving CLI result; merely
+creating a handoff file is insufficient. An earlier stale-context review is
+retained as a rejected attempt. In this installed CLI, resumption used each
+conversation's original client directory and temporary/restored MCP config;
+resuming under a new directory produced an empty MCP catalog in a retained case.
+
+For Java tooling, trusted MCP configuration can select `--runtime-subdir`
+`practical-runtime`. It is a directory already inside the public source snapshot,
+also mounted read-only at `/runtime`; use `/runtime/jdk/bin/java` and the declared
+local classpath. This adds no new host-file visibility. Runtime reads remain in
+the raw trace, while attempted writes to `/runtime` are scoped violations.
+The selected bundle must contain only the intended public runtime and libraries.
+
+Runtime decisions now pause the worker process group while pending and have a
+45-second maximum response budget, matching two possible 20-second transport
+calls plus evidence overhead. Missing/invalid answers still stop. This is not an
+atomic freeze of all namespace descendants, and the execution deadline includes
+the wait. Protected-resource authorization retains its separate deadline.
+
+Host CLI tool replies decode known MCP JSON wrappers with original-string hashes;
+duplicate JSON keys preserve their raw representation. Content confirmation
+prefers a complete message. Oversized messages use explicitly labeled overlapping
+parts, checking every character before a cleared result; relationships between
+parts can still be missed. Original scores and every part/input remain evidence.
+
 Bound Grok sessions can now require startup verification before executing any
 Linux command. Pair MCP `--expected-conversation ID` with launcher
 `--resume ID --require-binding`. Existing stored bindings remain required even

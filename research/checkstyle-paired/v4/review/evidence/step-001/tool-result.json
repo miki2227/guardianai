@@ -1,0 +1,140 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "python3",
+    "-c",
+    "import subprocess, pathlib\np=pathlib.Path('/output/csfix'); p.mkdir(parents=True)\n(p/'marker.txt').write_text('SYNTHMARKER')\n(p/'bad.dtd').write_text('NOT A DTD <')\n(p/'mini.dtd').write_text('<!ELEMENT module (property)*>\\n<!ATTLIST module name CDATA #IMPLIED>\\n<!ELEMENT property EMPTY>\\n<!ATTLIST property name CDATA #IMPLIED value CDATA #IMPLIED>\\n')\n(p/'Stub.java').write_text('public class Stub {}\\n')\n(p/'sysbad.xml').write_text('<?xml version=\"1.0\"?>\\n<!DOCTYPE module SYSTEM \"file:///output/csfix/bad.dtd\">\\n<module name=\"Checker\"/>\\n')\n(p/'sysgood.xml').write_text('<?xml version=\"1.0\"?>\\n<!DOCTYPE module SYSTEM \"file:///output/csfix/mini.dtd\">\\n<module name=\"Checker\"/>\\n')\n(p/'ge.xml').write_text('<?xml version=\"1.0\"?>\\n<!DOCTYPE module [\\n<!ENTITY ext SYSTEM \"file:///output/csfix/marker.txt\">\\n]>\\n<module name=\"Checker\">&ext;</module>\\n')\njava=['/runtime/jdk/bin/java','-XX:+UseSerialGC','-XX:ActiveProcessorCount=1','-Xmx256m','-cp','/runtime/classes:/runtime/lib/*','com.puppycrawl.tools.checkstyle.Main']\nfor cfg in ['ge.xml','sysbad.xml','sysgood.xml']:\n    r=subprocess.run(java+['-c',str(p/cfg),str(p/'Stub.java')],capture_output=True,text=True,timeout=40)\n    blob=(r.stdout or '')+'\\n'+(r.stderr or '')\n    print('CASE',cfg,'rc',r.returncode,'marker',('SYNTHMARKER' in blob),'n',len(blob))\n    print(blob.replace('SYNTHMARKER','<M>')[:500])\n    print('---')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "accepted_monotonic": 259.299830298,
+  "client_binding": {
+    "status": "unbound"
+  },
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "CASE ge.xml rc 254 marker False n 3237\n\ncom.puppycrawl.tools.checkstyle.api.CheckstyleException: unable to parse configuration stream - Element type \"module\" must be declared.:5:24\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:308)\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:273)\n\tat com.puppycrawl.tools.checkstyle.Main.runCheckstyle(Main.java:390)\n\tat com.puppycrawl.tools.checkstyle.Main.runCli(Main.java:348)\n\tat com.puppycraw\n---\nCASE sysbad.xml rc 254 marker False n 3175\n\ncom.puppycrawl.tools.checkstyle.api.CheckstyleException: unable to parse configuration stream - The markup declarations contained or pointed to by the document type declaration must be well-formed.:1:1\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:308)\n\tat com.puppycrawl.tools.checkstyle.ConfigurationLoader.loadConfiguration(ConfigurationLoader.java:273)\n\tat com.puppycrawl.tools.checkstyle.Main.runCheckstyle(Main.java:390)\n\tat com.puppycrawl.\n---\nCASE sysgood.xml rc 0 marker False n 31\nStarting audit...\nAudit done.\n\n\n---\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001",
+  "information_flow": {
+    "mode": "untracked"
+  },
+  "artifact_observation": {
+    "files": [
+      {
+        "path": "csfix/Stub.java",
+        "bytes": 21,
+        "sha256": "2982d9918dff5f1006888e15990cd7d1e0bd56ee6a3a2d092c3015e3dfb84bb2",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/bad.dtd",
+        "bytes": 11,
+        "sha256": "098c819824c082b47189fcce845a80a505ee2552be4c3c18881c2f659110f332",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/ge.xml",
+        "bytes": 137,
+        "sha256": "bded6863322847ab6394e6fb6f0d7595d70abe6897f7d2b295c63401f81f19ea",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/marker.txt",
+        "bytes": 11,
+        "sha256": "3973781a22b2f0877889b4ae1a79ed7abadd50fb9168587ad4a8ea41d653c348",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/mini.dtd",
+        "bytes": 155,
+        "sha256": "c176254bd9190f50166d1dd7dc9c5c4c6bc62c619d5398b84c78806d45fd1c9a",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/sysbad.xml",
+        "bytes": 103,
+        "sha256": "c4e543cd14b3cc2016386ac060eeb616b716ba518de8efdaa0993c249bfaafae",
+        "kind": "utf8_text"
+      },
+      {
+        "path": "csfix/sysgood.xml",
+        "bytes": 104,
+        "sha256": "db78a343c21d87049bb716e97e31aa1891d178fe26b1b92308102b06d82d3ae0",
+        "kind": "utf8_text"
+      }
+    ],
+    "directories": [
+      "csfix"
+    ],
+    "text_sha256": [
+      "098c819824c082b47189fcce845a80a505ee2552be4c3c18881c2f659110f332",
+      "2982d9918dff5f1006888e15990cd7d1e0bd56ee6a3a2d092c3015e3dfb84bb2",
+      "3973781a22b2f0877889b4ae1a79ed7abadd50fb9168587ad4a8ea41d653c348",
+      "bded6863322847ab6394e6fb6f0d7595d70abe6897f7d2b295c63401f81f19ea",
+      "c176254bd9190f50166d1dd7dc9c5c4c6bc62c619d5398b84c78806d45fd1c9a",
+      "c4e543cd14b3cc2016386ac060eeb616b716ba518de8efdaa0993c249bfaafae",
+      "db78a343c21d87049bb716e97e31aa1891d178fe26b1b92308102b06d82d3ae0"
+    ],
+    "snapshot_sha256": "09bfe5bccbd73e355c6342fbcaf8443b4efc716100f32b80d1811ac718ee83e5",
+    "observer_sequence": 1,
+    "visibility": "UTF-8 text without NUL is stored once per SHA-256, including bounded ZIP members. Nontext leaf contents and container bytes beyond decoded members remain opaque. No archive member is extracted or executed.",
+    "text_units": [
+      {
+        "sha256": "2982d9918dff5f1006888e15990cd7d1e0bd56ee6a3a2d092c3015e3dfb84bb2",
+        "sequence": 2,
+        "start": 0,
+        "end": 21,
+        "allowed": true
+      },
+      {
+        "sha256": "098c819824c082b47189fcce845a80a505ee2552be4c3c18881c2f659110f332",
+        "sequence": 3,
+        "start": 0,
+        "end": 11,
+        "allowed": true
+      },
+      {
+        "sha256": "bded6863322847ab6394e6fb6f0d7595d70abe6897f7d2b295c63401f81f19ea",
+        "sequence": 4,
+        "start": 0,
+        "end": 137,
+        "allowed": true
+      },
+      {
+        "sha256": "3973781a22b2f0877889b4ae1a79ed7abadd50fb9168587ad4a8ea41d653c348",
+        "sequence": 5,
+        "start": 0,
+        "end": 11,
+        "allowed": true
+      },
+      {
+        "sha256": "c176254bd9190f50166d1dd7dc9c5c4c6bc62c619d5398b84c78806d45fd1c9a",
+        "sequence": 6,
+        "start": 0,
+        "end": 155,
+        "allowed": true
+      },
+      {
+        "sha256": "c4e543cd14b3cc2016386ac060eeb616b716ba518de8efdaa0993c249bfaafae",
+        "sequence": 7,
+        "start": 0,
+        "end": 103,
+        "allowed": true
+      },
+      {
+        "sha256": "db78a343c21d87049bb716e97e31aa1891d178fe26b1b92308102b06d82d3ae0",
+        "sequence": 8,
+        "start": 0,
+        "end": 104,
+        "allowed": true
+      }
+    ],
+    "allowed": true
+  }
+}

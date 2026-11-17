@@ -1,0 +1,37 @@
+{
+  "execution": "step-001",
+  "argv": [
+    "python3",
+    "-c",
+    "from pathlib import Path\nbase=Path('/workspace/source/src/main/java/com/puppycrawl/tools/checkstyle')\nxl=(base/'XmlLoader.java').read_text().splitlines()\npf=(base/'PropertyCacheFile.java').read_text().splitlines()\nprint('XL',len(xl),'PF',len(pf))\nfor i in list(range(83,96))+list(range(111,121))+list(range(146,165)):\n print(f'X{i}|{xl[i-1]}')\nfor i in [75]+list(range(141,151))+list(range(304,331)):\n print(f'P{i}|{pf[i-1]}')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "accepted_monotonic": 30.08658012,
+  "client_binding": {
+    "status": "unbound"
+  },
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "XL 169 PF 397\nX83|    @Override\nX84|    public InputSource resolveEntity(String publicId, String systemId) {\nX85|        InputSource inputSource = null;\nX86|        if (publicId != null) {\nX87|            final String dtdResourceName = publicIdToResourceNameMap.get(publicId);\nX88|\nX89|            if (dtdResourceName != null) {\nX90|                final ClassLoader loader = getClass().getClassLoader();\nX91|                final InputStream dtdIs = loader.getResourceAsStream(dtdResourceName);\nX92|                inputSource = new InputSource(dtdIs);\nX93|            }\nX94|        }\nX95|        return inputSource;\nX111|    private static XMLReader createXmlReader(DefaultHandler handler)\nX112|            throws SAXException, ParserConfigurationException {\nX113|        final SAXParserFactory factory = SAXParserFactory.newInstance();\nX114|        LoadExternalDtdFeatureProvider.setFeaturesBySystemProperty(factory);\nX115|        factory.setValidating(true);\nX116|        final XMLReader xmlReader = factory.newSAXParser().getXMLReader();\nX117|        xmlReader.setContentHandler(handler);\nX118|        xmlReader.setEntityResolver(handler);\nX119|        xmlReader.setErrorHandler(handler);\nX120|        return xmlReader;\nX146|        /**\nX147|         * Configures SAXParserFactory with features required\nX148|         * to use external DTD file loading, this is not activated by default to no allow\nX149|         * usage of schema files that checkstyle do not know\nX150|         * it is even security problem to allow files from outside.\nX151|         *\nX152|         * @param factory factory to be configured with special features\nX153|         * @throws ParserConfigurationException if an error occurs\nX154|         * @throws SAXException if an error occurs\nX155|         */\nX156|        public static void setFeaturesBySystemProperty(SAXParserFactory factory)\nX157|                throws SAXException, ParserConfigurationException {\nX158|\nX159|            final boolean enableExternalDtdLoad = Boolean.parseBoolean(\nX160|                System.getProperty(ENABLE_EXTERNAL_DTD_LOAD, \"false\"));\nX161|\nX162|            factory.setFeature(LOAD_EXTERNAL_DTD, enableExternalDtdLoad);\nX163|            factory.setFeature(EXTERNAL_GENERAL_ENTITIES, enableExternalDtdLoad);\nX164|            factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, enableExternalDtdLoad);\nP75|    private static final byte[] BUFFER = new byte[BUFFER_SIZE];\nP141|    public void persist() throws IOException {\nP142|        final Path path = Path.of(fileName);\nP143|        final Path directory = path.getParent();\nP144|\nP145|        if (directory != null) {\nP146|            OsSpecificUtil.updateDirectory(directory);\nP147|        }\nP148|        try (OutputStream out = Files.newOutputStream(path)) {\nP149|            details.store(out, null);\nP150|        }\nP304|    private static byte[] loadExternalResource(String location)\nP305|            throws IOException, CheckstyleException {\nP306|        final URI uri = CommonUtil.getUriByFilename(location);\nP307|\nP308|        try (InputStream is = uri.toURL().openStream()) {\nP309|            return toByteArray(is);\nP310|        }\nP311|    }\nP312|\nP313|    /**\nP314|     * Reads all the contents of an input stream and returns it as a byte array.\nP315|     *\nP316|     * @param stream The input stream to read from.\nP317|     * @return The resulting byte array of the stream.\nP318|     * @throws IOException if there is an error reading the input stream.\nP319|     */\nP320|    private static byte[] toByteArray(InputStream stream) throws IOException {\nP321|        final ByteArrayOutputStream content = new ByteArrayOutputStream();\nP322|\nP323|        while (true) {\nP324|            final int size = stream.read(BUFFER);\nP325|            if (size == -1) {\nP326|                break;\nP327|            }\nP328|\nP329|            content.write(BUFFER, 0, size);\nP330|        }\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-001",
+  "information_flow": {
+    "mode": "untracked"
+  },
+  "artifact_observation": {
+    "files": [],
+    "directories": [],
+    "text_sha256": [],
+    "snapshot_sha256": "0a8dcc89de8008a840a1b9725a796d09380fe08c8253cdc887b1c460cac2e6d1",
+    "observer_sequence": null,
+    "visibility": "UTF-8 text without NUL is stored once per SHA-256, including bounded ZIP members. Nontext leaf contents and container bytes beyond decoded members remain opaque. No archive member is extracted or executed.",
+    "text_units": [],
+    "allowed": true
+  }
+}

@@ -2,6 +2,13 @@
 
 # GuardianAI
 
+The [working Checkstyle experiment](research/CHECKSTYLE_WORKING_RUN.md) completed
+investigation, review and reconciliation with two continuing Grok 4.7 low-effort
+subjects, nine supervised commands and two verified artifact handoffs. It also
+retains a rejected stale-review attempt and a separate live stop control. Bug
+findings are the subjects' provisional outputs; no P0 or covert convention was
+established.
+
 [Current practical verdict](research/REAL_SYSTEM_VERDICT.md): useful supervised
 work and declared flow gates work in the retained cases. A real supervisor-crash
 run also confirmed observed worker exit and refused identity resumption.

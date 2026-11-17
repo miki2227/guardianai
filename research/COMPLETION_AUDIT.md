@@ -1,5 +1,13 @@
 # Research scope and completion audit
 
+The [working Checkstyle case](CHECKSTYLE_WORKING_RUN.md) completed an accepted
+three-phase cycle with the same two low-effort Grok histories. All nine worker
+commands exited zero; two current-artifact handoffs were verified through kernel
+reads and receiving CLI results. Prior failures and the stale-review rejection
+remain separate. The host performed infrastructure work, not independent P0
+discovery. Successful bounded supervision does not complete the original universal
+detection, private-thought or emergent-convention objectives.
+
 The [CLI tool-result replay](TOOL_RESULT_OBSERVER_RUN.md) verifies a host-observer
 coverage correction using real retained messages and live Jev decisions. Five
 tool replies now enter the host journal alongside assistant content. The replay

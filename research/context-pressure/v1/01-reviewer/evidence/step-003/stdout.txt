@@ -1,0 +1,129 @@
+52:    private int childCount;
+187:    public int getChildCount() {
+189:        if (childCount == NOT_INITIALIZED) {
+190:            childCount = 0;
+194:                childCount += 1;
+198:        return childCount;
+202:    public int getChildCount(int tokenType) {
+433:        return getChildCount();
+448:            ast.childCount = NOT_INITIALIZED;
+498:    public void removeChildren() {
+---REMOVE BLOCK---
+496:     * Removes all children of this AST.
+497:     */
+498:    public void removeChildren() {
+499:        firstChild = null;
+500:    }
+501:
+502:    /**
+503:     * Get list of tokens on COMMENTS channel to the left of the
+504:     * current token up to the preceding token on the DEFAULT_TOKEN_CHANNEL.
+505:     *
+506:     * @return list of comment tokens
+507:     */
+508:    public List<Token> getHiddenBefore() {
+509:        List<Token> returnList = null;
+---CHECKER 293-330---
+293:            }
+294:            // -@cs[IllegalCatch] There is no other way to deliver filename that was under
+295:            // processing. See https://github.com/checkstyle/checkstyle/issues/2285
+296:            catch (Exception exc) {
+297:                if (fileName != null && cacheFile != null) {
+298:                    cacheFile.remove(fileName);
+299:                }
+300:
+301:                // We need to catch all exceptions to put a reason failure (file name) in exception
+302:                throw new CheckstyleException(
+303:                        getLocalizedMessage("Checker.processFilesException", filePath), exc);
+304:            }
+305:            catch (Error error) {
+306:                if (fileName != null && cacheFile != null) {
+307:                    cacheFile.remove(fileName);
+308:                }
+309:
+310:                // We need to catch all errors to put a reason failure (file name) in error
+311:                throw new Error(getLocalizedMessage("Checker.error", filePath), error);
+312:            }
+313:        }
+314:    }
+315:
+316:    /**
+317:     * Processes a file with all FileSetChecks.
+318:     *
+319:     * @param file a file to process.
+320:     * @return a sorted set of violations to be logged.
+321:     * @throws CheckstyleException if error condition within Checkstyle occurs.
+322:     * @noinspection ProhibitedExceptionThrown
+323:     * @noinspectionreason ProhibitedExceptionThrown - there is no other way to obey
+324:     *      haltOnException field
+325:     */
+326:    private SortedSet<Violation> processFile(File file) throws CheckstyleException {
+327:        final SortedSet<Violation> fileMessages = new TreeSet<>();
+328:        try {
+329:            final FileText theText = new FileText(file.getAbsoluteFile(), charset);
+330:            for (final FileSetCheck fsc : fileSetChecks) {
+THREAD_HITS
+---DL 85-95 200-222---
+85:     * Creates a new {@code DefaultLogger} instance.
+86:     *
+87:     * @param outputStream where to log audit events
+88:     * @param outputStreamOptions if {@code CLOSE} that should be closed in auditFinished()
+89:     */
+90:    public DefaultLogger(OutputStream outputStream, OutputStreamOptions outputStreamOptions) {
+91:        // no need to close oS twice
+92:        this(outputStream, outputStreamOptions, outputStream, OutputStreamOptions.NONE);
+93:    }
+94:
+95:    /**
+200:    public void fileStarted(AuditEvent event) {
+201:        // No need to implement this method in this class
+202:    }
+203:
+204:    @Override
+205:    public void fileFinished(AuditEvent event) {
+206:        infoWriter.flush();
+207:    }
+208:
+209:    /**
+210:     * Flushes the output streams and closes them if needed.
+211:     */
+212:    private void closeStreams() {
+213:        infoWriter.flush();
+214:        if (closeInfo) {
+215:            infoWriter.close();
+216:        }
+217:
+218:        errorWriter.flush();
+219:        if (closeError) {
+220:            errorWriter.close();
+221:        }
+222:    }
+TEST True
+TESTN 845
+134:    public void testGetChildCount() throws Exception {
+151:            .that(secondLevelA.getChildCount())
+154:            .that(firstLevelB.getChildCount())
+157:            .that(firstLevelA.getChildCount())
+160:            .that(root.getChildCount())
+195:    public void testGetChildCountType() throws Exception {
+210:        final int childCountLevelB = firstLevelB.getChildCount(0);
+214:        final int childCountLevelA = firstLevelA.getChildCount(TokenTypes.EXPR);
+218:        final int identTypeCount = root.getChildCount(TokenTypes.IDENT);
+222:        final int exprTypeCount = root.getChildCount(TokenTypes.EXPR);
+226:        final int invalidTypeCount = root.getChildCount(0);
+240:            .that(root.getChildCount())
+248:            .that(root.getChildCount())
+328:            .that(root.getChildCount())
+335:            .that(root.getChildCount())
+427:    public void testClearChildCountCache() {
+432:        final List<Consumer<DetailAstImpl>> clearChildCountCacheMethods = Arrays.asList(
+438:        for (Consumer<DetailAstImpl> method : clearChildCountCacheMethods) {
+439:            final int startCount = parent.getChildCount();
+443:            final int finishCount = parent.getChildCount();
+452:        final int startCount = child.getChildCount();
+455:        final int finishCount = child.getChildCount();
+465:    public void testCacheGetChildCount() {
+470:            .that(root.getChildCount())
+531:            .that(parent.getChildCount())
+746:        parent.removeChildren();
+749:                .that(parent.getChildCount())

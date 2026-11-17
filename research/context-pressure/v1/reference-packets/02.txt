@@ -1,0 +1,3930 @@
+ static boolean isJavadocTag(int type) {
+        return JAVADOC_TAG_TYPES.contains(type);
+    }
+
+    /**
+     * Create a JavadocNodeImpl from a given token and token type. This method should be used for
+     * imaginary nodes only, i.e. {@literal 'JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG'},
+     * where the text on the RHS matches the text on the LHS.
+     *
+     * @param tokenType the token type of this JavadocNodeImpl
+     * @return new JavadocNodeImpl of given type
+     */
+    private JavadocNodeImpl createImaginary(int tokenType) {
+        final JavadocNodeImpl node = new JavadocNodeImpl();
+        node.setType(tokenType);
+        node.setText(JavadocUtil.getTokenName(tokenType));
+        node.setLineNumber(blockCommentLineNumber);
+        node.setColumnNumber(javadocColumnNumber);
+        return node;
+    }
+
+    /**
+     * Returns the first non-tight HTML tag encountered in the Javadoc comment, if any.
+     *
+     * @return the first non-tight HTML tag, or null if none was found
+     */
+    public DetailNode getFirstNonTightHtmlTag() {
+        return firstNonTightHtmlTag;
+    }
+
+    /**
+     * A small utility to accumulate consecutive TEXT tokens into one node,
+     * preserving the starting token for accurate location metadata.
+     */
+    private final class TextAccumulator {
+
+        /**
+         * Buffer to accumulate TEXT token texts.
+         *
+         * @noinspection StringBufferField
+         * @noinspectionreason StringBufferField - We want to reuse the same buffer to avoid
+         */
+        private final StringBuilder buffer = new StringBuilder(256);
+
+        /**
+         * The first token in the accumulation, used for line/column info.
+         */
+        private Token startToken;
+
+        /**
+         * Creates a new {@code TextAccumulator} instance.
+         */
+        private TextAccumulator() {
+            // no code by default
+        }
+
+        /**
+         * Appends a TEXT token's text to the buffer and tracks the first token.
+         *
+         * @param token the token to accumulate
+         */
+        /* package */ void append(Token token) {
+            if (buffer.isEmpty()) {
+                startToken = token;
+            }
+            buffer.append(token.getText());
+        }
+
+        /**
+         * Flushes the accumulated buffer into a single {@link JavadocNodeImpl} node
+         * and adds it to the given parent. Clears the buffer after flushing.
+         *
+         * @param parent the parent node to add the new node to
+         */
+        /* package */ void flushTo(JavadocNodeImpl parent) {
+            if (!buffer.isEmpty()) {
+                final JavadocNodeImpl startNode = create(startToken);
+                startNode.setText(buffer.toString());
+                parent.addChild(startNode);
+                buffer.setLength(0);
+            }
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/JavadocDetailNodeParser.java SHA256 0dd725c89db1cc40e81fe548bc316e48d5bcf3db1af3c4c7b488c9cdd164ec7e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.Set;
+
+import org.antlr.v4.runtime.BaseErrorListener;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.atn.PredictionMode;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
+
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.DetailNode;
+import com.puppycrawl.tools.checkstyle.grammar.SimpleToken;
+import com.puppycrawl.tools.checkstyle.grammar.javadoc.JavadocCommentsLexer;
+import com.puppycrawl.tools.checkstyle.grammar.javadoc.JavadocCommentsParser;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+
+/**
+ * Used for parsing Javadoc comment as DetailNode tree.
+ *
+ */
+public class JavadocDetailNodeParser {
+
+    /**
+     * Parse error while rule recognition.
+     */
+    public static final String MSG_JAVADOC_PARSE_RULE_ERROR = "javadoc.parse.rule.error";
+
+    /**
+     * Message property key for the Unclosed HTML message.
+     */
+    public static final String MSG_UNCLOSED_HTML_TAG = "javadoc.unclosedHtml";
+
+    /** Symbols with which javadoc starts. */
+    private static final String JAVADOC_START = "/**";
+
+    /**
+     * Creates a new {@code JavadocDetailNodeParser} instance.
+     */
+    public JavadocDetailNodeParser() {
+        // no code by default
+    }
+
+    /**
+     * Parses the given Javadoc comment AST into a {@link ParseStatus} object.
+     *
+     * <p>
+     * This method extracts the raw Javadoc comment text from the supplied
+     * {@link DetailAST}, creates a new lexer and parser for the Javadoc grammar,
+     * and attempts to parse it into an AST of {@link DetailNode}s.
+     * The parser uses {@link PredictionMode#SLL} for
+     * faster performance and stops parsing on the first error encountered by
+     * using {@link CheckstyleParserErrorStrategy}.
+     * </p>
+     *
+     * @param javadocCommentAst
+     *        the {@code DetailAST} node representing the Javadoc comment in the source file
+     * @return a {@code ParseStatus} containing the root of the parsed Javadoc
+     *        tree (if successful), the first non-tight HTML tag (if any), and
+     *        the error message (if parsing failed)
+     */
+    public ParseStatus parseJavadocComment(DetailAST javadocCommentAst) {
+        final int blockCommentLineNumber = javadocCommentAst.getLineNo();
+
+        final String javadocComment = JavadocUtil.getJavadocCommentContent(javadocCommentAst);
+        final ParseStatus result = new ParseStatus();
+
+        // Use a new error listener each time to be able to use
+        // one check instance for multiple files to be checked
+        // without getting side effects.
+        final DescriptiveErrorListener errorListener = new DescriptiveErrorListener();
+
+        // Log messages should have line number in scope of file,
+        // not in scope of Javadoc comment.
+        // Offset is line number of beginning of Javadoc comment.
+        errorListener.setOffset(javadocCommentAst.getLineNo() - 1);
+
+        final JavadocCommentsLexer lexer =
+                        new JavadocCommentsLexer(CharStreams.fromString(javadocComment), true);
+
+        lexer.removeErrorListeners();
+        lexer.addErrorListener(errorListener);
+
+        final CommonTokenStream tokens = new CommonTokenStream(lexer);
+        tokens.fill();
+
+        final Set<SimpleToken> unclosedTags = lexer.getUnclosedTagNameTokens();
+        final JavadocCommentsParser parser = new JavadocCommentsParser(tokens, unclosedTags);
+
+        // set prediction mode to SLL to speed up parsing
+        parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
+
+        // remove default error listeners
+        parser.removeErrorListeners();
+
+        parser.addErrorListener(errorListener);
+
+        // JavadocParserErrorStrategy stops parsing on first parse error encountered unlike the
+        // DefaultErrorStrategy used by ANTLR which rather attempts error recovery.
+        parser.setErrorHandler(new CheckstyleParserErrorStrategy());
+
+        try {
+            final JavadocCommentsParser.JavadocContext javadoc = parser.javadoc();
+            final int javadocColumnNumber = javadocCommentAst.getColumnNo()
+                            + JAVADOC_START.length();
+
+            final JavadocCommentsAstVisitor visitor = new JavadocCommentsAstVisitor(
+                    tokens, blockCommentLineNumber, javadocColumnNumber);
+            final DetailNode tree = visitor.visit(javadoc);
+
+            result.setTree(tree);
+
+            result.firstNonTightHtmlTag = visitor.getFirstNonTightHtmlTag();
+
+            result.setParseErrorMessage(errorListener.getErrorMessage());
+        }
+        catch (ParseCancellationException | IllegalArgumentException exc) {
+            result.setParseErrorMessage(errorListener.getErrorMessage());
+        }
+
+        return result;
+    }
+
+    /**
+     * Custom error listener for JavadocParser that prints user readable errors.
+     */
+    private static final class DescriptiveErrorListener extends BaseErrorListener {
+
+        /**
+         * Offset is line number of beginning of the Javadoc comment. Log
+         * messages should have line number in scope of file, not in scope of Javadoc comment.
+         */
+        private int offset;
+
+        /**
+         * Error message that appeared while parsing.
+         */
+        private ParseErrorMessage errorMessage;
+
+        /**
+         * Creates a new {@code DescriptiveErrorListener} instance.
+         */
+        private DescriptiveErrorListener() {
+            // no code by default
+        }
+
+        /**
+         * Getter for error message during parsing.
+         *
+         * @return Error message during parsing.
+         */
+        private ParseErrorMessage getErrorMessage() {
+            return errorMessage;
+        }
+
+        /**
+         * Sets offset. Offset is line number of beginning of the Javadoc
+         * comment. Log messages should have line number in scope of file, not
+         * in scope of Javadoc comment.
+         *
+         * @param offset
+         *        offset line number
+         */
+        /* package */ void setOffset(int offset) {
+            this.offset = offset;
+        }
+
+        /**
+         * Logs parser errors in Checkstyle manner. Parser can generate error
+         * messages. There is special error that parser can generate. It is
+         * missed close HTML tag. This case is special because parser prints
+         * error like {@code "no viable alternative at input 'b \n *\n'"} and it
+         * is not clear that error is about missed close HTML tag. Other error
+         * messages are not special and logged simply as "Parse Error...".
+         *
+         * <p>{@inheritDoc}
+         */
+        @Override
+        public void syntaxError(
+                Recognizer<?, ?> recognizer, Object offendingSymbol,
+                int line, int charPositionInLine,
+                String msg, RecognitionException ex) {
+            final int lineNumber = offset + line;
+
+            final String target;
+            if (recognizer instanceof final JavadocCommentsLexer lexer) {
+                target = lexer.getPreviousToken().getText();
+            }
+            else {
+                final int ruleIndex = ex.getCtx().getRuleIndex();
+                final String ruleName = recognizer.getRuleNames()[ruleIndex];
+                target = convertUpperCamelToUpperUnderscore(ruleName);
+            }
+
+            errorMessage = new ParseErrorMessage(lineNumber,
+                    MSG_JAVADOC_PARSE_RULE_ERROR, charPositionInLine, msg, target);
+
+        }
+
+        /**
+         * Converts the given {@code text} from camel case to all upper case with
+         * underscores separating each word.
+         *
+         * @param text The string to convert.
+         * @return The result of the conversion.
+         */
+        private static String convertUpperCamelToUpperUnderscore(String text) {
+            final StringBuilder result = new StringBuilder(20);
+            for (int index = 0; index < text.length(); index++) {
+                final char letter = text.charAt(index);
+                if (Character.isUpperCase(letter)) {
+                    result.append('_');
+                }
+                result.append(Character.toUpperCase(letter));
+            }
+            return result.toString();
+        }
+
+    }
+
+    /**
+     * Contains result of parsing javadoc comment: DetailNode tree and parse error message.
+     */
+    public static class ParseStatus {
+
+        /**
+         * DetailNode tree (is null if parsing fails).
+         */
+        private DetailNode tree;
+
+        /**
+         * Parse error message (is null if parsing is successful).
+         */
+        private ParseErrorMessage parseErrorMessage;
+
+        /**
+         * Stores the first non-tight HTML tag encountered while parsing javadoc.
+         *
+         * @see <a
+         *     href="https://checkstyle.org/writing-javadoc-checks.html#Tight-HTML_rules">
+         *     Tight HTML rules</a>
+         */
+        private DetailNode firstNonTightHtmlTag;
+
+        /**
+         * Creates a new {@code ParseStatus} instance.
+         */
+        public ParseStatus() {
+            // no code by default
+        }
+
+        /**
+         * Getter for DetailNode tree.
+         *
+         * @return DetailNode tree if parsing was successful, null otherwise.
+         */
+        public DetailNode getTree() {
+            return tree;
+        }
+
+        /**
+         * Sets DetailNode tree.
+         *
+         * @param tree DetailNode tree.
+         */
+        public void setTree(DetailNode tree) {
+            this.tree = tree;
+        }
+
+        /**
+         * Getter for error message during parsing.
+         *
+         * @return Error message if parsing was unsuccessful, null otherwise.
+         */
+        public ParseErrorMessage getParseErrorMessage() {
+            return parseErrorMessage;
+        }
+
+        /**
+         * Sets parse error message.
+         *
+         * @param parseErrorMessage Parse error message.
+         */
+        public void setParseErrorMessage(ParseErrorMessage parseErrorMessage) {
+            this.parseErrorMessage = parseErrorMessage;
+        }
+
+        /**
+         * This method is used to check if the javadoc parsed has non-tight HTML tags.
+         *
+         * @return returns true if the javadoc has at least one non-tight HTML tag; false otherwise
+         * @see <a
+         *     href="https://checkstyle.org/writing-javadoc-checks.html#Tight-HTML_rules">
+         *     Tight HTML rules</a>
+         */
+        public boolean isNonTight() {
+            return firstNonTightHtmlTag != null;
+        }
+
+        /**
+         * Getter for the first non-tight HTML tag encountered while parsing javadoc.
+         *
+         * @return the first non-tight HTML tag that is encountered while parsing Javadoc,
+         *     if one exists
+         * @see <a href="https://checkstyle.org/writing-javadoc-checks.html#Tight-HTML_rules">
+         *     Tight HTML rules</a>
+         */
+        public DetailNode getFirstNonTightHtmlTag() {
+            return firstNonTightHtmlTag;
+        }
+
+    }
+
+    /**
+     * Contains information about parse error message.
+     */
+    public static class ParseErrorMessage {
+
+        /**
+         * Line number where parse error occurred.
+         */
+        private final int lineNumber;
+
+        /**
+         * Key for error message.
+         */
+        private final String messageKey;
+
+        /**
+         * Error message arguments.
+         */
+        private final Object[] messageArguments;
+
+        /**
+         * Initializes parse error message.
+         *
+         * @param lineNumber line number
+         * @param messageKey message key
+         * @param messageArguments message arguments
+         */
+        /* package */ ParseErrorMessage(int lineNumber, String messageKey,
+                Object... messageArguments) {
+            this.lineNumber = lineNumber;
+            this.messageKey = messageKey;
+            this.messageArguments = messageArguments.clone();
+        }
+
+        /**
+         * Getter for line number where parse error occurred.
+         *
+         * @return Line number where parse error occurred.
+         */
+        public int getLineNumber() {
+            return lineNumber;
+        }
+
+        /**
+         * Getter for key for error message.
+         *
+         * @return Key for error message.
+         */
+        public String getMessageKey() {
+            return messageKey;
+        }
+
+        /**
+         * Getter for error message arguments.
+         *
+         * @return Array of error message arguments.
+         */
+        public Object[] getMessageArguments() {
+            return messageArguments.clone();
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/JavadocPropertiesGenerator.java SHA256 ff45a2ab6761ee26489ed386a66fc32f0a0de9add82e862858d142c4cca6bd99
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.DetailNode;
+import com.puppycrawl.tools.checkstyle.api.JavadocCommentsTokenTypes;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+import com.puppycrawl.tools.checkstyle.utils.NullUtil;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
+import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParseResult;
+
+/**
+ * This class is used internally in the build process to write a property file
+ * with short descriptions (the first sentences) of TokenTypes constants.
+ * Request: 724871.
+ * For IDE plugins (like the eclipse plugin) it would be useful to have
+ * programmatic access to the first sentence of the TokenType constants,
+ * so they can use them in their configuration gui.
+ *
+ * @noinspection UseOfSystemOutOrSystemErr, unused, ClassIndependentOfModule
+ * @noinspectionreason UseOfSystemOutOrSystemErr - used for CLI output
+ * @noinspectionreason unused - main method is "unused" in code since it is driver method
+ * @noinspectionreason ClassIndependentOfModule - architecture of package requires this
+ */
+public final class JavadocPropertiesGenerator {
+
+    /**
+     * This regexp is used to extract the first sentence from the text.
+     * The end of the sentence is determined by the symbol "period", "exclamation mark" or
+     * "question mark", followed by a space or the end of the text.
+     */
+    private static final Pattern END_OF_SENTENCE_PATTERN = Pattern.compile(
+        "(([^.?!]|[.?!](?!\\s|$))*+[.?!])(\\s|$)");
+
+    /**
+     * Don't create instance of this class, use the {@link #main(String[])} method instead.
+     */
+    private JavadocPropertiesGenerator() {
+    }
+
+    /**
+     * TokenTypes.properties generator entry point.
+     *
+     * @param args the command line arguments
+     * @throws CheckstyleException if parser or lexer failed or if there is an IO problem
+     */
+    public static void main(String... args) throws CheckstyleException {
+        final CliOptions cliOptions = new CliOptions();
+        final CommandLine cmd = new CommandLine(cliOptions);
+        try {
+            final ParseResult parseResult = cmd.parseArgs(args);
+            if (parseResult.isUsageHelpRequested()) {
+                cmd.usage(System.out);
+            }
+            else {
+                writePropertiesFile(cliOptions);
+            }
+        }
+        catch (ParameterException exc) {
+            System.err.println(exc.getMessage());
+            exc.getCommandLine().usage(System.err);
+        }
+    }
+
+    /**
+     * Creates the .properties file from a .java file.
+     *
+     * @param options the user-specified options
+     * @throws CheckstyleException if a javadoc comment can not be parsed
+     */
+    private static void writePropertiesFile(CliOptions options) throws CheckstyleException {
+        try (PrintWriter writer = new PrintWriter(options.outputFile, StandardCharsets.UTF_8)) {
+            final DetailAST top = JavaParser.parseFile(options.inputFile,
+                    JavaParser.Options.WITH_COMMENTS).getFirstChild();
+            final DetailAST objBlock = getClassBody(top);
+            if (objBlock != null) {
+                iteratePublicStaticIntFields(objBlock, writer::println);
+            }
+        }
+        catch (IOException exc) {
+            throw new CheckstyleException("Failed to write javadoc properties of '"
+                    + options.inputFile + "' to '" + options.outputFile + "'", exc);
+        }
+    }
+
+    /**
+     * Walks over the type members and push the first javadoc sentence of every
+     * {@code public} {@code static} {@code int} field to the consumer.
+     *
+     * @param objBlock the OBJBLOCK of a class to iterate over its members
+     * @param consumer first javadoc sentence consumer
+     * @throws CheckstyleException if failed to parse a javadoc comment
+     */
+    private static void iteratePublicStaticIntFields(DetailAST objBlock, Consumer<String> consumer)
+            throws CheckstyleException {
+        for (DetailAST member = objBlock.getFirstChild(); member != null;
+                member = member.getNextSibling()) {
+            if (isPublicStaticFinalIntField(member)) {
+                final DetailAST modifiers = member.findFirstToken(TokenTypes.MODIFIERS);
+                final String firstJavadocSentence = getFirstJavadocSentence(modifiers);
+                if (firstJavadocSentence != null) {
+                    consumer.accept(getName(member) + "=" + firstJavadocSentence.trim());
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds the class body of the first class in the DetailAST.
+     *
+     * @param top AST to find the class body
+     * @return OBJBLOCK token if found; {@code null} otherwise
+     */
+    private static DetailAST getClassBody(DetailAST top) {
+        DetailAST ast = top;
+        while (ast != null && ast.getType() != TokenTypes.CLASS_DEF) {
+            ast = ast.getNextSibling();
+        }
+        DetailAST objBlock = null;
+        if (ast != null) {
+            objBlock = ast.findFirstToken(TokenTypes.OBJBLOCK);
+        }
+        return objBlock;
+    }
+
+    /**
+     * Checks that the DetailAST is a {@code public} {@code static} {@code final} {@code int} field.
+     *
+     * @param ast to process
+     * @return {@code true} if matches; {@code false} otherwise
+     */
+    private static boolean isPublicStaticFinalIntField(DetailAST ast) {
+        boolean result = ast.getType() == TokenTypes.VARIABLE_DEF;
+        if (result) {
+            final DetailAST type = ast.findFirstToken(TokenTypes.TYPE);
+            final DetailAST arrayDeclarator = type.getFirstChild().getNextSibling();
+            result = arrayDeclarator == null
+                    && type.getFirstChild().getType() == TokenTypes.LITERAL_INT;
+            if (result) {
+                final DetailAST modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
+                result = modifiers.findFirstToken(TokenTypes.LITERAL_PUBLIC) != null
+                    && modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null
+                    && modifiers.findFirstToken(TokenTypes.FINAL) != null;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Extracts the name of an ast.
+     *
+     * @param ast to extract the name
+     * @return the text content of the inner {@code TokenTypes.IDENT} node
+     */
+    private static String getName(DetailAST ast) {
+        return NullUtil.notNull(ast.findFirstToken(TokenTypes.IDENT)).getText();
+    }
+
+    /**
+     * Extracts the first sentence as HTML formatted text from the comment of an DetailAST.
+     * The end of the sentence is determined by the symbol "period", "exclamation mark" or
+     * "question mark", followed by a space or the end of the text. Inline tags @code and @literal
+     * are converted to HTML code.
+     *
+     * @param ast to extract the first sentence
+     * @return the first sentence of the inner {@code TokenTypes.BLOCK_COMMENT_BEGIN} node
+     *      or {@code null} if the first sentence is absent or malformed (does not end with period)
+     * @throws CheckstyleException if a javadoc comment can not be parsed or an unsupported inline
+     *      tag found
+     */
+    private static String getFirstJavadocSentence(DetailAST ast) throws CheckstyleException {
+        String firstSentence = null;
+        for (DetailAST child = ast.getFirstChild(); child != null && firstSentence == null;
+                child = child.getNextSibling()) {
+            // If there is an annotation, the javadoc comment will be a child of it.
+            if (child.getType() == TokenTypes.ANNOTATION) {
+                firstSentence = getFirstJavadocSentence(child);
+            }
+            // Otherwise, the javadoc comment will be right here.
+            else if (child.getType() == TokenTypes.BLOCK_COMMENT_BEGIN
+                    && JavadocUtil.isJavadocComment(child)) {
+                final DetailNode tree = DetailNodeTreeStringPrinter.parseJavadocAsDetailNode(child);
+                firstSentence = getFirstJavadocSentence(tree);
+            }
+        }
+        return firstSentence;
+    }
+
+    /**
+     * Extracts the first sentence as HTML formatted text from a DetailNode.
+     * The end of the sentence is determined by the symbol "period", "exclamation mark" or
+     * "question mark", followed by a space or the end of the text. Inline tags @code and @literal
+     * are converted to HTML code.
+     *
+     * @param tree to extract the first sentence
+     * @return the first sentence of the node or {@code null} if the first sentence is absent or
+     *      malformed (does not end with any of the end-of-sentence markers)
+     * @throws CheckstyleException if an unsupported inline tag found
+     */
+    private static String getFirstJavadocSentence(DetailNode tree) throws CheckstyleException {
+        String firstSentence = null;
+        final StringBuilder builder = new StringBuilder(128);
+
+        for (DetailNode node = tree.getFirstChild(); node != null;
+                node = node.getNextSibling()) {
+            if (node.getType() == JavadocCommentsTokenTypes.TEXT) {
+                final Matcher matcher = END_OF_SENTENCE_PATTERN.matcher(node.getText());
+                if (matcher.find()) {
+                    // Commit the sentence if an end-of-sentence marker is found.
+                    firstSentence = builder.append(matcher.group(1)).toString();
+                    break;
+                }
+                // Otherwise append the whole line and look for an end-of-sentence marker
+                // on the next line.
+                builder.append(node.getText());
+            }
+            else if (node.getType() == JavadocCommentsTokenTypes.JAVADOC_INLINE_TAG) {
+                formatInlineCodeTag(builder, node);
+            }
+            else {
+                formatHtmlElement(builder, node);
+            }
+        }
+        return firstSentence;
+    }
+
+    /**
+     * Converts inline code tag into HTML form.
+     *
+     * @param builder to append
+     * @param inlineTag to format
+     * @throws CheckstyleException if the inline javadoc tag is not a literal nor a code tag
+     */
+    private static void formatInlineCodeTag(StringBuilder builder, DetailNode inlineTag)
+            throws CheckstyleException {
+        final int tagType = inlineTag.getFirstChild().getType();
+
+        if (tagType != JavadocCommentsTokenTypes.LITERAL_INLINE_TAG
+                && tagType != JavadocCommentsTokenTypes.CODE_INLINE_TAG) {
+            throw new CheckstyleException("Unsupported inline tag "
+                + JavadocUtil.getTokenName(tagType));
+        }
+
+        final boolean wrapWithCodeTag = tagType == JavadocCommentsTokenTypes.CODE_INLINE_TAG;
+
+        for (DetailNode node = inlineTag.getFirstChild().getFirstChild(); node != null;
+                node = node.getNextSibling()) {
+            switch (node.getType()) {
+                // The text to append.
+                case JavadocCommentsTokenTypes.TEXT -> {
+                    if (wrapWithCodeTag) {
+                        builder.append("<code>").append(node.getText().trim()).append("</code>");
+                    }
+                    else {
+                        builder.append(node.getText().trim());
+                    }
+                }
+                case JavadocCommentsTokenTypes.JAVADOC_INLINE_TAG_START,
+                     JavadocCommentsTokenTypes.JAVADOC_INLINE_TAG_END,
+                     JavadocCommentsTokenTypes.TAG_NAME -> {
+                    // skip tag markers
+                }
+                default -> throw new CheckstyleException("Unsupported child in the inline tag "
+                    + JavadocUtil.getTokenName(node.getType()));
+            }
+        }
+    }
+
+    /**
+     * Concatenates the HTML text from AST of a JavadocTokenTypes.HTML_ELEMENT.
+     *
+     * @param builder to append
+     * @param node to format
+     */
+    private static void formatHtmlElement(StringBuilder builder, DetailNode node) {
+        switch (node.getType()) {
+            case JavadocCommentsTokenTypes.TAG_OPEN,
+                 JavadocCommentsTokenTypes.TAG_CLOSE,
+                 JavadocCommentsTokenTypes.TAG_SLASH,
+                 JavadocCommentsTokenTypes.TAG_SLASH_CLOSE,
+                 JavadocCommentsTokenTypes.TAG_NAME,
+                 JavadocCommentsTokenTypes.TEXT ->
+                builder.append(node.getText());
+
+            default -> {
+                for (DetailNode child = node.getFirstChild(); child != null;
+                     child = child.getNextSibling()) {
+                    formatHtmlElement(builder, child);
+                }
+            }
+        }
+
+    }
+
+    /**
+     * Helper class encapsulating the command line options and positional parameters.
+     */
+    @Command(name = "java com.puppycrawl.tools.checkstyle.JavadocPropertiesGenerator",
+            mixinStandardHelpOptions = true)
+    private static final class CliOptions {
+
+        /**
+         * The command line option to specify the output file.
+         */
+        @Option(names = "--destfile", required = true, description = "The output file.")
+        private File outputFile;
+
+        /**
+         * The command line positional parameter to specify the input file.
+         */
+        @Parameters(index = "0", description = "The input file.")
+        private File inputFile;
+
+        /**
+         * Creates a new {@code CliOptions} instance.
+         */
+        private CliOptions() {
+            // no code by default
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/LocalizedMessage.java SHA256 e2e6a53967a7ae6bdca89f246e296080c70ca912b8b7de5cd0eba03768d39d6c
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.text.MessageFormat;
+import java.util.Locale;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
+
+import com.puppycrawl.tools.checkstyle.utils.UnmodifiableCollectionUtil;
+
+/**
+ * Represents a message that can be localised. The translations come from
+ * message.properties files. The underlying implementation uses java.text.MessageFormat.
+ */
+public class LocalizedMessage {
+
+    /** The locale to localise messages to. */
+    private static Locale messageLocale = Locale.getDefault();
+
+    /** Name of the resource bundle to get messages from. */
+    private final String bundle;
+
+    /** Class of the source for this message. */
+    private final Class<?> sourceClass;
+
+    /**
+     * Key for the message format.
+     */
+    private final String key;
+
+    /**
+     * Arguments for java.text.MessageFormat, that is why type is Object[].
+     *
+     * <p>Note: Changing types from Object[] will be huge breaking compatibility, as Module
+     * messages use some type formatting already, so better to keep it as Object[].
+     * </p>
+     */
+    private final Object[] args;
+
+    /**
+     * Creates a new {@code LocalizedMessage} instance.
+     *
+     * @param bundle resource bundle name
+     * @param sourceClass the Class that is the source of the message
+     * @param key the key to locate the translation.
+     * @param args arguments for the translation.
+     */
+    public LocalizedMessage(String bundle, Class<?> sourceClass, String key,
+            Object... args) {
+        this.bundle = bundle;
+        this.sourceClass = sourceClass;
+        this.key = key;
+        if (args == null) {
+            this.args = null;
+        }
+        else {
+            this.args = UnmodifiableCollectionUtil.copyOfArray(args, args.length);
+        }
+    }
+
+    /**
+     * Sets a locale to use for localization.
+     *
+     * @param locale the locale to use for localization
+     */
+    public static void setLocale(Locale locale) {
+        if (Locale.ENGLISH.getLanguage().equals(locale.getLanguage())) {
+            messageLocale = Locale.ROOT;
+        }
+        else {
+            messageLocale = locale;
+        }
+    }
+
+    /**
+     * Gets the translated message.
+     *
+     * @return the translated message.
+     */
+    public String getMessage() {
+        String result;
+        try {
+            // Important to use the default class loader, and not the one in
+            // the GlobalProperties object. This is because the class loader in
+            // the GlobalProperties is specified by the user for resolving
+            // custom classes.
+            final ResourceBundle resourceBundle = getBundle();
+            final String pattern = resourceBundle.getString(key);
+            final MessageFormat formatter = new MessageFormat(pattern, Locale.ROOT);
+            result = formatter.format(args);
+        }
+        catch (final MissingResourceException ignored) {
+            // If the Check author didn't provide i18n resource bundles
+            // and logs audit event messages directly, this will return
+            // the author's original message
+            final MessageFormat formatter = new MessageFormat(key, Locale.ROOT);
+            result = formatter.format(args);
+        }
+        return result;
+    }
+
+    /**
+     * Obtain the ResourceBundle. Uses the classloader
+     * of the class emitting this message, to be sure to get the correct
+     * bundle. Property files are read as UTF-8 by the JDK since Java 9,
+     * so no custom {@code ResourceBundle.Control} is needed.
+     *
+     * @return a ResourceBundle.
+     */
+    private ResourceBundle getBundle() {
+        return ResourceBundle.getBundle(bundle, messageLocale, sourceClass.getClassLoader());
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/Main.java SHA256 fd744f068589960d9e47e728361d9a81eac7fd9a803a2fe5eded7f1d9725f0cf
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Filter;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.puppycrawl.tools.checkstyle.AbstractAutomaticBean.OutputStreamOptions;
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.api.RootModule;
+import com.puppycrawl.tools.checkstyle.utils.ChainedPropertyUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.XpathUtil;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
+import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParseResult;
+
+/**
+ * Wrapper command line program for the Checker.
+ */
+public final class Main {
+
+    /**
+     * A key pointing to the error counter message in the "messages.properties" file.
+     */
+    public static final String ERROR_COUNTER = "Main.errorCounter";
+    /**
+     * A key pointing to the load properties exception message in the "messages.properties" file.
+     */
+    public static final String LOAD_PROPERTIES_EXCEPTION = "Main.loadProperties";
+    /**
+     * A key pointing to the create listener exception message in the "messages.properties" file.
+     */
+    public static final String CREATE_LISTENER_EXCEPTION = "Main.createListener";
+
+    /** Logger for Main. */
+    private static final Log LOG = LogFactory.getLog(Main.class);
+
+    /** Exit code returned when user specified invalid command line arguments. */
+    private static final int EXIT_WITH_INVALID_USER_INPUT_CODE = -1;
+
+    /** Exit code returned when execution finishes with {@link CheckstyleException}. */
+    private static final int EXIT_WITH_CHECKSTYLE_EXCEPTION_CODE = -2;
+
+    /** Maximum exit code, so the number of errors can not wrap around to 0. */
+    private static final int MAX_EXIT_CODE = 255;
+
+    /**
+     * Client code should not create instances of this class, but use
+     * {@link #main(String[])} method instead.
+     */
+    private Main() {
+    }
+
+    /**
+     * Loops over the files specified checking them for errors. The exit code
+     * is the number of errors found in all the files, but no more than 255,
+     * so it can not wrap around to 0 on a multiple of 256 errors.
+     *
+     * @param args the command line arguments.
+     * @throws IOException if there is a problem with files access
+     * @noinspection UseOfSystemOutOrSystemErr, CallToPrintStackTrace, CallToSystemExit
+     * @noinspectionreason UseOfSystemOutOrSystemErr - driver class for Checkstyle requires
+     *      usage of System.out and System.err
+     * @noinspectionreason CallToPrintStackTrace - driver class for Checkstyle must be able to
+     *      show all details in case of failure
+     * @noinspectionreason CallToSystemExit - driver class must call exit
+     */
+    public static void main(String... args) throws IOException {
+
+        final CliOptions cliOptions = new CliOptions();
+        final CommandLine commandLine = new CommandLine(cliOptions);
+        commandLine.setUsageHelpWidth(CliOptions.HELP_WIDTH);
+        commandLine.setCaseInsensitiveEnumValuesAllowed(true);
+
+        // provide proper exit code based on results.
+        int exitStatus = 0;
+        int errorCounter = 0;
+        try {
+            final ParseResult parseResult = commandLine.parseArgs(args);
+            if (parseResult.isVersionHelpRequested()) {
+                printVersionToSystemOutput();
+            }
+            else if (parseResult.isUsageHelpRequested()) {
+                commandLine.usage(System.out);
+            }
+            else {
+                exitStatus = execute(parseResult, cliOptions);
+                errorCounter = exitStatus;
+            }
+        }
+        catch (ParameterException exc) {
+            exitStatus = EXIT_WITH_INVALID_USER_INPUT_CODE;
+            System.err.println(exc.getMessage());
+            System.err.println("Usage: checkstyle [OPTIONS]... file(s) or folder(s) ...");
+            System.err.println("Try 'checkstyle --help' for more information.");
+        }
+        catch (CheckstyleException exc) {
+            exitStatus = EXIT_WITH_CHECKSTYLE_EXCEPTION_CODE;
+            errorCounter = 1;
+            exc.printStackTrace();
+        }
+        finally {
+            // return exit code base on validation of Checker
+            if (errorCounter > 0) {
+                final LocalizedMessage errorCounterViolation = new LocalizedMessage(
+                        Definitions.CHECKSTYLE_BUNDLE, Main.class,
+                        ERROR_COUNTER, String.valueOf(errorCounter));
+                // print error count statistic to error output stream,
+                // output stream might be used by validation report content
+                System.err.println(errorCounterViolation.getMessage());
+            }
+        }
+        Runtime.getRuntime().exit(Math.min(exitStatus, MAX_EXIT_CODE));
+    }
+
+    /**
+     * Prints version string when the user requests version help (--version or -V).
+     *
+     * @noinspection UseOfSystemOutOrSystemErr
+     * @noinspectionreason UseOfSystemOutOrSystemErr - driver class for Checkstyle requires
+     *      usage of System.out and System.err
+     */
+    private static void printVersionToSystemOutput() {
+        System.out.println("Checkstyle version: " + getVersionString());
+    }
+
+    /**
+     * Returns the version string printed when the user requests version help (--version or -V).
+     *
+     * @return a version string based on the package implementation version
+     */
+    private static String getVersionString() {
+        return Main.class.getPackage().getImplementationVersion();
+    }
+
+    /**
+     * Validates the user input and returns {@value #EXIT_WITH_INVALID_USER_INPUT_CODE} if
+     * invalid, otherwise executes CheckStyle and returns the number of violations.
+     *
+     * @param parseResult generic access to options and parameters found on the command line
+     * @param options encapsulates options and parameters specified on the command line
+     * @return number of violations
+     * @throws CheckstyleException if something happens processing the files.
+     * @throws IOException if a file could not be read.
+     * @noinspection UseOfSystemOutOrSystemErr
+     * @noinspectionreason UseOfSystemOutOrSystemErr - driver class for Checkstyle requires
+     *      usage of System.out and System.err
+     */
+    private static int execute(ParseResult parseResult, CliOptions options)
+            throws IOException, CheckstyleException {
+
+        final int exitStatus;
+
+        // return error if something is wrong in arguments
+        final List<File> filesToProcess = getFilesToProcess(options);
+        final List<String> messages = options.validateCli(parseResult, filesToProcess);
+        final boolean hasMessages = !messages.isEmpty();
+        if (hasMessages) {
+            messages.forEach(System.out::println);
+            exitStatus = EXIT_WITH_INVALID_USER_INPUT_CODE;
+        }
+        else {
+            exitStatus = runCli(options, filesToProcess);
+        }
+        return exitStatus;
+    }
+
+    /**
+     * Determines the files to process.
+     *
+     * @param options the user-specified options
+     * @return list of files to process
+     */
+    private static List<File> getFilesToProcess(CliOptions options) {
+        final List<Pattern> patternsToExclude = options.getExclusions();
+
+        final List<File> result = new ArrayList<>();
+        for (File file : options.files) {
+            result.addAll(listFiles(file, patternsToExclude));
+        }
+        return result;
+    }
+
+    /**
+     * Traverses a specified node looking for files to check. Found files are added to
+     * a specified list. Subdirectories are also traversed.
+     *
+     * @param node
+     *        the node to process
+     * @param patternsToExclude The list of patterns to exclude from searching or being added as
+     *        files.
+     * @return found files
+     */
+    private static List<File> listFiles(File node, List<Pattern> patternsToExclude) {
+        // could be replaced with org.apache.commons.io.FileUtils.list() method
+        // if only we add commons-io library
+        final List<File> result = new ArrayList<>();
+
+        if (node.canRead() && !isPathExcluded(node.getAbsolutePath(), patternsToExclude)) {
+            if (node.isDirectory()) {
+                final File[] files = node.listFiles();
+                // listFiles() can return null, so we need to check it
+                if (files != null) {
+                    for (File element : files) {
+                        result.addAll(listFiles(element, patternsToExclude));
+                    }
+                }
+            }
+            else if (node.isFile()) {
+                result.add(node);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks if a directory/file {@code path} should be excluded based on if it matches one of the
+     * patterns supplied.
+     *
+     * @param path The path of the directory/file to check
+     * @param patternsToExclude The collection of patterns to exclude from searching
+     *        or being added as files.
+     * @return True if the directory/file matches one of the patterns.
+     */
+    private static boolean isPathExcluded(String path, Iterable<Pattern> patternsToExclude) {
+        boolean result = false;
+
+        for (Pattern pattern : patternsToExclude) {
+            if (pattern.matcher(path).find()) {
+                result = true;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Do execution of CheckStyle based on Command line options.
+     *
+     * @param options user-specified options
+     * @param filesToProcess the list of files whose style to check
+     * @return number of violations
+     * @throws CheckstyleException if something happens processing the files.
+     * @throws IOException if a file could not be read.
+     * @noinspection UseOfSystemOutOrSystemErr
+     * @noinspectionreason UseOfSystemOutOrSystemErr - driver class for Checkstyle requires
+     *      usage of System.out and System.err
+     */
+    private static int runCli(CliOptions options, List<File> filesToProcess)
+            throws IOException, CheckstyleException {
+        int result = 0;
+        final boolean hasSuppressionLineColumnNumber = options.suppressionLineColumnNumber != null;
+
+        // create config helper object
+        if (options.printAst) {
+            // print AST
+            final File file = filesToProcess.getFirst();
+            final String stringAst = AstTreeStringPrinter.printFileAst(file,
+                    JavaParser.Options.WITHOUT_COMMENTS);
+            System.out.print(stringAst);
+        }
+        else if (Objects.nonNull(options.xpath)) {
+            final String branch =
+                    XpathUtil.printXpathBranch(options.xpath, filesToProcess.getFirst());
+            System.out.print(branch);
+        }
+        else if (options.printAstWithComments) {
+            final File file = filesToProcess.getFirst();
+            final String stringAst = AstTreeStringPrinter.printFileAst(file,
+                    JavaParser.Options.WITH_COMMENTS);
+            System.out.print(stringAst);
+        }
+        else if (options.printJavadocTree) {
+            final File file = filesToProcess.getFirst();
+            final String stringAst = DetailNodeTreeStringPrinter.printFileAst(file);
+            System.out.print(stringAst);
+        }
+        else if (options.printTreeWithJavadoc) {
+            final File file = filesToProcess.getFirst();
+            final String stringAst = AstTreeStringPrinter.printJavaAndJavadocTree(file);
+            System.out.print(stringAst);
+        }
+        else if (hasSuppressionLineColumnNumber) {
+            final File file = filesToProcess.getFirst();
+            final String stringSuppressions =
+                    SuppressionsStringPrinter.printSuppressions(file,
+                            options.suppressionLineColumnNumber, options.tabWidth);
+            System.out.print(stringSuppressions);
+        }
+        else {
+            if (options.debug) {
+                final Logger parentLogger = Logger.getLogger(Main.class.getName()).getParent();
+                final ConsoleHandler handler = new ConsoleHandler();
+                handler.setLevel(Level.FINEST);
+                handler.setFilter(new OnlyCheckstyleLoggersFilter());
+                parentLogger.addHandler(handler);
+                parentLogger.setLevel(Level.FINEST);
+            }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Checkstyle debug logging enabled");
+            }
+
+            // run Checker
+            result = runCheckstyle(options, filesToProcess);
+        }
+
+        return result;
+    }
+
+    /**
+     * Executes required Checkstyle actions based on passed parameters.
+     *
+     * @param options user-specified options
+     * @param filesToProcess the list of files whose style to check
+     * @return number of violations of ERROR level
+     * @throws CheckstyleException
+     *         when properties file could not be loaded
+     * @throws IOException
+     *         when output file could not be found
+     */
+    private static int runCheckstyle(CliOptions options, List<File> filesToProcess)
+            throws CheckstyleException, IOException {
+        // setup the properties
+        final Properties props;
+
+        if (options.propertiesFile == null) {
+            props = System.getProperties();
+        }
+        else {
+            props = loadProperties(options.propertiesFile);
+        }
+
+        // create a configuration
+
+        final ConfigurationLoader.IgnoredModulesOptions ignoredModulesOptions;
+        if (options.executeIgnoredModules) {
+            ignoredModulesOptions = ConfigurationLoader.IgnoredModulesOptions.EXECUTE;
+        }
+        else {
+            ignoredModulesOptions = ConfigurationLoader.IgnoredModulesOptions.OMIT;
+        }
+
+        final ThreadModeSettings multiThreadModeSettings =
+                new ThreadModeSettings(CliOptions.CHECKER_THREADS_NUMBER,
+                CliOptions.TREE_WALKER_THREADS_NUMBER);
+        final Configuration config = ConfigurationLoader.loadConfiguration(
+                options.configurationFile, new PropertiesExpander(props),
+                ignoredModulesOptions, multiThreadModeSettings);
+
+        // create RootModule object and run it
+        final int errorCounter;
+        final ClassLoader moduleClassLoader = Checker.class.getClassLoader();
+        final RootModule rootModule = getRootModule(config.getName(), moduleClassLoader);
+
+        try {
+            final AuditListener listener;
+            if (options.generateXpathSuppressionsFile) {
+                // create filter to print generated xpath suppressions file
+                final Configuration treeWalkerConfig = getTreeWalkerConfig(config);
+                if (treeWalkerConfig != null) {
+                    final DefaultConfiguration moduleConfig =
+                            new DefaultConfiguration(
+                                    XpathFileGeneratorAstFilter.class.getName());
+                    moduleConfig.addProperty(CliOptions.ATTRIB_TAB_WIDTH_NAME,
+                            String.valueOf(options.tabWidth));
+                    ((DefaultConfiguration) treeWalkerConfig).addChild(moduleConfig);
+                }
+
+                listener = new XpathFileGeneratorAuditListener(getOutputStream(options.outputPath),
+                        getOutputStreamOptions(options.outputPath));
+            }
+            else if (options.generateCheckAndFileSuppressionsFile) {
+                listener = new ChecksAndFilesSuppressionFileGeneratorAuditListener(
+                        getOutputStream(options.outputPath),
+                        getOutputStreamOptions(options.outputPath));
+            }
+            else {
+                listener = createListener(options.format, options.outputPath);
+            }
+
+            rootModule.setModuleClassLoader(moduleClassLoader);
+            rootModule.configure(config);
+            rootModule.addListener(listener);
+
+            // run RootModule
+            errorCounter = rootModule.process(filesToProcess);
+        }
+        finally {
+            rootModule.destroy();
+        }
+
+        return errorCounter;
+    }
+
+    /**
+     * Loads properties from a File.
+     *
+     * @param file
+     *        the properties file
+     * @return the properties in file
+     * @throws CheckstyleException
+     *         when could not load properties file
+     */
+    private static Properties loadProperties(File file)
+            throws CheckstyleException {
+        final Properties properties = new Properties();
+
+        try (InputStream stream = Files.newInputStream(file.toPath())) {
+            properties.load(stream);
+        }
+        catch (final IOException exc) {
+            final LocalizedMessage loadPropertiesExceptionMessage = new LocalizedMessage(
+                    Definitions.CHECKSTYLE_BUNDLE, Main.class,
+                    LOAD_PROPERTIES_EXCEPTION, file.getAbsolutePath());
+            throw new CheckstyleException(loadPropertiesExceptionMessage.getMessage(), exc);
+        }
+
+        return ChainedPropertyUtil.getResolvedProperties(properties);
+    }
+
+    /**
+     * Creates a new instance of the root module that will control and run Checkstyle.
+     *
+     * @param name The name of the module. This will either be a short name that
+     *        will have to be found or the complete package name.
+     * @param moduleClassLoader Class loader used to load the root module.
+     * @return The new instance of the root module.
+     * @throws CheckstyleException if no module can be instantiated from name
+     */
+    private static RootModule getRootModule(String name, ClassLoader moduleClassLoader)
+            throws CheckstyleException {
+        final ModuleFactory factory = new PackageObjectFactory(
+                Checker.class.getPackage().getName(), moduleClassLoader);
+
+        return (RootModule) factory.createModule(name);
+    }
+
+    /**
+     * Returns {@code TreeWalker} module configuration.
+     *
+     * @param config The configuration object.
+     * @return The {@code TreeWalker} module configuration.
+     */
+    private static Configuration getTreeWalkerConfig(Configuration config) {
+        Configuration result = null;
+
+        final Configuration[] children = config.getChildren();
+        for (Configuration child : children) {
+            if ("TreeWalker".equals(child.getName())) {
+                result = child;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * This method creates in AuditListener an open stream for validation data, it must be
+     * closed by {@link RootModule} (default implementation is {@link Checker}) by calling
+     * {@link AuditListener#auditFinished(AuditEvent)}.
+     *
+     * @param format format of the audit listener
+     * @param outputLocation the location of output
+     * @return a fresh new {@code AuditListener}
+     * @throws IOException when provided output location is not found
+     */
+    private static AuditListener createListener(OutputFormat format, Path outputLocation)
+            throws IOException {
+        final OutputStream out = getOutputStream(outputLocation);
+        final OutputStreamOptions closeOutputStreamOption =
+                getOutputStreamOptions(outputLocation);
+        return format.createListener(out, closeOutputStreamOption);
+    }
+
+    /**
+     * Create output stream or return System.out.
+     *
+     * @param outputPath output location
+     * @return output stream
+     * @throws IOException might happen
+     * @noinspection UseOfSystemOutOrSystemErr
+     * @noinspectionreason UseOfSystemOutOrSystemErr - driver class for Checkstyle requires
+     *      usage of System.out and System.err
+     */
+    @SuppressWarnings("resource")
+    private static OutputStream getOutputStream(Path outputPath) throws IOException {
+        final OutputStream result;
+        if (outputPath == null) {
+            result = System.out;
+        }
+        else {
+            result = Files.newOutputStream(outputPath);
+        }
+        return result;
+    }
+
+    /**
+     * Create {@link OutputStreamOptions} for the given location.
+     *
+     * @param outputPath output location
+     * @return output stream options
+     */
+    private static OutputStreamOptions getOutputStreamOptions(Path outputPath) {
+        final OutputStreamOptions result;
+        if (outputPath == null) {
+            result = OutputStreamOptions.NONE;
+        }
+        else {
+            result = OutputStreamOptions.CLOSE;
+        }
+        return result;
+    }
+
+    /**
+     * Enumeration over the possible output formats.
+     *
+     * @noinspection PackageVisibleInnerClass
+     * @noinspectionreason PackageVisibleInnerClass - we keep this enum package visible for tests
+     */
+    /* package */ enum OutputFormat {
+
+        /** XML output format. */
+        XML,
+        /** SARIF output format. */
+        SARIF,
+        /** Plain output format. */
+        PLAIN;
+
+        /**
+         * Returns a new AuditListener for this OutputFormat.
+         *
+         * @param out the output stream
+         * @param options the output stream options
+         * @return a new AuditListener for this OutputFormat
+         * @throws IOException if there is any IO exception during logger initialization
+         */
+        /* package */ AuditListener createListener(
+            OutputStream out,
+            OutputStreamOptions options)
+                    throws IOException {
+            final AuditListener result;
+            if (this == XML) {
+                result = new XMLLogger(out, options);
+            }
+            else if (this == SARIF) {
+                result = new SarifLogger(out, options);
+            }
+            else {
+                result = new DefaultLogger(out, options);
+            }
+            return result;
+        }
+
+        /**
+         * Returns the name in lowercase.
+         *
+         * @return the enum name in lowercase
+         */
+        @Override
+        public String toString() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+
+    }
+
+    /** Log Filter used in debug mode. */
+    private static final class OnlyCheckstyleLoggersFilter implements Filter {
+
+        /** Name of the package used to filter on. */
+        private final String packageName = Main.class.getPackage().getName();
+
+        /**
+         * Creates a new {@code OnlyCheckstyleLoggersFilter} instance.
+         */
+        private OnlyCheckstyleLoggersFilter() {
+            // no code by default
+        }
+
+        /**
+         * Returns whether the specified logRecord should be logged.
+         *
+         * @param logRecord the logRecord to log
+         * @return true if the logger name is in the package of this class or a subpackage
+         */
+        @Override
+        public boolean isLoggable(LogRecord logRecord) {
+            return logRecord.getLoggerName().startsWith(packageName);
+        }
+
+    }
+
+    /**
+     * Command line options.
+     *
+     * @noinspection unused, FieldMayBeFinal, CanBeFinal,
+     *              MismatchedQueryAndUpdateOfCollection, LocalCanBeFinal
+     * @noinspectionreason FieldMayBeFinal - usage of picocli requires
+     *      suppression of above inspections
+     * @noinspectionreason CanBeFinal - usage of picocli requires suppression of above inspections
+     * @noinspectionreason MismatchedQueryAndUpdateOfCollection - list of files is gathered and used
+     *      via reflection by picocli library
+     * @noinspectionreason LocalCanBeFinal - usage of picocli requires
+     *      suppression of above inspections
+     */
+    @Command(name = "checkstyle", description = "Checkstyle verifies that the specified "
+            + "source code files adhere to the specified rules. By default, violations are "
+            + "reported to standard out in plain format. Checkstyle requires a configuration "
+            + "XML file that configures the checks to apply.",
+            mixinStandardHelpOptions = true)
+    private static final class CliOptions {
+
+        /** Width of CLI help option. */
+        private static final int HELP_WIDTH = 100;
+
+        /** The default number of threads to use for checker and the tree walker. */
+        private static final int DEFAULT_THREAD_COUNT = 1;
+
+        /** Name for the moduleConfig attribute 'tabWidth'. */
+        private static final String ATTRIB_TAB_WIDTH_NAME = "tabWidth";
+
+        /** Default output format. */
+        private static final OutputFormat DEFAULT_OUTPUT_FORMAT = OutputFormat.PLAIN;
+
+        /** Option name for output format. */
+        private static final String OUTPUT_FORMAT_OPTION = "-f";
+
+        /**
+         * The checker threads number.
+         * This option has been skipped for CLI options intentionally.
+         *
+         */
+        private static final int CHECKER_THREADS_NUMBER = DEFAULT_THREAD_COUNT;
+
+        /**
+         * The tree walker threads number.
+         *
+         */
+        private static final int TREE_WALKER_THREADS_NUMBER = DEFAULT_THREAD_COUNT;
+
+        /** List of file to validate. */
+        @Parameters(arity = "1..*", paramLabel = "<files or folders>",
+                description = "One or more source files to verify")
+        private List<File> files;
+
+        /** Config file location. */
+        @Option(names = "-c", description = "Specifies the location of the file that defines"
+                + " the configuration modules. The location can either be a filesystem location"
+                + ", or a name passed to the ClassLoader.getResource() method.")
+        private String configurationFile;
+
+        /** Output file location. */
+        @Option(names = "-o", description = "Sets the output file. Defaults to stdout.")
+        private Path outputPath;
+
+        /** Properties file location. */
+        @Option(names = "-p", description = "Sets the property files to load.")
+        private File propertiesFile;
+
+        /** LineNo and columnNo for the suppression. */
+        @Option(names = "-s",
+                description = "Prints xpath suppressions at the file's line and column position. "
+                        + "Argument is the line and column number (separated by a : ) in the file "
+                        + "that the suppression should be generated for. The option cannot be used "
+                        + "with other options and requires exactly one file to run on to be "
+                        + "specified. Note that the generated result will have few queries, joined "
+                        + "by pipe(|). Together they will match all AST nodes on "
+                        + "specified line and column. You need to choose only one and recheck "
+                        + "that it works. Usage of all of them is also ok, but might result in "
+                        + "undesirable matching and suppress other issues.")
+        private String suppressionLineColumnNumber;
+
+        /**
+         * Tab character length.
+         *
+         * @noinspection CanBeFinal
+         * @noinspectionreason CanBeFinal - we use picocli, and it uses
+         *      reflection to manage such fields
+         */
+        @Option(names = {"-w", "--tabWidth"},
+                description = "Sets the length of the tab character. "
+                + "Used only with -s option. Default value is ${DEFAULT-VALUE}.")
+        private int tabWidth = CommonUtil.DEFAULT_TAB_WIDTH;
+
+        /** Switch whether to generate xpath suppressions file or not. */
+        @Option(names = {"-g", "--generate-xpath-suppression"},
+                description = "Generates an output xpath suppression XML to use to suppress all "
+                        + "violations from user's config. Instead of printing every violation, "
+                        + "all violations will be caught and single suppressions xml file will "
+                        + "be printed out. Used only with -c option. Output "
+                        + "location can be specified with -o option.")
+        private boolean generateXpathSuppressionsFile;
+
+        /** Switch whether to generate check and file suppressions file or not. */
+        @Option(names = {"-G", "--generate-checks-and-files-suppression"},
+                description = "Generates an output suppression XML that will have suppress "
+                        + "elements with \"checks\" and \"files\" attributes only to use to "
+                        + "suppress all violations from user's config. Instead of printing every "
+                        + "violation, all violations will be caught and single suppressions xml "
+                        + "file will be printed out. Used only with -c option. Output "
+                        + "location can be specified with -o option.")
+        private boolean generateCheckAndFileSuppressionsFile;
+
+        /**
+         * Output format.
+         *
+         * @noinspection CanBeFinal
+         * @noinspectionreason CanBeFinal - we use picocli, and it uses
+         *      reflection to manage such fields
+         */
+        @Option(names = "-f",
+                description = "Specifies the output format. Valid values: "
+                + "${COMPLETION-CANDIDATES} for XMLLogger, SarifLogger, "
+                + "and DefaultLogger respectively. Defaults to ${DEFAULT-VALUE}.")
+        private OutputFormat format = DEFAULT_OUTPUT_FORMAT;
+
+        /** Option that controls whether to print the AST of the file. */
+        @Option(names = {"-t", "--tree"},
+                description = "This option is used to display the Abstract Syntax Tree (AST) "
+                        + "without any comments of the specified file. It can only be used on "
+                        + "a single file and cannot be combined with other options.")
+        private boolean printAst;
+
+        /** Option that controls whether to print the AST of the file including comments. */
+        @Option(names = {"-T", "--treeWithComments"},
+                description = "This option is used to display the Abstract Syntax Tree (AST) "
+                        + "with comment nodes excluding Javadoc of the specified file. It can only"
+                        + " be used on a single file and cannot be combined with other options.")
+        private boolean printAstWithComments;
+
+        /** Option that controls whether to print the parse tree of the javadoc comment. */
+        @Option(names = {"-j", "--javadocTree"},
+                description = "This option is used to print the Parse Tree of the Javadoc comment."
+                        + " The file has to contain only Javadoc comment content "
+                        + "excluding '/**' and '*/' at the beginning and at the end respectively. "
+                        + "It can only be used on a single file and cannot be combined "
+                        + "with other options.")
+        private boolean printJavadocTree;
+
+        /** Option that controls whether to print the full AST of the file. */
+        @Option(names = {"-J", "--treeWithJavadoc"},
+                description = "This option is used to display the Abstract Syntax Tree (AST) "
+                        + "with Javadoc nodes of the specified file. It can only be used on a "
+                        + "single file and cannot be combined with other options.")
+        private boolean printTreeWithJavadoc;
+
+        /** Option that controls whether to print debug info. */
+        @Option(names = {"-d", "--debug"},
+                description = "Prints all debug logging of CheckStyle utility.")
+        private boolean debug;
+
+        /**
+         * Option that allows users to specify a list of paths to exclude.
+         *
+         * @noinspection CanBeFinal
+         * @noinspectionreason CanBeFinal - we use picocli, and it uses
+         *      reflection to manage such fields
+         */
+        @Option(names = {"-e", "--exclude"},
+                description = "Directory/file to exclude from CheckStyle. The path can be the "
+                        + "full, absolute path, or relative to the current path. Multiple "
+                        + "excludes are allowed.")
+        private List<File> exclude = new ArrayList<>();
+
+        /**
+         * Option that allows users to specify a regex of paths to exclude.
+         *
+         * @noinspection CanBeFinal
+         * @noinspectionreason CanBeFinal - we use picocli, and it uses
+         *      reflection to manage such fields
+         */
+        @Option(names = {"-x", "--exclude-regexp"},
+                description = "Directory/file pattern to exclude from CheckStyle. Multiple "
+                        + "excludes are allowed.")
+        private List<Pattern> excludeRegex = new ArrayList<>();
+
+        /** Switch whether to execute ignored modules or not. */
+        @Option(names = {"-E", "--executeIgnoredModules"},
+                description = "Allows ignored modules to be run.")
+        private boolean executeIgnoredModules;
+
+        /** Show AST branches that match xpath. */
+        @Option(names = {"-b", "--branch-matching-xpath"},
+            description = "Shows Abstract Syntax Tree(AST) branches that match given XPath query.")
+        private String xpath;
+
+        /**
+         * Creates a new {@code CliOptions} instance.
+         */
+        private CliOptions() {
+            // no code by default
+        }
+
+        /**
+         * Gets the list of exclusions provided through the command line arguments.
+         *
+         * @return List of exclusion patterns.
+         */
+        private List<Pattern> getExclusions() {
+            final List<Pattern> result = exclude.stream()
+                    .map(File::getAbsolutePath)
+                    .map(Pattern::quote)
+                    .map(pattern -> Pattern.compile("^" + pattern + "$"))
+                    .collect(Collectors.toCollection(ArrayList::new));
+            result.addAll(excludeRegex);
+            return result;
+        }
+
+        /**
+         * Validates the user-specified command line options.
+         *
+         * @param parseResult used to verify if the format option was specified on the command line
+         * @param filesToProcess the list of files whose style to check
+         * @return list of violations
+         */
+        // -@cs[CyclomaticComplexity] Breaking apart will damage encapsulation
+        private List<String> validateCli(ParseResult parseResult, List<File> filesToProcess) {
+            final List<String> result = new ArrayList<>();
+            final boolean hasConfigurationFile = configurationFile != null;
+            final boolean hasSuppressionLineColumnNumber = suppressionLineColumnNumber != null;
+
+            if (filesToProcess.isEmpty()) {
+                result.add("Files to process must be specified, found 0.");
+            }
+            // ensure there is no conflicting options
+            else if (printAst || printAstWithComments || printJavadocTree || printTreeWithJavadoc
+                || xpath != null) {
+                if (suppressionLineColumnNumber != null || configurationFile != null
+                        || propertiesFile != null || outputPath != null
+                        || parseResult.hasMatchedOption(OUTPUT_FORMAT_OPTION)) {
+                    result.add("Option '-t' cannot be used with other options.");
+                }
+                else if (filesToProcess.size() > 1) {
+                    result.add("Printing AST is allowed for only one file.");
+                }
+            }
+            else if (hasSuppressionLineColumnNumber) {
+                if (configurationFile != null || propertiesFile != null
+                        || outputPath != null
+                        || parseResult.hasMatchedOption(OUTPUT_FORMAT_OPTION)) {
+                    result.add("Option '-s' cannot be used with other options.");
+                }
+                else if (filesToProcess.size() > 1) {
+                    result.add("Printing xpath suppressions is allowed for only one file.");
+                }
+            }
+            else if (hasConfigurationFile) {
+                try {
+                    // test location only
+                    CommonUtil.getUriByFilename(configurationFile);
+                }
+                catch (CheckstyleException ignored) {
+                    final String msg = "Could not find config XML file '%s'.";
+                    result.add(String.format(Locale.ROOT, msg, configurationFile));
+                }
+                result.addAll(validateOptionalCliParametersIfConfigDefined());
+            }
+            else {
+                result.add("Must specify a config XML file.");
+            }
+
+            return result;
+        }
+
+        /**
+         * Validates optional command line parameters that might be used with config file.
+         *
+         * @return list of violations
+         */
+        private List<String> validateOptionalCliParametersIfConfigDefined() {
+            final List<String> result = new ArrayList<>();
+            if (propertiesFile != null && !propertiesFile.exists()) {
+                result.add(String.format(Locale.ROOT,
+                        "Could not find file '%s'.", propertiesFile));
+            }
+            return result;
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/ModuleFactory.java SHA256 5bb7308cc90de85c8d60139077cc72a7e3141f1ee0f37820de5e1f631fe91c03
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+
+/**
+ * A module factory creates Objects from a given name.
+ * Its purpose is to map the short names like
+ * {@code AvoidStarImport} to full class names like
+ * {@code com.puppycrawl.tools.checkstyle.checks.AvoidStarImportCheck}.
+ * A ModuleFactory can implement this name resolution by using naming
+ * conventions, fallback strategies, etc.
+ *
+ */
+@FunctionalInterface
+public interface ModuleFactory {
+
+    /**
+     * Creates a new instance of a class from a given name.
+     * If the provided module name is a class name an instance of that class
+     * is returned. If the name is not a class name the ModuleFactory uses
+     * heuristics to find the corresponding class.
+     *
+     * @param name the name of the module, might be a short name
+     * @return the created module
+     * @throws CheckstyleException if no module can be instantiated from name
+     */
+    Object createModule(String name) throws CheckstyleException;
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/PackageNamesLoader.java SHA256 7796b4655134cdfb2e64dfc18c1e9fcfcc36209e095d9c82648bb967971204a3
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+
+/**
+ * Loads a list of package names from a package name XML file.
+ */
+public final class PackageNamesLoader extends XmlLoader {
+
+    /** The public ID for the configuration dtd. */
+    private static final String DTD_PUBLIC_ID =
+        "-//Puppy Crawl//DTD Package Names 1.0//EN";
+
+    /** The new public ID for the configuration dtd. */
+    private static final String DTD_PUBLIC_CS_ID =
+        "-//Checkstyle//DTD Package Names Configuration 1.0//EN";
+
+    /** The resource for the configuration dtd. */
+    private static final String DTD_RESOURCE_NAME =
+        "com/puppycrawl/tools/checkstyle/packages_1_0.dtd";
+
+    /**
+     * Name of default checkstyle package names resource file.
+     * The file must be in the classpath.
+     */
+    private static final String CHECKSTYLE_PACKAGES =
+        "checkstyle_packages.xml";
+
+    /** Qualified name for element 'package'. */
+    private static final String PACKAGE_ELEMENT_NAME = "package";
+
+    /** The temporary stack of package name parts. */
+    private final Deque<String> packageStack = new ArrayDeque<>();
+
+    /** The fully qualified package names. */
+    private final Set<String> packageNames = new LinkedHashSet<>();
+
+    /**
+     * Creates a new {@code PackageNamesLoader} instance.
+     *
+     * @throws ParserConfigurationException if an error occurs
+     * @throws SAXException if an error occurs
+     */
+    private PackageNamesLoader()
+            throws ParserConfigurationException, SAXException {
+        super(createIdToResourceNameMap());
+    }
+
+    @Override
+    public void startElement(String uri,
+                             String localName,
+                             String qName,
+                             Attributes attributes) {
+        if (PACKAGE_ELEMENT_NAME.equals(qName)) {
+            // push package name, name is mandatory attribute with not empty value by DTD
+            final String name = attributes.getValue("name");
+            packageStack.push(name);
+        }
+    }
+
+    /**
+     * Creates a full package name from the package names on the stack.
+     *
+     * @return the full name of the current package.
+     */
+    private String getPackageName() {
+        final StringBuilder buf = new StringBuilder(256);
+        final Iterator<String> iterator = packageStack.descendingIterator();
+        while (iterator.hasNext()) {
+            final String subPackage = iterator.next();
+            buf.append(subPackage);
+            if (!subPackage.endsWith(".") && iterator.hasNext()) {
+                buf.append('.');
+            }
+        }
+        return buf.toString();
+    }
+
+    @Override
+    public void endElement(String uri,
+                           String localName,
+                           String qName) {
+        if (PACKAGE_ELEMENT_NAME.equals(qName)) {
+            packageNames.add(getPackageName());
+            packageStack.pop();
+        }
+    }
+
+    /**
+     * Returns the set of package names, compiled from all
+     * checkstyle_packages.xml files found on the given class loaders classpath.
+     *
+     * @param classLoader the class loader for loading the checkstyle_packages.xml files.
+     * @return the set of package names.
+     * @throws CheckstyleException if an error occurs.
+     */
+    public static Set<String> getPackageNames(ClassLoader classLoader)
+            throws CheckstyleException {
+        final Set<String> result;
+        try {
+            // create the loader outside the loop to prevent PackageObjectFactory
+            // being created anew for each file
+            final PackageNamesLoader namesLoader = new PackageNamesLoader();
+
+            final Enumeration<URL> packageFiles = classLoader.getResources(CHECKSTYLE_PACKAGES);
+
+            while (packageFiles.hasMoreElements()) {
+                processFile(packageFiles.nextElement(), namesLoader);
+            }
+
+            result = namesLoader.packageNames;
+        }
+        catch (IOException exc) {
+            throw new CheckstyleException("unable to get package file resources with "
+                    + classLoader.getClass().getName(), exc);
+        }
+        catch (ParserConfigurationException | SAXException exc) {
+            throw new CheckstyleException("unable to open one of package files with "
+                    + classLoader.getClass().getName(), exc);
+        }
+
+        return Collections.unmodifiableSet(result);
+    }
+
+    /**
+     * Reads the file provided and parses it with package names loader.
+     *
+     * @param packageFile file from package
+     * @param namesLoader package names loader
+     * @throws CheckstyleException if unable to open file
+     * @throws SAXException if an error while parsing occurs
+     */
+    private static void processFile(URL packageFile, PackageNamesLoader namesLoader)
+            throws SAXException, CheckstyleException {
+        try (InputStream stream = new BufferedInputStream(packageFile.openStream())) {
+            final InputSource source = new InputSource(stream);
+            namesLoader.parseInputSource(source);
+        }
+        catch (IOException exc) {
+            throw new CheckstyleException("unable to open " + packageFile, exc);
+        }
+    }
+
+    /**
+     * Creates mapping between local resources and dtd ids.
+     *
+     * @return map between local resources and dtd ids.
+     */
+    private static Map<String, String> createIdToResourceNameMap() {
+        final Map<String, String> map = new HashMap<>();
+        map.put(DTD_PUBLIC_ID, DTD_RESOURCE_NAME);
+        map.put(DTD_PUBLIC_CS_ID, DTD_RESOURCE_NAME);
+        return map;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/PackageObjectFactory.java SHA256 a47ea14498fa7f18f60be7b0764f6aa07ceb785a42ebcc2695b729ce856f1ae2
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.utils.ModuleReflectionUtil;
+
+/**
+ * A factory for creating objects from package names and names.
+ * Consider the below example for better understanding.
+ * <ul>
+ *     <li>module name - name of java class that represents module;</li>
+ *     <li>module full name - fully qualifies name of java class that represents module;</li>
+ *     <li>check module short name - name of Check without 'Check' suffix;</li>
+ *     <li>check module name - name of java class that represents Check (with 'Check' suffix);</li>
+ *     <li>
+ *         check module full name - fully qualifies name of java class
+ *         that represents Check (with 'Check' suffix).
+ *     </li>
+ * </ul>
+ */
+public class PackageObjectFactory implements ModuleFactory {
+
+    /**
+     * Enum class to define loading options.
+     */
+    public enum ModuleLoadOption {
+
+        /**
+         * Searching from registered checkstyle modules and from packages given in constructor.
+         */
+        SEARCH_REGISTERED_PACKAGES,
+        /**
+         * As SEARCH_REGISTERED_PACKAGES and also try to load class from all of packages given in
+         * constructor.
+         * Required for eclipse-cs plugin.
+         */
+        TRY_IN_ALL_REGISTERED_PACKAGES,
+
+    }
+
+    /** Base package of checkstyle modules checks. */
+    public static final String BASE_PACKAGE = "com.puppycrawl.tools.checkstyle";
+
+    /** Exception message when it is unable to create a class instance. */
+    public static final String UNABLE_TO_INSTANTIATE_EXCEPTION_MESSAGE =
+            "PackageObjectFactory.unableToInstantiateExceptionMessage";
+
+    /** Exception message when there is ambiguous module name in config file. */
+    public static final String AMBIGUOUS_MODULE_NAME_EXCEPTION_MESSAGE =
+            "PackageObjectFactory.ambiguousModuleNameExceptionMessage";
+
+    /** Suffix of checks. */
+    public static final String CHECK_SUFFIX = "Check";
+
+    /** Character separate package names in qualified name of java class. */
+    public static final String PACKAGE_SEPARATOR = ".";
+
+    /** Exception message when null class loader is given. */
+    public static final String NULL_LOADER_MESSAGE = "moduleClassLoader must not be null";
+
+    /** Exception message when null package name is given. */
+    public static final String NULL_PACKAGE_MESSAGE = "package name must not be null";
+
+    /** Separator to use in strings. */
+    public static final String STRING_SEPARATOR = ", ";
+
+    /** Map of Checkstyle module names to their fully qualified names. */
+    private static final Map<String, String> NAME_TO_FULL_MODULE_NAME = new HashMap<>();
+
+    /** Package names to prepend to class names. */
+    private final Set<String> packages;
+
+    /** The class loader used to load Checkstyle core and custom modules. */
+    private final ClassLoader moduleClassLoader;
+
+    /** Map of third party Checkstyle module names to the set of their fully qualified names. */
+    private Map<String, Set<String>> thirdPartyNameToFullModuleNames;
+
+    /** Module load option which defines class search type. */
+    private ModuleLoadOption moduleLoadOption;
+
+    static {
+        fillShortToFullModuleNamesMap();
+    }
+
+    /**
+     * Creates a new {@code PackageObjectFactory} instance.
+     *
+     * @param packageNames package names to use
+     * @param moduleClassLoader class loader used to load Checkstyle core and custom modules
+     */
+    public PackageObjectFactory(Set<String> packageNames, ClassLoader moduleClassLoader) {
+        this(packageNames, moduleClassLoader, ModuleLoadOption.SEARCH_REGISTERED_PACKAGES);
+    }
+
+    /**
+     * Creates a new {@code PackageObjectFactory} instance.
+     *
+     * @param packageName The package name to use
+     * @param moduleClassLoader class loader used to load Checkstyle core and custom modules
+     * @throws IllegalArgumentException if moduleClassLoader is null or packageNames is null
+     */
+    public PackageObjectFactory(String packageName, ClassLoader moduleClassLoader) {
+        if (moduleClassLoader == null) {
+            throw new IllegalArgumentException(NULL_LOADER_MESSAGE);
+        }
+        if (packageName == null) {
+            throw new IllegalArgumentException(NULL_PACKAGE_MESSAGE);
+        }
+
+        packages = Set.of(packageName);
+        this.moduleClassLoader = moduleClassLoader;
+    }
+
+    /**
+     * Creates a new {@code PackageObjectFactory} instance.
+     *
+     * @param packageNames package names to use
+     * @param moduleClassLoader class loader used to load Checkstyle core and custom modules
+     * @param moduleLoadOption loading option
+     * @throws IllegalArgumentException if moduleClassLoader is null or packageNames contains null
+     */
+    public PackageObjectFactory(Set<String> packageNames, ClassLoader moduleClassLoader,
+            ModuleLoadOption moduleLoadOption) {
+        if (moduleClassLoader == null) {
+            throw new IllegalArgumentException(NULL_LOADER_MESSAGE);
+        }
+        if (packageNames.contains(null)) {
+            throw new IllegalArgumentException(NULL_PACKAGE_MESSAGE);
+        }
+
+        // create a copy of the given set, but retain ordering
+        packages = new LinkedHashSet<>(packageNames);
+        this.moduleClassLoader = moduleClassLoader;
+        this.moduleLoadOption = moduleLoadOption;
+    }
+
+    /**
+     * Creates a new instance of a class from a given name, or that name
+     * concatenated with {@code "Check"}. If the name is
+     * a class name, creates an instance of the named class. Otherwise, creates
+     * an instance of a class name obtained by concatenating the given name
+     * to a package name from a given list of package names.
+     *
+     * @param name the name of a class.
+     * @return the {@code Object} created by loader.
+     * @throws CheckstyleException if an error occurs.
+     */
+    @Override
+    public Object createModule(String name) throws CheckstyleException {
+        Object instance = null;
+        // if the name is a simple class name, try to find it in maps at first
+        if (!name.contains(PACKAGE_SEPARATOR)) {
+            instance = createFromStandardCheckSet(name);
+            // find the name in third party map
+            if (instance == null) {
+                instance = createObjectFromClassPath(name);
+            }
+        }
+        if (instance == null) {
+            instance = createObject(name);
+        }
+        if (instance == null
+                && moduleLoadOption == ModuleLoadOption.TRY_IN_ALL_REGISTERED_PACKAGES) {
+            instance = createModuleByTryInEachPackage(name);
+        }
+        if (instance == null) {
+            String attemptedNames = null;
+            if (!name.contains(PACKAGE_SEPARATOR)) {
+                final String nameCheck = name + CHECK_SUFFIX;
+                attemptedNames = joinPackageNamesWithClassName(name, packages)
+                        + STRING_SEPARATOR + nameCheck + STRING_SEPARATOR
+                        + joinPackageNamesWithClassName(nameCheck, packages);
+            }
+            final LocalizedMessage exceptionMessage = new LocalizedMessage(
+                Definitions.CHECKSTYLE_BUNDLE, getClass(),
+                UNABLE_TO_INSTANTIATE_EXCEPTION_MESSAGE, name, attemptedNames);
+            throw new CheckstyleException(exceptionMessage.getMessage());
+        }
+        return instance;
+    }
+
+    /**
+     * Create object from one of Checkstyle module names.
+     *
+     * @param name name of module.
+     * @return instance of module.
+     * @throws CheckstyleException if the class fails to instantiate or there are ambiguous classes.
+     */
+    private Object createFromStandardCheckSet(String name) throws CheckstyleException {
+        final String fullModuleName = NAME_TO_FULL_MODULE_NAME.get(name);
+        Object instance = null;
+        if (fullModuleName == null) {
+            final String fullCheckModuleName =
+                    NAME_TO_FULL_MODULE_NAME.get(name + CHECK_SUFFIX);
+            if (fullCheckModuleName != null) {
+                instance = createObject(fullCheckModuleName);
+            }
+        }
+        else {
+            instance = createObject(fullModuleName);
+        }
+        return instance;
+    }
+
+    /**
+     * Create object with the help of the classpath.
+     *
+     * @param name name of module.
+     * @return instance of module if it is found in modules map and no ambiguous classes exist.
+     * @throws CheckstyleException if the class fails to instantiate or there are ambiguous classes.
+     */
+    private Object createObjectFromClassPath(String name)
+            throws CheckstyleException {
+        thirdPartyNameToFullModuleNames = lazyLoad(
+                thirdPartyNameToFullModuleNames,
+                () -> generateThirdPartyNameToFullModuleName(moduleClassLoader)
+        );
+        final Set<String> fullModuleNames = thirdPartyNameToFullModuleNames.get(name);
+        Object instance = null;
+        if (fullModuleNames == null) {
+            final Set<String> fullCheckModuleNames =
+                    thirdPartyNameToFullModuleNames.get(name + CHECK_SUFFIX);
+            if (fullCheckModuleNames != null) {
+                instance = createObjectFromFullModuleNames(name, fullCheckModuleNames);
+            }
+        }
+        else {
+            instance = createObjectFromFullModuleNames(name, fullModuleNames);
+        }
+        return instance;
+    }
+
+    /**
+     * Create Object from optional full module names.
+     * In most case, there should be only one element in {@code fullModuleNames}, otherwise
+     * an exception would be thrown.
+     *
+     * @param name name of module
+     * @param fullModuleNames the supplied full module names set
+     * @return instance of module if there is only one element in {@code fullModuleNames}
+     * @throws CheckstyleException if the class fails to instantiate or there are more than one
+     *      element in {@code fullModuleNames}
+     */
+    private Object createObjectFromFullModuleNames(String name, Set<String> fullModuleNames)
+            throws CheckstyleException {
+        final Object returnValue;
+        if (fullModuleNames.size() == 1) {
+            returnValue = createObject(fullModuleNames.iterator().next());
+        }
+        else {
+            final String optionalNames = fullModuleNames.stream()
+                    .sorted()
+                    .collect(Collectors.joining(STRING_SEPARATOR));
+            final LocalizedMessage exceptionMessage = new LocalizedMessage(
+                    Definitions.CHECKSTYLE_BUNDLE, getClass(),
+                    AMBIGUOUS_MODULE_NAME_EXCEPTION_MESSAGE, name, optionalNames);
+            throw new CheckstyleException(exceptionMessage.getMessage());
+        }
+        return returnValue;
+    }
+
+    /**
+     * Generate the map of third party Checkstyle module names to the set of their fully qualified
+     * names.
+     *
+     * @param loader the class loader used to load Checkstyle package names
+     * @return the map of third party Checkstyle module names to the set of their fully qualified
+     *      names
+     */
+    private Map<String, Set<String>> generateThirdPartyNameToFullModuleName(ClassLoader loader) {
+        Map<String, Set<String>> returnValue;
+        try {
+            returnValue = ModuleReflectionUtil.getCheckstyleModules(packages, loader).stream()
+                .collect(Collectors.groupingBy(Class::getSimpleName,
+                    Collectors.mapping(
+                        Class::getCanonicalName,
+                        Collectors.toCollection(HashSet::new))));
+        }
+        catch (IOException ignore) {
+            returnValue = Map.of();
+        }
+        return returnValue;
+    }
+
+    /**
+     * Returns simple check name from full modules names map.
+     *
+     * @param fullName name of the class for joining.
+     * @return simple check name.
+     */
+    public static String getShortFromFullModuleNames(String fullName) {
+        return NAME_TO_FULL_MODULE_NAME
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().equals(fullName))
+                .findFirst()
+                .map(Entry::getKey)
+                .orElse(fullName);
+    }
+
+    /**
+     * Creates a string by joining package names with a class name.
+     *
+     * @param className name of the class for joining.
+     * @param packages packages names.
+     * @return a string which is obtained by joining package names with a class name.
+     */
+    private static String joinPackageNamesWithClassName(String className, Set<String> packages) {
+        return packages.stream().collect(
+            Collectors.joining(PACKAGE_SEPARATOR + className + STRING_SEPARATOR, "",
+                    PACKAGE_SEPARATOR + className));
+    }
+
+    /**
+     * Creates a new instance of a named class.
+     *
+     * @param className the name of the class to instantiate.
+     * @return the {@code Object} created by loader or null.
+     * @throws CheckstyleException if the class fails to instantiate.
+     */
+    private Object createObject(String className) throws CheckstyleException {
+        Class<?> clazz = null;
+
+        try {
+            clazz = Class.forName(className, true, moduleClassLoader);
+        }
+        catch (final ReflectiveOperationException | NoClassDefFoundError ignored) {
+            // ignore the exception
+        }
+
+        Object instance = null;
+
+        if (clazz != null) {
+            try {
+                instance = clazz.getDeclaredConstructor().newInstance();
+            }
+            catch (final ReflectiveOperationException exc) {
+                throw new CheckstyleException("Unable to instantiate " + className, exc);
+            }
+        }
+
+        return instance;
+    }
+
+    /**
+     * Searching to class with given name (or name concatenated with {@code "Check"}) in existing
+     * packages. Returns instance if class found or, otherwise, null.
+     *
+     * @param name the name of a class.
+     * @return the {@code Object} created by loader.
+     * @throws CheckstyleException if an error occurs.
+     */
+    private Object createModuleByTryInEachPackage(String name) throws CheckstyleException {
+        final List<String> possibleNames = packages.stream()
+            .map(packageName -> packageName + PACKAGE_SEPARATOR + name)
+            .flatMap(className -> Stream.of(className, className + CHECK_SUFFIX))
+            .toList();
+        Object instance = null;
+        for (String possibleName : possibleNames) {
+            instance = createObject(possibleName);
+            if (instance != null) {
+                break;
+            }
+        }
+        return instance;
+    }
+
+    /**
+     * Initialize object by supplier if object is null.
+     *
+     * @param <T> type of object
+     * @param object object to initialize
+     * @param supplier function to initialize if object is null
+     * @return object as it was provided in method or initialized
+     */
+    private static <T> T lazyLoad(T object, Supplier<T> supplier) {
+        final T result;
+        if (object == null) {
+            result = supplier.get();
+        }
+        else {
+            result = object;
+        }
+        return result;
+    }
+
+    /**
+     * Fill short-to-full module names map.
+     */
+    private static void fillShortToFullModuleNamesMap() {
+        fillChecksFromAnnotationPackage();
+        fillChecksFromBlocksPackage();
+        fillChecksFromCodingPackage();
+        fillChecksFromDesignPackage();
+        fillChecksFromHeaderPackage();
+        fillChecksFromImportsPackage();
+        fillChecksFromIndentationPackage();
+        fillChecksFromJavadocPackage();
+        fillChecksFromMetricsPackage();
+        fillChecksFromModifierPackage();
+        fillChecksFromModulesPackage();
+        fillChecksFromNamingPackage();
+        fillChecksFromRegexpPackage();
+        fillChecksFromSizesPackage();
+        fillChecksFromWhitespacePackage();
+        fillModulesFromChecksPackage();
+        fillModulesFromFilefiltersPackage();
+        fillModulesFromFiltersPackage();
+        fillModulesFromCheckstylePackage();
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from annotation package.
+     */
+    private static void fillChecksFromAnnotationPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("AnnotationLocationCheck",
+                BASE_PACKAGE + ".checks.annotation.AnnotationLocationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OpenjdkAnnotationLocationCheck",
+                BASE_PACKAGE + ".checks.annotation.OpenjdkAnnotationLocationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AnnotationOnSameLineCheck",
+                BASE_PACKAGE + ".checks.annotation.AnnotationOnSameLineCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AnnotationUseStyleCheck",
+                BASE_PACKAGE + ".checks.annotation.AnnotationUseStyleCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingDeprecatedCheck",
+                BASE_PACKAGE + ".checks.annotation.MissingDeprecatedCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingOverrideCheck",
+                BASE_PACKAGE + ".checks.annotation.MissingOverrideCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingOverrideOnRecordAccessorCheck",
+                BASE_PACKAGE + ".checks.annotation.MissingOverrideOnRecordAccessorCheck");
+        NAME_TO_FULL_MODULE_NAME.put("PackageAnnotationCheck",
+                BASE_PACKAGE + ".checks.annotation.PackageAnnotationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressWarningsCheck",
+                BASE_PACKAGE + ".checks.annotation.SuppressWarningsCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from blocks package.
+     */
+    private static void fillChecksFromBlocksPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("AvoidNestedBlocksCheck",
+                BASE_PACKAGE + ".checks.blocks.AvoidNestedBlocksCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EmptyBlockCheck",
+                BASE_PACKAGE + ".checks.blocks.EmptyBlockCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EmptyCatchBlockCheck",
+                BASE_PACKAGE + ".checks.blocks.EmptyCatchBlockCheck");
+        NAME_TO_FULL_MODULE_NAME.put("LeftCurlyCheck",
+                BASE_PACKAGE + ".checks.blocks.LeftCurlyCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NeedBracesCheck",
+                BASE_PACKAGE + ".checks.blocks.NeedBracesCheck");
+        NAME_TO_FULL_MODULE_NAME.put("GoogleRightCurlyCheck",
+                BASE_PACKAGE + ".checks.blocks.GoogleRightCurlyCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RightCurlyCheck",
+                BASE_PACKAGE + ".checks.blocks.RightCurlyCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from coding package.
+     */
+    // -@cs[ExecutableStatementCount] splitting this method is not reasonable.
+    // -@cs[JavaNCSS] splitting this method is not reasonable.
+    private static void fillChecksFromCodingPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("ArrayTrailingCommaCheck",
+                BASE_PACKAGE + ".checks.coding.ArrayTrailingCommaCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AvoidDoubleBraceInitializationCheck",
+                BASE_PACKAGE + ".checks.coding.AvoidDoubleBraceInitializationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AvoidInlineConditionalsCheck",
+                BASE_PACKAGE + ".checks.coding.AvoidInlineConditionalsCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AvoidNoArgumentSuperConstructorCallCheck",
+                BASE_PACKAGE + ".checks.coding.AvoidNoArgumentSuperConstructorCallCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ConstructorsDeclarationGroupingCheck",
+                BASE_PACKAGE + ".checks.coding.ConstructorsDeclarationGroupingCheck");
+        NAME_TO_FULL_MODULE_NAME.put("CovariantEqualsCheck",
+                BASE_PACKAGE + ".checks.coding.CovariantEqualsCheck");
+        NAME_TO_FULL_MODULE_NAME.put("DeclarationOrderCheck",
+                BASE_PACKAGE + ".checks.coding.DeclarationOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("DefaultComesLastCheck",
+                BASE_PACKAGE + ".checks.coding.DefaultComesLastCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EmptyStatementCheck",
+                BASE_PACKAGE + ".checks.coding.EmptyStatementCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EqualsAvoidNullCheck",
+                BASE_PACKAGE + ".checks.coding.EqualsAvoidNullCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EqualsHashCodeCheck",
+                BASE_PACKAGE + ".checks.coding.EqualsHashCodeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ExplicitInitializationCheck",
+                BASE_PACKAGE + ".checks.coding.ExplicitInitializationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ExpressionOverBlockLambdaCheck",
+                BASE_PACKAGE + ".checks.coding.ExpressionOverBlockLambdaCheck");
+        NAME_TO_FULL_MODULE_NAME.put("FallThroughCheck",
+                BASE_PACKAGE + ".checks.coding.FallThroughCheck");
+        NAME_TO_FULL_MODULE_NAME.put("FinalLocalVariableCheck",
+                BASE_PACKAGE + ".checks.coding.FinalLocalVariableCheck");
+        NAME_TO_FULL_MODULE_NAME.put("FinalPatternVariableCheck",
+                BASE_PACKAGE + ".checks.coding.FinalPatternVariableCheck");
+        NAME_TO_FULL_MODULE_NAME.put("HiddenFieldCheck",
+                BASE_PACKAGE + ".checks.coding.HiddenFieldCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalCatchCheck",
+                BASE_PACKAGE + ".checks.coding.IllegalCatchCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalInstantiationCheck",
+                BASE_PACKAGE + ".checks.coding.IllegalInstantiationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalSymbolCheck",
+                BASE_PACKAGE + ".checks.coding.IllegalSymbolCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalThrowsCheck",
+                BASE_PACKAGE + ".checks.coding.IllegalThrowsCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalTokenCheck",
+                BASE_PACKAGE + ".checks.coding.IllegalTokenCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalTokenTextCheck",
+                BASE_PACKAGE + ".checks.coding.IllegalTokenTextCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalTypeCheck",
+                BASE_PACKAGE + ".checks.coding.IllegalTypeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InnerAssignmentCheck",
+                BASE_PACKAGE + ".checks.coding.InnerAssignmentCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MagicNumberCheck",
+                BASE_PACKAGE + ".checks.coding.MagicNumberCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingCtorCheck",
+                BASE_PACKAGE + ".checks.coding.MissingCtorCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingNullCaseInSwitchCheck",
+                BASE_PACKAGE + ".checks.coding.MissingNullCaseInSwitchCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingSwitchDefaultCheck",
+                BASE_PACKAGE + ".checks.coding.MissingSwitchDefaultCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ModifiedControlVariableCheck",
+                BASE_PACKAGE + ".checks.coding.ModifiedControlVariableCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MultipleStringLiteralsCheck",
+                BASE_PACKAGE + ".checks.coding.MultipleStringLiteralsCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MultipleVariableDeclarationsCheck",
+                BASE_PACKAGE + ".checks.coding.MultipleVariableDeclarationsCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NestedForDepthCheck",
+                BASE_PACKAGE + ".checks.coding.NestedForDepthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NestedIfDepthCheck",
+                BASE_PACKAGE + ".checks.coding.NestedIfDepthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NestedTryDepthCheck",
+                BASE_PACKAGE + ".checks.coding.NestedTryDepthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoCloneCheck",
+                BASE_PACKAGE + ".checks.coding.NoCloneCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoEnumTrailingCommaCheck",
+                BASE_PACKAGE + ".checks.coding.NoEnumTrailingCommaCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoFinalizerCheck",
+                BASE_PACKAGE + ".checks.coding.NoFinalizerCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OneStatementPerLineCheck",
+                BASE_PACKAGE + ".checks.coding.OneStatementPerLineCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OverloadMethodsDeclarationOrderCheck",
+                BASE_PACKAGE + ".checks.coding.OverloadMethodsDeclarationOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("PackageDeclarationCheck",
+                BASE_PACKAGE + ".checks.coding.PackageDeclarationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("PatternVariableAssignmentCheck",
+                BASE_PACKAGE + ".checks.coding.PatternVariableAssignmentCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ParameterAssignmentCheck",
+                BASE_PACKAGE + ".checks.coding.ParameterAssignmentCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RedundantThisCheck",
+                BASE_PACKAGE + ".checks.coding.RedundantThisCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RequireThisCheck",
+                BASE_PACKAGE + ".checks.coding.RequireThisCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ReturnCountCheck",
+                BASE_PACKAGE + ".checks.coding.ReturnCountCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SimplifyBooleanExpressionCheck",
+                BASE_PACKAGE + ".checks.coding.SimplifyBooleanExpressionCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SimplifyBooleanReturnCheck",
+                BASE_PACKAGE + ".checks.coding.SimplifyBooleanReturnCheck");
+        NAME_TO_FULL_MODULE_NAME.put("StringLiteralEqualityCheck",
+                BASE_PACKAGE + ".checks.coding.StringLiteralEqualityCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SuperCloneCheck",
+                BASE_PACKAGE + ".checks.coding.SuperCloneCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SuperFinalizeCheck",
+                BASE_PACKAGE + ".checks.coding.SuperFinalizeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessaryParenthesesCheck",
+                BASE_PACKAGE + ".checks.coding.UnnecessaryParenthesesCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessaryPermitsClauseCheck",
+                BASE_PACKAGE + ".checks.coding.UnnecessaryPermitsClauseCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessarySemicolonAfterOuterTypeDeclarationCheck",
+                BASE_PACKAGE
+                        + ".checks.coding.UnnecessarySemicolonAfterOuterTypeDeclarationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessarySemicolonAfterTypeMemberDeclarationCheck",
+                BASE_PACKAGE
+                    + ".checks.coding.UnnecessarySemicolonAfterTypeMemberDeclarationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessarySemicolonInEnumerationCheck",
+                BASE_PACKAGE + ".checks.coding.UnnecessarySemicolonInEnumerationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessarySemicolonInTryWithResourcesCheck",
+                BASE_PACKAGE + ".checks.coding.UnnecessarySemicolonInTryWithResourcesCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UseEnhancedSwitchCheck",
+            BASE_PACKAGE + ".checks.coding.UseEnhancedSwitchCheck");
+        NAME_TO_FULL_MODULE_NAME.put("VariableDeclarationUsageDistanceCheck",
+                BASE_PACKAGE + ".checks.coding.VariableDeclarationUsageDistanceCheck");
+        NAME_TO_FULL_MODULE_NAME.put("WhenShouldBeUsedCheck",
+                BASE_PACKAGE + ".checks.coding.WhenShouldBeUsedCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoArrayTrailingCommaCheck",
+                BASE_PACKAGE + ".checks.coding.NoArrayTrailingCommaCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MatchXpathCheck",
+                BASE_PACKAGE + ".checks.coding.MatchXpathCheck");
+        NAME_TO_FULL_MODULE_NAME.put("TextBlockGoogleStyleFormattingCheck",
+                BASE_PACKAGE + ".checks.coding.TextBlockGoogleStyleFormattingCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnusedLocalVariableCheck",
+                BASE_PACKAGE + ".checks.coding.UnusedLocalVariableCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnusedPrivateFieldCheck",
+                BASE_PACKAGE + ".checks.coding.UnusedPrivateFieldCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnusedCatchParameterShouldBeUnnamedCheck",
+                BASE_PACKAGE + ".checks.coding.UnusedCatchParameterShouldBeUnnamedCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnusedLambdaParameterShouldBeUnnamedCheck",
+                BASE_PACKAGE + ".checks.coding.UnusedLambdaParameterShouldBeUnnamedCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessaryNullCheckWithInstanceOfCheck",
+                BASE_PACKAGE + ".checks.coding.UnnecessaryNullCheckWithInstanceOfCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnusedTryResourceShouldBeUnnamedCheck",
+                BASE_PACKAGE + ".checks.coding.UnusedTryResourceShouldBeUnnamedCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessaryTypeArgumentsWithRecordPatternCheck",
+                BASE_PACKAGE + ".checks.coding.UnnecessaryTypeArgumentsWithRecordPatternCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoCauseGetMessageInExceptionConstructorCheck",
+                BASE_PACKAGE + ".checks.coding.NoCauseGetMessageInExceptionConstructorCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ExceptionThrowShouldUseContextCheck",
+                BASE_PACKAGE + ".checks.coding.ExceptionThrowShouldUseContextCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from design package.
+     */
+    private static void fillChecksFromDesignPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("DesignForExtensionCheck",
+                BASE_PACKAGE + ".checks.design.DesignForExtensionCheck");
+        NAME_TO_FULL_MODULE_NAME.put("FinalClassCheck",
+                BASE_PACKAGE + ".checks.design.FinalClassCheck");
+        NAME_TO_FULL_MODULE_NAME.put("HideUtilityClassConstructorCheck",
+                BASE_PACKAGE + ".checks.design.HideUtilityClassConstructorCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InnerTypeLastCheck",
+                BASE_PACKAGE + ".checks.design.InnerTypeLastCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InterfaceIsTypeCheck",
+                BASE_PACKAGE + ".checks.design.InterfaceIsTypeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MutableExceptionCheck",
+                BASE_PACKAGE + ".checks.design.MutableExceptionCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OneTopLevelClassCheck",
+                BASE_PACKAGE + ".checks.design.OneTopLevelClassCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SealedShouldHavePermitsListCheck",
+                BASE_PACKAGE + ".checks.design.SealedShouldHavePermitsListCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ThrowsCountCheck",
+                BASE_PACKAGE + ".checks.design.ThrowsCountCheck");
+        NAME_TO_FULL_MODULE_NAME.put("VisibilityModifierCheck",
+                BASE_PACKAGE + ".checks.design.VisibilityModifierCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from header package.
+     */
+    private static void fillChecksFromHeaderPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("HeaderCheck",
+                BASE_PACKAGE + ".checks.header.HeaderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RegexpHeaderCheck",
+                BASE_PACKAGE + ".checks.header.RegexpHeaderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MultiFileRegexpHeaderCheck",
+                BASE_PACKAGE + ".checks.header.MultiFileRegexpHeaderCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from imports package.
+     */
+    private static void fillChecksFromImportsPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("AvoidModuleImportCheck",
+                BASE_PACKAGE + ".checks.imports.AvoidModuleImportCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AvoidStarImportCheck",
+                BASE_PACKAGE + ".checks.imports.AvoidStarImportCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AvoidStaticImportCheck",
+                BASE_PACKAGE + ".checks.imports.AvoidStaticImportCheck");
+        NAME_TO_FULL_MODULE_NAME.put("CustomImportOrderCheck",
+                BASE_PACKAGE + ".checks.imports.CustomImportOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalImportCheck",
+                BASE_PACKAGE + ".checks.imports.IllegalImportCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ImportControlCheck",
+                BASE_PACKAGE + ".checks.imports.ImportControlCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ImportOrderCheck",
+                BASE_PACKAGE + ".checks.imports.ImportOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ModuleImportOrderCheck",
+                BASE_PACKAGE + ".checks.imports.ModuleImportOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RedundantImportCheck",
+                BASE_PACKAGE + ".checks.imports.RedundantImportCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnnecessaryFullyQualifiedTypeCheck",
+                BASE_PACKAGE + ".checks.imports.UnnecessaryFullyQualifiedTypeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UnusedImportsCheck",
+                BASE_PACKAGE + ".checks.imports.UnusedImportsCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from indentation package.
+     */
+    private static void fillChecksFromIndentationPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("ClassHeaderWrapOpenjdkCheck",
+                BASE_PACKAGE + ".checks.indentation.ClassHeaderWrapOpenjdkCheck");
+        NAME_TO_FULL_MODULE_NAME.put("CommentsIndentationCheck",
+                BASE_PACKAGE + ".checks.indentation.CommentsIndentationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IndentationCheck",
+                BASE_PACKAGE + ".checks.indentation.IndentationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OpenjdkMethodThrowsAlignmentCheck",
+                BASE_PACKAGE + ".checks.indentation.OpenjdkMethodThrowsAlignmentCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from javadoc package.
+     */
+    private static void fillChecksFromJavadocPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("AtclauseOrderCheck",
+                BASE_PACKAGE + ".checks.javadoc.AtclauseOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalBlockTagCheck",
+                BASE_PACKAGE + ".checks.javadoc.IllegalBlockTagCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InappropriateJavadocBlockTagsOnPackageCheck",
+                BASE_PACKAGE + ".checks.javadoc.InappropriateJavadocBlockTagsOnPackageCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InappropriateJavadocBlockTagsOnTypeCheck",
+                BASE_PACKAGE + ".checks.javadoc.InappropriateJavadocBlockTagsOnTypeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InappropriateJavadocBlockTagsOnFieldCheck",
+                BASE_PACKAGE + ".checks.javadoc.InappropriateJavadocBlockTagsOnFieldCheck");
+        NAME_TO_FULL_MODULE_NAME.put("BlockCommentEndPositionCheck",
+                BASE_PACKAGE + ".checks.javadoc.BlockCommentEndPositionCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InvalidJavadocPositionCheck",
+                BASE_PACKAGE + ".checks.javadoc.InvalidJavadocPositionCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocBlockTagLocationCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocBlockTagLocationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocContentLocationCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocContentLocationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocEndCommentDelimiterCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocEndCommentDelimiterCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocLeadingAsteriskAlignCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocLeadingAsteriskAlignCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocLinkFirstOccurrenceCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocLinkFirstOccurrenceCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocLinkWellKnownApiCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocLinkWellKnownApiCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocMethodCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocMethodCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocMissingLeadingAsteriskCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocMissingLeadingAsteriskCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocMissingWhitespaceAfterAsteriskCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocMissingWhitespaceAfterAsteriskCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocNoErrorInThrowsTagCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocNoErrorInThrowsTagCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocPackageCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocPackageCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocParagraphCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocParagraphCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocParamOrderCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocParamOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocRegexpCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocRegexpCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocSeeTagOrderCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocSeeTagOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocTagContinuationIndentationCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocTagContinuationIndentationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocThrowsOrderCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocThrowsOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocTypeCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocTypeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocUtilizingTrailingSpaceCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocUtilizingTrailingSpaceCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavadocVariableCheck",
+                BASE_PACKAGE + ".checks.javadoc.JavadocVariableCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingJavadocMethodCheck",
+                BASE_PACKAGE + ".checks.javadoc.MissingJavadocMethodCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingJavadocPackageCheck",
+                BASE_PACKAGE + ".checks.javadoc.MissingJavadocPackageCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MissingJavadocTypeCheck",
+                BASE_PACKAGE + ".checks.javadoc.MissingJavadocTypeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NonEmptyAtclauseDescriptionCheck",
+                BASE_PACKAGE + ".checks.javadoc.NonEmptyAtclauseDescriptionCheck");
+        NAME_TO_FULL_MODULE_NAME.put("PreferCodeOrSnippetJavadocInlineTagCheck",
+                BASE_PACKAGE + ".checks.javadoc.PreferCodeOrSnippetJavadocInlineTagCheck");
+        NAME_TO_FULL_MODULE_NAME.put("PreferLiteralJavadocInlineTagCheck",
+                BASE_PACKAGE + ".checks.javadoc.PreferLiteralJavadocInlineTagCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RequireEmptyLineBeforeBlockTagGroupCheck",
+                BASE_PACKAGE + ".checks.javadoc.RequireEmptyLineBeforeBlockTagGroupCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SingleLineJavadocCheck",
+                BASE_PACKAGE + ".checks.javadoc.SingleLineJavadocCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SummaryJavadocCheck",
+                BASE_PACKAGE + ".checks.javadoc.SummaryJavadocCheck");
+        NAME_TO_FULL_MODULE_NAME.put("WriteTagCheck",
+                BASE_PACKAGE + ".checks.javadoc.WriteTagCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from metrics package.
+     */
+    private static void fillChecksFromMetricsPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("BooleanExpressionComplexityCheck",
+                BASE_PACKAGE + ".checks.metrics.BooleanExpressionComplexityCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ClassDataAbstractionCouplingCheck",
+                BASE_PACKAGE + ".checks.metrics.ClassDataAbstractionCouplingCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ClassFanOutComplexityCheck",
+                BASE_PACKAGE + ".checks.metrics.ClassFanOutComplexityCheck");
+        NAME_TO_FULL_MODULE_NAME.put("CyclomaticComplexityCheck",
+                BASE_PACKAGE + ".checks.metrics.CyclomaticComplexityCheck");
+        NAME_TO_FULL_MODULE_NAME.put("JavaNCSSCheck",
+                BASE_PACKAGE + ".checks.metrics.JavaNCSSCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NPathComplexityCheck",
+                BASE_PACKAGE + ".checks.metrics.NPathComplexityCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from modifier package.
+     */
+    private static void fillChecksFromModifierPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("AnnotatedDeclarationVisibilityCheck",
+                BASE_PACKAGE + ".checks.modifier.AnnotatedDeclarationVisibilityCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ClassMemberImpliedModifierCheck",
+            BASE_PACKAGE + ".checks.modifier.ClassMemberImpliedModifierCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InterfaceMemberImpliedModifierCheck",
+            BASE_PACKAGE + ".checks.modifier.InterfaceMemberImpliedModifierCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ModifierOrderCheck",
+                BASE_PACKAGE + ".checks.modifier.ModifierOrderCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RedundantModifierCheck",
+                BASE_PACKAGE + ".checks.modifier.RedundantModifierCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RedundantModifierCompactSourceCheck",
+                BASE_PACKAGE + ".checks.modifier.RedundantModifierCompactSourceCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from modules package.
+     */
+    private static void fillChecksFromModulesPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("ModuleDirectiveOrderCheck",
+                BASE_PACKAGE + ".checks.modules.ModuleDirectiveOrderCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from naming package.
+     */
+    private static void fillChecksFromNamingPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("AbbreviationAsWordInNameCheck",
+                BASE_PACKAGE + ".checks.naming.AbbreviationAsWordInNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AbstractClassNameCheck",
+                BASE_PACKAGE + ".checks.naming.AbstractClassNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("CatchParameterNameCheck",
+                BASE_PACKAGE + ".checks.naming.CatchParameterNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ClassTypeParameterNameCheck",
+                BASE_PACKAGE + ".checks.naming.ClassTypeParameterNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ConstantNameCheck",
+                BASE_PACKAGE + ".checks.naming.ConstantNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("InterfaceTypeParameterNameCheck",
+                BASE_PACKAGE + ".checks.naming.InterfaceTypeParameterNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("LambdaParameterNameCheck",
+                BASE_PACKAGE + ".checks.naming.LambdaParameterNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("LocalFinalVariableNameCheck",
+                BASE_PACKAGE + ".checks.naming.LocalFinalVariableNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("LocalVariableNameCheck",
+                BASE_PACKAGE + ".checks.naming.LocalVariableNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MemberNameCheck",
+                BASE_PACKAGE + ".checks.naming.MemberNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("GoogleNonConstantFieldNameCheck",
+                BASE_PACKAGE + ".checks.naming.GoogleNonConstantFieldNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MethodNameCheck",
+                BASE_PACKAGE + ".checks.naming.MethodNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("GoogleMethodNameCheck",
+                BASE_PACKAGE + ".checks.naming.GoogleMethodNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MethodTypeParameterNameCheck",
+                BASE_PACKAGE + ".checks.naming.MethodTypeParameterNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("PackageNameCheck",
+                BASE_PACKAGE + ".checks.naming.PackageNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ParameterNameCheck",
+                BASE_PACKAGE + ".checks.naming.ParameterNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RecordComponentNameCheck",
+                BASE_PACKAGE + ".checks.naming.RecordComponentNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RecordTypeParameterNameCheck",
+                BASE_PACKAGE + ".checks.naming.RecordTypeParameterNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("StaticVariableNameCheck",
+                BASE_PACKAGE + ".checks.naming.StaticVariableNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("TypeNameCheck",
+                BASE_PACKAGE + ".checks.naming.TypeNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("PatternVariableNameCheck",
+                BASE_PACKAGE + ".checks.naming.PatternVariableNameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("IllegalIdentifierNameCheck",
+            BASE_PACKAGE + ".checks.naming.IllegalIdentifierNameCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from regexp package.
+     */
+    private static void fillChecksFromRegexpPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("RegexpCheck",
+                BASE_PACKAGE + ".checks.regexp.RegexpCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RegexpMultilineCheck",
+                BASE_PACKAGE + ".checks.regexp.RegexpMultilineCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RegexpOnFilenameCheck",
+                BASE_PACKAGE + ".checks.regexp.RegexpOnFilenameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RegexpSinglelineCheck",
+                BASE_PACKAGE + ".checks.regexp.RegexpSinglelineCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RegexpSinglelineJavaCheck",
+                BASE_PACKAGE + ".checks.regexp.RegexpSinglelineJavaCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from sizes package.
+     */
+    private static void fillChecksFromSizesPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("AnonInnerLengthCheck",
+                BASE_PACKAGE + ".checks.sizes.AnonInnerLengthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ExecutableStatementCountCheck",
+                BASE_PACKAGE + ".checks.sizes.ExecutableStatementCountCheck");
+        NAME_TO_FULL_MODULE_NAME.put("FileLengthCheck",
+                BASE_PACKAGE + ".checks.sizes.FileLengthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("LambdaBodyLengthCheck",
+                BASE_PACKAGE + ".checks.sizes.LambdaBodyLengthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("LineLengthCheck",
+                BASE_PACKAGE + ".checks.sizes.LineLengthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MethodCountCheck",
+                BASE_PACKAGE + ".checks.sizes.MethodCountCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MethodLengthCheck",
+                BASE_PACKAGE + ".checks.sizes.MethodLengthCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OuterTypeNumberCheck",
+                BASE_PACKAGE + ".checks.sizes.OuterTypeNumberCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ParameterNumberCheck",
+                BASE_PACKAGE + ".checks.sizes.ParameterNumberCheck");
+        NAME_TO_FULL_MODULE_NAME.put("RecordComponentNumberCheck",
+                BASE_PACKAGE + ".checks.sizes.RecordComponentNumberCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with Checks from whitespace package.
+     */
+    private static void fillChecksFromWhitespacePackage() {
+        NAME_TO_FULL_MODULE_NAME.put("ArrayBracketNoWhitespaceCheck",
+                BASE_PACKAGE + ".checks.whitespace.ArrayBracketNoWhitespaceCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EmptyForInitializerPadCheck",
+                BASE_PACKAGE + ".checks.whitespace.EmptyForInitializerPadCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EmptyForIteratorPadCheck",
+                BASE_PACKAGE + ".checks.whitespace.EmptyForIteratorPadCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EmptyLineSeparatorCheck",
+                BASE_PACKAGE + ".checks.whitespace.EmptyLineSeparatorCheck");
+        NAME_TO_FULL_MODULE_NAME.put("EmptyLineWrappingInBlockCheck",
+                BASE_PACKAGE + ".checks.whitespace.EmptyLineWrappingInBlockCheck");
+        NAME_TO_FULL_MODULE_NAME.put("FileTabCharacterCheck",
+                BASE_PACKAGE + ".checks.whitespace.FileTabCharacterCheck");
+        NAME_TO_FULL_MODULE_NAME.put("GenericWhitespaceCheck",
+                BASE_PACKAGE + ".checks.whitespace.GenericWhitespaceCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MethodParamPadCheck",
+                BASE_PACKAGE + ".checks.whitespace.MethodParamPadCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoLineWrapCheck",
+                BASE_PACKAGE + ".checks.whitespace.NoLineWrapCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoWhitespaceAfterCheck",
+                BASE_PACKAGE + ".checks.whitespace.NoWhitespaceAfterCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoWhitespaceBeforeCheck",
+                BASE_PACKAGE + ".checks.whitespace.NoWhitespaceBeforeCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoWhitespaceBeforeCaseDefaultColonCheck",
+                BASE_PACKAGE + ".checks.whitespace.NoWhitespaceBeforeCaseDefaultColonCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OpenjdkMethodParameterAlignmentCheck",
+                BASE_PACKAGE + ".checks.whitespace.OpenjdkMethodParameterAlignmentCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OperatorWrapCheck",
+                BASE_PACKAGE + ".checks.whitespace.OperatorWrapCheck");
+        NAME_TO_FULL_MODULE_NAME.put("ParenPadCheck",
+                BASE_PACKAGE + ".checks.whitespace.ParenPadCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SeparatorWrapCheck",
+                BASE_PACKAGE + ".checks.whitespace.SeparatorWrapCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SingleSpaceSeparatorCheck",
+                BASE_PACKAGE + ".checks.whitespace.SingleSpaceSeparatorCheck");
+        NAME_TO_FULL_MODULE_NAME.put("TypeBodyPaddingCheck",
+                BASE_PACKAGE + ".checks.whitespace.TypeBodyPaddingCheck");
+        NAME_TO_FULL_MODULE_NAME.put("TypecastParenPadCheck",
+                BASE_PACKAGE + ".checks.whitespace.TypecastParenPadCheck");
+        NAME_TO_FULL_MODULE_NAME.put("WhitespaceAfterCheck",
+                BASE_PACKAGE + ".checks.whitespace.WhitespaceAfterCheck");
+        NAME_TO_FULL_MODULE_NAME.put("WhitespaceAroundCheck",
+                BASE_PACKAGE + ".checks.whitespace.WhitespaceAroundCheck");
+        NAME_TO_FULL_MODULE_NAME.put("WhitespaceBeforeEmptyBodyCheck",
+                BASE_PACKAGE + ".checks.whitespace.WhitespaceBeforeEmptyBodyCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with modules from checks package.
+     */
+    private static void fillModulesFromChecksPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("ArrayTypeStyleCheck",
+                BASE_PACKAGE + ".checks.ArrayTypeStyleCheck");
+        NAME_TO_FULL_MODULE_NAME.put("AvoidEscapedUnicodeCharactersCheck",
+                BASE_PACKAGE + ".checks.AvoidEscapedUnicodeCharactersCheck");
+        NAME_TO_FULL_MODULE_NAME.put("DescendantTokenCheck",
+                BASE_PACKAGE + ".checks.DescendantTokenCheck");
+        NAME_TO_FULL_MODULE_NAME.put("FinalParametersCheck",
+                BASE_PACKAGE + ".checks.FinalParametersCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NewlineAtEndOfFileCheck",
+                BASE_PACKAGE + ".checks.NewlineAtEndOfFileCheck");
+        NAME_TO_FULL_MODULE_NAME.put("LineEndingCheck",
+                BASE_PACKAGE + ".checks.LineEndingCheck");
+        NAME_TO_FULL_MODULE_NAME.put("MultilineCommentLeadingAsteriskPresenceCheck",
+                BASE_PACKAGE + ".checks.MultilineCommentLeadingAsteriskPresenceCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NoCodeInFileCheck",
+                BASE_PACKAGE + ".checks.NoCodeInFileCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OuterTypeFilenameCheck",
+                BASE_PACKAGE + ".checks.OuterTypeFilenameCheck");
+        NAME_TO_FULL_MODULE_NAME.put("OrderedPropertiesCheck",
+                BASE_PACKAGE + ".checks.OrderedPropertiesCheck");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressWarningsHolder",
+                BASE_PACKAGE + ".checks.SuppressWarningsHolder");
+        NAME_TO_FULL_MODULE_NAME.put("TodoCommentCheck",
+                BASE_PACKAGE + ".checks.TodoCommentCheck");
+        NAME_TO_FULL_MODULE_NAME.put("TrailingCommentCheck",
+                BASE_PACKAGE + ".checks.TrailingCommentCheck");
+        NAME_TO_FULL_MODULE_NAME.put("TranslationCheck",
+                BASE_PACKAGE + ".checks.TranslationCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UncommentedMainCheck",
+                BASE_PACKAGE + ".checks.UncommentedMainCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UniquePropertiesCheck",
+                BASE_PACKAGE + ".checks.UniquePropertiesCheck");
+        NAME_TO_FULL_MODULE_NAME.put("UpperEllCheck",
+                BASE_PACKAGE + ".checks.UpperEllCheck");
+        NAME_TO_FULL_MODULE_NAME.put("HexLiteralCaseCheck",
+                BASE_PACKAGE + ".checks.HexLiteralCaseCheck");
+        NAME_TO_FULL_MODULE_NAME.put("NumericalPrefixesInfixesSuffixesCharacterCaseCheck",
+                BASE_PACKAGE + ".checks.NumericalPrefixesInfixesSuffixesCharacterCaseCheck");
+    }
+
+    /**
+     * Fill short-to-full module names map with modules from filefilters package.
+     */
+    private static void fillModulesFromFilefiltersPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("BeforeExecutionExclusionFileFilter",
+                BASE_PACKAGE + ".filefilters.BeforeExecutionExclusionFileFilter");
+    }
+
+    /**
+     * Fill short-to-full module names map with modules from filters package.
+     */
+    private static void fillModulesFromFiltersPackage() {
+        NAME_TO_FULL_MODULE_NAME.put("SeverityMatchFilter",
+                BASE_PACKAGE + ".filters.SeverityMatchFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressWithPlainTextCommentFilter",
+            BASE_PACKAGE + ".filters.SuppressWithPlainTextCommentFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressionCommentFilter",
+                BASE_PACKAGE + ".filters.SuppressionCommentFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressionFilter",
+                BASE_PACKAGE + ".filters.SuppressionFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressionSingleFilter",
+                BASE_PACKAGE + ".filters.SuppressionSingleFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressionXpathFilter",
+                BASE_PACKAGE + ".filters.SuppressionXpathFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressionXpathSingleFilter",
+                BASE_PACKAGE + ".filters.SuppressionXpathSingleFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressWarningsFilter",
+                BASE_PACKAGE + ".filters.SuppressWarningsFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressWithNearbyCommentFilter",
+                BASE_PACKAGE + ".filters.SuppressWithNearbyCommentFilter");
+        NAME_TO_FULL_MODULE_NAME.put("SuppressWithNearbyTextFilter",
+                BASE_PACKAGE + ".filters.SuppressWithNearbyTextFilter");
+    }
+
+    /**
+     * Fill short-to-full module names map with modules from checkstyle package.
+     */
+    private static void fillModulesFromCheckstylePackage() {
+        NAME_TO_FULL_MODULE_NAME.put("Checker", BASE_PACKAGE + ".Checker");
+        NAME_TO_FULL_MODULE_NAME.put("TreeWalker", BASE_PACKAGE + ".TreeWalker");
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/PropertiesExpander.java SHA256 e8cbd1af41656be06242c09e18c03676ae5ec58bf32b82e5bbf07b9384e0ceaf
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.Map;
+import java.util.Properties;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Resolves external properties from an underlying {@code Properties} object.
+ *
+ */
+public final class PropertiesExpander implements PropertyResolver {
+
+    /** The underlying values. */
+    private final Map<String, String> values;
+
+    /**
+     * Creates a new PropertiesExpander.
+     *
+     * @param properties the underlying properties to use for property resolution.
+     * @throws IllegalArgumentException when properties argument is null
+     */
+    public PropertiesExpander(Properties properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException("cannot pass null");
+        }
+        values = properties.stringPropertyNames()
+                .stream()
+                .collect(
+                    Collectors.toUnmodifiableMap(Function.identity(), properties::getProperty));
+    }
+
+    @Override
+    public String resolve(String name) {
+        return values.get(name);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/PropertyCacheFile.java SHA256 c06edbc2c65b347b26eb7aeba32e75fe8b62ebee549cc12e4328f825d49bffaf
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.math.BigInteger;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.OsSpecificUtil;
+
+/**
+ * This class maintains a persistent(on file-system) store of the files
+ * that have checked ok(no validation events) and their associated
+ * timestamp. It is used to optimize Checkstyle between few launches.
+ * It is mostly useful for plugin and extensions of Checkstyle.
+ * It uses a property file for storage.  A hashcode of the Configuration is stored in the
+ * cache file to ensure the cache is invalidated when the configuration has changed.
+ *
+ */
+public final class PropertyCacheFile {
+
+    /**
+     * The property key to use for storing the hashcode of the
+     * configuration. To avoid name clashes with the files that are
+     * checked the key is chosen in such a way that it cannot be a valid file name.
+     */
+    public static final String CONFIG_HASH_KEY = "configuration*?";
+
+    /**
+     * The property prefix to use for storing the hashcode of an
+     * external resource. To avoid name clashes with the files that are
+     * checked the prefix is chosen in such a way that it cannot be a
+     * valid file name and makes it clear it is a resource.
+     */
+    public static final String EXTERNAL_RESOURCE_KEY_PREFIX = "module-resource*?:";
+
+    /** Size of default byte array for buffer. */
+    private static final int BUFFER_SIZE = 1024;
+
+    /** Default buffer for reading from streams. */
+    private static final byte[] BUFFER = new byte[BUFFER_SIZE];
+
+    /** Default number for base 16 encoding. */
+    private static final int BASE_16 = 16;
+
+    /** The details on files. */
+    private final Properties details = new Properties();
+
+    /** Configuration object. */
+    private final Configuration config;
+
+    /** File name of cache. */
+    private final String fileName;
+
+    /** Generated configuration hash. */
+    private String configHash;
+
+    /**
+     * Creates a new {@code PropertyCacheFile} instance.
+     *
+     * @param config the current configuration, not null
+     * @param fileName the cache file
+     * @throws IllegalArgumentException when either arguments are null
+     */
+    public PropertyCacheFile(Configuration config, String fileName) {
+        if (config == null) {
+            throw new IllegalArgumentException("config can not be null");
+        }
+        if (fileName == null) {
+            throw new IllegalArgumentException("fileName can not be null");
+        }
+        this.config = config;
+        this.fileName = fileName;
+    }
+
+    /**
+     * Load cached values from file.
+     *
+     * @throws IOException when there is a problems with file read
+     */
+    public void load() throws IOException {
+        // get the current config so if the file isn't found
+        // the first time the hash will be added to output file
+        configHash = getHashCodeBasedOnObjectContent(config);
+        final Path path = Path.of(fileName);
+        if (Files.exists(path)) {
+            try (InputStream inStream = Files.newInputStream(path)) {
+                details.load(inStream);
+                final String cachedConfigHash = details.getProperty(CONFIG_HASH_KEY);
+                if (!configHash.equals(cachedConfigHash)) {
+                    // Detected configuration change - clear cache
+                    reset();
+                }
+            }
+        }
+        else {
+            // put the hash in the file if the file is going to be created
+            reset();
+        }
+    }
+
+    /**
+     * Cleans up the object and updates the cache file.
+     *
+     * @throws IOException  when there is a problems with file save
+     */
+    public void persist() throws IOException {
+        final Path path = Path.of(fileName);
+        final Path directory = path.getParent();
+
+        if (directory != null) {
+            OsSpecificUtil.updateDirectory(directory);
+        }
+        try (OutputStream out = Files.newOutputStream(path)) {
+            details.store(out, null);
+        }
+    }
+
+    /**
+     * Resets the cache to be empty except for the configuration hash.
+     */
+    public void reset() {
+        details.clear();
+        details.setProperty(CONFIG_HASH_KEY, configHash);
+    }
+
+    /**
+     * Checks that file is in cache.
+     *
+     * @param uncheckedFileName the file to check
+     * @param timestamp the timestamp of the file to check
+     * @return whether the specified file has already been checked ok
+     */
+    public boolean isInCache(String uncheckedFileName, long timestamp) {
+        final String lastChecked = details.getProperty(uncheckedFileName);
+        return Objects.equals(lastChecked, Long.toString(timestamp));
+    }
+
+    /**
+     * Records that a file checked ok.
+     *
+     * @param checkedFileName name of the file that checked ok
+     * @param timestamp the timestamp of the file
+     */
+    public void put(String checkedFileName, long timestamp) {
+        details.setProperty(checkedFileName, Long.toString(timestamp));
+    }
+
+    /**
+     * Retrieves the hash of a specific file.
+     *
+     * @param name The name of the file to retrieve.
+     * @return The has of the file or {@code null}.
+     */
+    public String get(String name) {
+        return details.getProperty(name);
+    }
+
+    /**
+     * Removed a specific file from the cache.
+     *
+     * @param checkedFileName The name of the file to remove.
+     */
+    public void remove(String checkedFileName) {
+        details.remove(checkedFileName);
+    }
+
+    /**
+     * Returns the cache file name.
+     *
+     * @return the cache file name.
+     */
+    public String getFileName() {
+        return fileName;
+    }
+
+    /**
+     * Calculates the hashcode for the serializable object based on its content.
+     *
+     * @param object serializable object.
+     * @return the hashcode for serializable object.
+     * @throws IllegalStateException when some unexpected happened.
+     */
+    private static String getHashCodeBasedOnObjectContent(Serializable object) {
+        try {
+            final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            // in-memory serialization of Configuration
+            serialize(object, outputStream);
+            // Instead of hexEncoding outputStream.toByteArray() directly we
+            // use a message digest here to keep the length of the
+            // hashcode reasonable
+
+            final MessageDigest digest = MessageDigest.getInstance("SHA-1");
+            digest.update(outputStream.toByteArray());
+
+            return new BigInteger(1, digest.digest()).toString(BASE_16).toUpperCase(Locale.ROOT);
+        }
+        catch (final IOException | NoSuchAlgorithmException exc) {
+            // rethrow as unchecked exception
+            throw new IllegalStateException("Unable to calculate hashcode for "
+                    + object.getClass().getName(), exc);
+        }
+    }
+
+    /**
+     * Serializes object to output stream.
+     *
+     * @param object object to be serialized
+     * @param outputStream serialization stream
+     * @throws IOException if an error occurs
+     */
+    private static void serialize(Serializable object,
+                                  OutputStream outputStream)
+            throws IOException {
+        try (ObjectOutputStream oos = new ObjectOutputStream(outputStream)) {
+            oos.writeObject(object);
+        }
+    }
+
+    /**
+     * Puts external resources in cache.
+     * If at least one external resource changed, clears the cache.
+     *
+     * @param locations locations of external resources.
+     */
+    public void putExternalResources(Set<String> locations) {
+        final Set<ExternalResource> resources = loadExternalResources(locations);
+        if (areExternalResourcesChanged(resources)) {
+            reset();
+            fillCacheWithExternalResources(resources);
+        }
+    }
+
+    /**
+     * Loads a set of {@link ExternalResource} based on their locations.
+     *
+     * @param resourceLocations locations of external configuration resources.
+     * @return a set of {@code ExternalResource}.
+     */
+    private static Set<ExternalResource> loadExternalResources(Set<String> resourceLocations) {
+        final Set<ExternalResource> resources = new HashSet<>();
+        for (String location : resourceLocations) {
+            try {
+                final byte[] content = loadExternalResource(location);
+                final String contentHashSum = getHashCodeBasedOnObjectContent(content);
+                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+                        contentHashSum));
+            }
+            catch (CheckstyleException | IOException exc) {
+                // if exception happened (configuration resource was not found, connection is not
+                // available, resource is broken, etc.), we need to calculate hash sum based on
+                // exception object content in order to check whether problem is resolved later
+                // and/or the configuration is changed.
+                final String contentHashSum = getHashCodeBasedOnObjectContent(exc);
+                resources.add(new ExternalResource(EXTERNAL_RESOURCE_KEY_PREFIX + location,
+                        contentHashSum));
+            }
+        }
+        return resources;
+    }
+
+    /**
+     * Loads the content of external resource.
+     *
+     * @param location external resource location.
+     * @return array of bytes which represents the content of external resource in binary form.
+     * @throws CheckstyleException if error while loading occurs.
+     * @throws IOException if error while loading occurs.
+     */
+    private static byte[] loadExternalResource(String location)
+            throws IOException, CheckstyleException {
+        final URI uri = CommonUtil.getUriByFilename(location);
+
+        try (InputStream is = uri.toURL().openStream()) {
+            return toByteArray(is);
+        }
+    }
+
+    /**
+     * Reads all the contents of an input stream and returns it as a byte array.
+     *
+     * @param stream The input stream to read from.
+     * @return The resulting byte array of the stream.
+     * @throws IOException if there is an error reading the input stream.
+     */
+    private static byte[] toByteArray(InputStream stream) throws IOException {
+        final ByteArrayOutputStream content = new ByteArrayOutputStream();
+
+        while (true) {
+            final int size = stream.read(BUFFER);
+            if (size == -1) {
+                break;
+            }
+
+            content.write(BUFFER, 0, size);
+        }
+
+        return content.toByteArray();
+    }
+
+    /**
+     * Checks whether the contents of external configuration resources were changed.
+     *
+     * @param resources a set of {@link ExternalResource}.
+     * @return true if the contents of external configuration resources were changed.
+     */
+    private boolean areExternalResourcesChanged(Set<ExternalResource> resources) {
+        return resources.stream().anyMatch(this::isResourceChanged);
+    }
+
+    /**
+     * Checks whether the resource is changed.
+     *
+     * @param resource resource to check.
+     * @return true if resource is changed.
+     */
+    private boolean isResourceChanged(ExternalResource resource) {
+        boolean changed = false;
+        if (isResourceLocationInCache(resource.location)) {
+            final String contentHashSum = resource.contentHashSum;
+            final String cachedHashSum = details.getProperty(resource.location);
+            if (!cachedHashSum.equals(contentHashSum)) {
+                changed = true;
+            }
+        }
+        else {
+            changed = true;
+        }
+        return changed;
+    }
+
+    /**
+     * Fills cache with a set of {@link ExternalResource}.
+     * If external resource from the set is already in cache, it will be skipped.
+     *
+     * @param externalResources a set of {@code ExternalResource}.
+     */
+    private void fillCacheWithExternalResources(Set<ExternalResource> externalResources) {
+        externalResources
+            .forEach(resource -> details.setProperty(resource.location, resource.contentHashSum));
+    }
+
+    /**
+     * Checks whether resource location is in cache.
+     *
+     * @param location resource location.
+     * @return true if resource location is in cache.
+     */
+    private boolean isResourceLocationInCache(String location) {
+        final String cachedHashSum = details.getProperty(location);
+        return cachedHashSum != null;
+    }
+
+    /**
+     * Class which represents external resource.
+     *
+     * @param location       resource location.
+     * @param contentHashSum content hash sum.
+     */
+    private record ExternalResource(String location, String contentHashSum) {
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/PropertyResolver.java SHA256 036c03c6fc305663cb2abaf03fa59cc9ed2e053171de349852132b6582ec5d38
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+/**
+ * Resolves properties in module configurations.
+ *
+ * <p>The {@link ConfigurationLoader} uses a PropertyResolver to
+ * resolve the values of external properties like {@code ${basename}}
+ * that occur in the configuration file.
+ *
+ * @see ConfigurationLoader
+ */
+@FunctionalInterface
+public interface PropertyResolver {
+
+    /**
+     * Resolves a property name to its value.
+     *
+     * @param name the name of the property.
+     * @return the value that is associated with {@code propertyName}.
+     */
+    String resolve(String name);
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/PropertyType.java SHA256 d99d909d8f74d88e917811b10e0de56bc1996bc5e52c8c57ca5f4066eb5e7921
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+/**
+ * Represents the custom property type used in documentation and configuration files.
+ */
+public enum PropertyType {
+
+    /** This property is a file. */
+    FILE("java.io.File"),
+
+    /** This property is a string represents an ISO 3166 2-letter code. */
+    LOCALE_COUNTRY("String (either the empty string or an uppercase ISO 3166 2-letter code)"),
+
+    /** This property is a string represents an ISO 639 code. */
+    LOCALE_LANGUAGE("String (either the empty string or a lowercase ISO 639 code)"),
+
+    /** This property is a regular expression pattern. */
+    PATTERN("java.util.regex.Pattern"),
+
+    /** This property is a string. */
+    STRING("java.lang.String"),
+
+    /** This property is a set of tokens. */
+    TOKEN_ARRAY("subset of tokens TokenTypes");
+
+    /** The human-readable property description. */
+    private final String description;
+
+    /**
+     * Creates a new {@code PropertyType} instance.
+     *
+     * @param description the human-readable property description
+     */
+    PropertyType(String description) {
+        this.description = description;
+    }
+
+    /**
+     * Returns the human-readable property description.
+     *
+     * @return human-readable property description
+     */
+    public String getDescription() {
+        return description;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/SarifLogger.java SHA256 a572d37a1b6b9e599d1f55703728267a0302e324bf7ab6cd93153cb3bc1367ad
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.MissingResourceException;
+import java.util.Objects;
+import java.util.ResourceBundle;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.meta.ModuleDetails;
+import com.puppycrawl.tools.checkstyle.meta.XmlMetaReader;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * Simple SARIF logger.
+ * SARIF stands for the static analysis results interchange format.
+ * See <a href="https://sarifweb.azurewebsites.net/">reference</a>
+ */
+public final class SarifLogger extends AbstractAutomaticBean implements AuditListener {
+
+    /** The length of unicode placeholder. */
+    private static final int UNICODE_LENGTH = 4;
+
+    /** Unicode escaping upper limit. */
+    private static final int UNICODE_ESCAPE_UPPER_LIMIT = 0x1F;
+
+    /** Input stream buffer size. */
+    private static final int BUFFER_SIZE = 1024;
+
+    /** The placeholder for message. */
+    private static final String MESSAGE_PLACEHOLDER = "${message}";
+
+    /** The placeholder for message text. */
+    private static final String MESSAGE_TEXT_PLACEHOLDER = "${messageText}";
+
+    /** The placeholder for message id. */
+    private static final String MESSAGE_ID_PLACEHOLDER = "${messageId}";
+
+    /** The placeholder for severity level. */
+    private static final String SEVERITY_LEVEL_PLACEHOLDER = "${severityLevel}";
+
+    /** The placeholder for uri. */
+    private static final String URI_PLACEHOLDER = "${uri}";
+
+    /** The placeholder for line. */
+    private static final String LINE_PLACEHOLDER = "${line}";
+
+    /** The placeholder for column. */
+    private static final String COLUMN_PLACEHOLDER = "${column}";
+
+    /** The placeholder for rule id. */
+    private static final String RULE_ID_PLACEHOLDER = "${ruleId}";
+
+    /** The placeholder for version. */
+    private static final String VERSION_PLACEHOLDER = "${version}";
+
+    /** The placeholder for results. */
+    private static final String RESULTS_PLACEHOLDER = "${results}";
+
+    /** The placeholder for rules. */
+    private static final String RULES_PLACEHOLDER = "${rules}";
+
+    /** Two backslashes to not duplicate strings. */
+    private static final String TWO_BACKSLASHES = "\\\\";
+
+    /** A pattern for two backslashes. */
+    private static final Pattern TWO_BACKSLASHES_PATTERN = Pattern.compile(TWO_BACKSLASHES);
+
+    /** A pattern to match a file with a Windows drive letter. */
+    private static final Pattern WINDOWS_DRIVE_LETTER_PATTERN =
+            Pattern.compile("\\A[A-Z]:", Pattern.CASE_INSENSITIVE);
+
+    /** A pattern matching a template placeholder such as {@code ${uri}}. */
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{\\w+}");
+
+    /** Comma and line separator. */
+    private static final String COMMA_LINE_SEPARATOR = ",\n";
+
+    /** Helper writer that allows easy encoding and printing. */
+    private final PrintWriter writer;
+
+    /** Close output stream in auditFinished. */
+    private final boolean closeStream;
+
+    /** The results. */
+    private final List<String> results = new ArrayList<>();
+
+    /** Map of all available module metadata by fully qualified name. */
+    private final Map<String, ModuleDetails> allModuleMetadata = new HashMap<>();
+
+    /** Map to store rule metadata by composite key (sourceName, moduleId). */
+    private final Map<RuleKey, ModuleDetails> ruleMetadata = new LinkedHashMap<>();
+
+    /** Content for the entire report. */
+   

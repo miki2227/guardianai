@@ -1,87 +1,83 @@
 # GuardianAI recorded-run viewer
 
-A local, read-only React/Vite viewer for retained GuardianAI run evidence. It has
-no server API, upload path, execution controls or live stop control. Imported
-folder contents stay in the current browser tab.
+A local React/Vite interface for presenting actual retained GuardianAI evidence.
+No backend API, uploads, execution controls or live stop button. Imported files
+stay in the browser tab. Native stacks describe execution, not private thoughts.
 
-## Run locally
+## Start
+
+Use Node 20.19+ or 22.12+ (validated with Node 24.15):
 
 ```sh
 cd frontend
-npm install
+npm ci
+npm test
 npm run dev
 ```
 
-Open the localhost URL printed by Vite. `npm run build` makes a static build in
-`frontend/dist/`.
+Open the localhost URL printed by Vite. `npm run build` creates `frontend/dist`.
+The production bundle contains offline evidence and is larger than a typical
+application shell (about 1.65 MB before compression); no remote fetch is needed.
 
-Use **Import run folder** and choose a recorded run folder. The browser uses
-`webkitdirectory` folder selection. For a folder with nested sessions, select
-the narrowest folder that contains the relevant `summary.json` or
-`coding-session.json` and its evidence tree. The app also includes two bundled
-examples so its first view works without selecting files.
+## Presentation path
 
-## Included real examples
+1. Open **Two-agent Checkstyle**, the default. It is the accepted v5 experiment:
+   two continuing Grok 4.7 low-effort subjects, three phases, nine commands,
+   133 scoped events and two verified public artifact handoffs.
+2. Expand **Workflow evidence** for the saved host audit and each handoff.
+   Delivery is a recorded assertion here; independent verification is in the
+   source audit, not performed again by the viewer. These public handoffs used
+   explicit `untracked` flow mode.
+3. Select a command. Open **Syscall timeline** and select an event for its stack.
+   **Jev decisions** exposes scores, model, deadlines, application state and exact
+   runtime/session input references. Missing files remain missing.
+4. Open **Message observation (phase)** for saved host-client and MCP content
+   receipts. These cover the phase, not only the selected command. Expand a
+   receipt to inspect initial chunks and confirmation/multipart review fields.
+5. Open **Command output** or download selected-worker evidence. **Show all run
+   files** explicitly includes files not joined to that worker.
+6. Switch to **Grok build & review** for older policy-stop and timeout records,
+   or **Owner cancellation** for a retained interrupted build.
 
-The bundled JSON is copied without alteration from repository artifacts:
+The v5 findings are provisional subject outputs. No P0 or emergent covert
+convention was established. The later [context-pressure attempt](../../research/CONTEXT_PRESSURE_RUN.md)
+did not complete; it is not substituted for the accepted v5 demo.
 
-| Viewer example | Source artifacts |
-|---|---|
-| Grok build and review | `research/coding-agent-runs/grok-v1/summary.json`; `session-completion/evidence/coding-session.json`; `step-001/manifest.json`, `runtime.json`, and `observer-input-0.json` |
-| Owner lifetime | `research/system-runs/owner-lifetime/summary.json`, `normal/evidence/coding-session.json`, `cancelled/evidence/coding-session.json`, and `cancellation.json` |
+## Source integrity and joins
 
-The first dataset shows the policy stop, successful commands, and the actual
-30-second abstention in its retained scope list. The selected successful build
-shows its recorded 236 syscall events and Jev action receipts. The second dataset
-shows normal completion alongside the separate SIGKILL cancellation. The
-cancelled build has an interrupted worker return code and an unavailable runtime
-verdict; it is not counted as a successful or violating worker.
+`npm run sync-demo` copies 189 exact files from `research/checkstyle-paired/v5`
+into `frontend/src/demo/paired`. `source-sha256.json` lists their original byte
+hashes. Tests recompute all hashes and compare every copy to the source. Existing
+historical examples remain in `frontend/src/demo` as supplied in the original PR.
 
-`frontend/src/demo/` contains these source JSON copies. The full run directories
-remain the authoritative records.
+Each session command joins only its exact sibling `step-NNN/runtime.json` and
+`manifest.json`; there is no first-worker or first-runtime fallback. Historical
+`summary.json` with `scopes[].calls[]` also works. Return code, capture status,
+runtime verdict, closure and stop state remain separate. A nonzero/interrupted
+worker, incomplete capture or review-cleared alert cannot become a green worker
+success. A clean `finish=true` also revokes the finished scope; a stopped marker
+alone does not mean misconduct.
 
-## What is shown
+## Import limits
 
-- Task and command argv when those fields were saved.
-- Worker exit, runtime/observer verdict, capture status, lifecycle closure and
-  stop state as separate fields.
-- Syscall event time, syscall, paths, errno, permission denial and native
-  execution stack when included in the runtime event.
-- Jev model, probability, action and linked observer input fields exposed by a
-  saved action receipt.
-- Evidence JSON file names and local JSON downloads. Manifest hash receipts
-  remain available in the original manifest JSON.
-- Parse/read errors for files that cannot be parsed, with partial run viewing
-  retained for the remaining files.
+Choose the narrowest run directory containing sessions and their evidence.
+Folder selection strips only the selected root directory name. Supported local
+text extensions: JSON, JSONL, Markdown, TXT, LOG and TOML. Files over 2 MiB and
+imports exceeding 64 MiB are skipped with visible notes. Binary databases,
+archives and raw traces are excluded before reading. Invalid JSON remains
+inspectable text with a parse note; unsupported shapes do not invent commands.
 
-The syscall list is capped at 2,000 rendered events per selection. Native stacks
-are execution stacks, not model reasoning. `recorded` means the artifact says
-recorded; it does not assert complete telemetry. Missing values remain unknown.
-The old `denied` flag is displayed separately from `permission_denied` and
-`errno`. A policy stop is an observed policy outcome, not a claim about intent.
+The event list renders at most 2,000 events per selection. There is no raw trace
+parser, SQLite engine, native-path resolver, causal clock ordering, independent
+hash verification in the browser, complete FTS/flow/identity reconstruction or
+live telemetry subscription. Oversized files skipped at import may remove some
+relationships. The adapter never fills gaps from a different worker.
 
-## Format support and current limits
+## Validation
 
-The first adapter recognizes session `coding-session.json` records and summaries
-with a `scopes[].calls[]` shape, and joins a locally imported `runtime.json` and
-`manifest.json` for a selected step-001 when present. Other JSON files remain
-available in the evidence file list. It does not yet implement the additional
-research schemas in the frontend handoff: content observer journals, paired
-workflow/provenance joins, flow/MCP/identity audit joins, saved FTS packets,
-artifact and ZIP observer receipts, peer handoffs, or controller stop
-acknowledgement joins. For these formats the viewer offers partial file
-inspection, not a claim that all relationships have been reconstructed.
-
-No trace text parser, browser SQLite engine, native-ledger path resolver, hash
-recomputation, or causal ordering across workers/clocks is implemented. The
-browser does not infer a verdict from return code, file presence, `denied`, or
-an absent value. It also does not currently expose stdout/stderr bodies. Large
-trace files should be excluded when selecting an import; the UI reads files in
-the selected directory into browser memory.
-
-## Review screenshots
-
-The overview and syscall/decision panels can be reviewed by running the local
-viewer and selecting the bundled examples. Captured review images should be
-attached to the PR from those real views; they are not synthetic dashboard
-mockups.
+Seven adapter/integrity tests pass; TypeScript and production build pass.
+`npm audit` reports zero known vulnerabilities for the resolved dependencies.
+A headless Chromium check covered default nine-command rendering, two handoffs,
+Jev input references, stdout/stderr, owner cancellation and directory import.
+Desktop and 390px mobile views had no page overflow after the mobile grid fix;
+no browser errors were recorded. Screenshots are in `screenshots/`.

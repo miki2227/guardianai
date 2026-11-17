@@ -1,0 +1,4631 @@
+tBundle.getPath().equals(currentBundle.getPath())) {
+                result = Optional.of(currentBundle);
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Extracts the base name (the unique prefix) of resource bundle from translation file name.
+     * For example "messages" is the base name of "messages.properties",
+     * "messages_de_AT.properties", "messages_en.properties", etc.
+     *
+     * @param fileName the fully qualified name of the translation file.
+     * @return the extracted base name.
+     */
+    private static String extractBaseName(String fileName) {
+        final String regexp;
+        final Matcher languageCountryVariantMatcher =
+            LANGUAGE_COUNTRY_VARIANT_PATTERN.matcher(fileName);
+        final Matcher languageCountryMatcher = LANGUAGE_COUNTRY_PATTERN.matcher(fileName);
+        final Matcher languageMatcher = LANGUAGE_PATTERN.matcher(fileName);
+        if (languageCountryVariantMatcher.matches()) {
+            regexp = LANGUAGE_COUNTRY_VARIANT_PATTERN.pattern();
+        }
+        else if (languageCountryMatcher.matches()) {
+            regexp = LANGUAGE_COUNTRY_PATTERN.pattern();
+        }
+        else if (languageMatcher.matches()) {
+            regexp = LANGUAGE_PATTERN.pattern();
+        }
+        else {
+            regexp = DEFAULT_TRANSLATION_REGEXP;
+        }
+        // We use substring(...) instead of replace(...), so that the regular expression does
+        // not have to be compiled each time it is used inside 'replace' method.
+        final String removePattern = regexp.substring("^.+".length());
+        return fileName.replaceAll(removePattern, "");
+    }
+
+    /**
+     * Extracts path from a file name which contains the path.
+     * For example, if the file name is /xyz/messages.properties,
+     * then the method will return /xyz/.
+     *
+     * @param fileNameWithPath file name which contains the path.
+     * @return file path.
+     */
+    private static String getPath(String fileNameWithPath) {
+        return fileNameWithPath
+            .substring(0, fileNameWithPath.lastIndexOf(File.separator));
+    }
+
+    /**
+     * Checks resource files in bundle for consistency regarding their keys.
+     * All files in bundle must have the same key set. If this is not the case
+     * an audit event message is posted giving information which key misses in which file.
+     *
+     * @param bundle resource bundle.
+     */
+    private void checkTranslationKeys(ResourceBundle bundle) {
+        final Set<File> filesInBundle = bundle.getFiles();
+        // build a map from files to the keys they contain
+        final Set<String> allTranslationKeys = new HashSet<>();
+        final Map<File, Set<String>> filesAssociatedWithKeys = new TreeMap<>();
+        for (File currentFile : filesInBundle) {
+            final Set<String> keysInCurrentFile = getTranslationKeys(currentFile);
+            allTranslationKeys.addAll(keysInCurrentFile);
+            filesAssociatedWithKeys.put(currentFile, keysInCurrentFile);
+        }
+        checkFilesForConsistencyRegardingTheirKeys(filesAssociatedWithKeys, allTranslationKeys);
+    }
+
+    /**
+     * Compares th the specified key set with the key sets of the given translation files (arranged
+     * in a map). All missing keys are reported.
+     *
+     * @param fileKeys a Map from translation files to their key sets.
+     * @param keysThatMustExist the set of keys to compare with.
+     */
+    private void checkFilesForConsistencyRegardingTheirKeys(Map<File, Set<String>> fileKeys,
+                                                            Set<String> keysThatMustExist) {
+        for (Entry<File, Set<String>> fileKey : fileKeys.entrySet()) {
+            final Set<String> currentFileKeys = fileKey.getValue();
+            final Set<String> missingKeys = keysThatMustExist.stream()
+                .filter(key -> !currentFileKeys.contains(key))
+                .collect(Collectors.toUnmodifiableSet());
+            if (!missingKeys.isEmpty()) {
+                final MessageDispatcher dispatcher = getMessageDispatcher();
+                final String path = fileKey.getKey().getAbsolutePath();
+                dispatcher.fireFileStarted(path);
+                for (String key : missingKeys) {
+                    log(1, MSG_KEY, ALL_NEW_LINES.matcher(key).replaceAll("\\\\n"));
+                }
+                fireErrors(path);
+                dispatcher.fireFileFinished(path);
+            }
+        }
+    }
+
+    /**
+     * Loads the keys from the specified translation file into a set.
+     *
+     * @param file translation file.
+     * @return a Set object which holds the loaded keys.
+     */
+    private Set<String> getTranslationKeys(File file) {
+        Set<String> keys = new HashSet<>();
+        try (InputStream inStream = Files.newInputStream(file.toPath())) {
+            final Properties translations = new Properties();
+            translations.load(inStream);
+            keys = translations.stringPropertyNames();
+        }
+        // -@cs[IllegalCatch] It is better to catch all exceptions since it can throw
+        // a runtime exception.
+        catch (final Exception exc) {
+            logException(exc, file);
+        }
+        return keys;
+    }
+
+    /**
+     * Helper method to log an exception.
+     *
+     * @param exception the exception that occurred
+     * @param file the file that could not be processed
+     */
+    private void logException(Exception exception, File file) {
+        final String[] args;
+        final String key;
+        if (exception instanceof NoSuchFileException) {
+            args = null;
+            key = "general.fileNotFound";
+        }
+        else {
+            args = new String[] {exception.getMessage()};
+            key = "general.exception";
+        }
+        final Violation message =
+            new Violation(
+                0,
+                Definitions.CHECKSTYLE_BUNDLE,
+                key,
+                args,
+                getId(),
+                getClass(), null);
+        final SortedSet<Violation> messages = new TreeSet<>();
+        messages.add(message);
+        getMessageDispatcher().fireErrors(file.getPath(), messages);
+        log.debug("Exception occurred.", exception);
+    }
+
+    /** Class which represents a resource bundle. */
+    private static final class ResourceBundle {
+
+        /** Bundle base name. */
+        private final String baseName;
+        /** Common extension of files which are included in the resource bundle. */
+        private final String extension;
+        /** Common path of files which are included in the resource bundle. */
+        private final String path;
+        /** Set of files which are included in the resource bundle. */
+        private final Set<File> files;
+
+        /**
+         * Creates a ResourceBundle object with specific base name, common files extension.
+         *
+         * @param baseName bundle base name.
+         * @param path common path of files which are included in the resource bundle.
+         * @param extension common extension of files which are included in the resource bundle.
+         */
+        private ResourceBundle(String baseName, String path, String extension) {
+            this.baseName = baseName;
+            this.path = path;
+            this.extension = extension;
+            files = new HashSet<>();
+        }
+
+        /**
+         * Returns the bundle base name.
+         *
+         * @return the bundle base name
+         */
+        /* package */ String getBaseName() {
+            return baseName;
+        }
+
+        /**
+         * Returns the common path of files which are included in the resource bundle.
+         *
+         * @return the common path of files
+         */
+        /* package */ String getPath() {
+            return path;
+        }
+
+        /**
+         * Returns the common extension of files which are included in the resource bundle.
+         *
+         * @return the common extension of files
+         */
+        /* package */ String getExtension() {
+            return extension;
+        }
+
+        /**
+         * Returns the set of files which are included in the resource bundle.
+         *
+         * @return the set of files
+         */
+        /* package */ Set<File> getFiles() {
+            return Collections.unmodifiableSet(files);
+        }
+
+        /**
+         * Adds a file into resource bundle.
+         *
+         * @param file file which should be added into resource bundle.
+         */
+        /* package */ void addFile(File file) {
+            files.add(file);
+        }
+
+        /**
+         * Checks whether a resource bundle contains a file which name matches file name regexp.
+         *
+         * @param fileNameRegexp file name regexp.
+         * @return true if a resource bundle contains a file which name matches file name regexp.
+         */
+        /* package */ boolean containsFile(String fileNameRegexp) {
+            boolean containsFile = false;
+            for (File currentFile : files) {
+                if (Pattern.matches(fileNameRegexp, currentFile.getName())) {
+                    containsFile = true;
+                    break;
+                }
+            }
+            return containsFile;
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/UncommentedMainCheck.java SHA256 2aafecc37ce501dc40caf07e4f5d8e2a4383754af6b5cfe38090879753ee1813
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks;
+
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.NullUtil;
+
+/**
+ * <div>
+ * Detects uncommented {@code main} methods.
+ * </div>
+ *
+ * <p>
+ * Rationale: A {@code main} method is often used for debugging purposes.
+ * When debugging is finished, developers often forget to remove the method,
+ * which changes the API and increases the size of the resulting class or JAR file.
+ * Except for the real program entry points, all {@code main} methods
+ * should be removed or commented out of the sources.
+ * </p>
+ *
+ * <p>
+ * Note: Compact source files
+ * (<a href="https://openjdk.org/jeps/512">JEP 512</a>)
+ * are skipped by design. The whole purpose of compact source files is to serve as
+ * standalone single-file programs with a {@code main} method as the entry point.
+ * Unlike regular classes where leftover {@code main} methods may be
+ * debugging artifacts, compact sources inherently require a {@code main} method to function.
+ * </p>
+ *
+ * @since 3.2
+ */
+@FileStatefulCheck
+public class UncommentedMainCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "uncommented.main";
+
+    /** Set of possible String array types. */
+    private static final Set<String> STRING_PARAMETER_NAMES = Set.of(
+        String[].class.getCanonicalName(),
+        String.class.getCanonicalName(),
+        String[].class.getSimpleName(),
+        String.class.getSimpleName()
+    );
+
+    /**
+     * Specify pattern for qualified names of classes which are allowed to
+     * have a {@code main} method.
+     */
+    private Pattern excludedClasses = Pattern.compile("^$");
+    /** Current class name. */
+    private String currentClass;
+    /** Current package. */
+    private FullIdent packageName;
+    /** Class definition depth. */
+    private int classDepth;
+
+    /**
+     * Creates a new {@code UncommentedMainCheck} instance.
+     */
+    public UncommentedMainCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify pattern for qualified names of classes which are allowed
+     * to have a {@code main} method.
+     *
+     * @param excludedClasses a pattern
+     * @since 3.2
+     */
+    public void setExcludedClasses(Pattern excludedClasses) {
+        this.excludedClasses = excludedClasses;
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.PACKAGE_DEF,
+            TokenTypes.RECORD_DEF,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        packageName = FullIdent.createFullIdent(null);
+        classDepth = 0;
+    }
+
+    @Override
+    public void leaveToken(DetailAST ast) {
+        if (ast.getType() == TokenTypes.CLASS_DEF) {
+            classDepth--;
+        }
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.PACKAGE_DEF -> visitPackageDef(ast);
+            case TokenTypes.RECORD_DEF, TokenTypes.CLASS_DEF -> visitClassOrRecordDef(ast);
+            case TokenTypes.METHOD_DEF -> visitMethodDef(ast);
+            default -> throw new IllegalStateException(ast.toString());
+        }
+    }
+
+    /**
+     * Sets current package.
+     *
+     * @param packageDef node for package definition
+     */
+    private void visitPackageDef(DetailAST packageDef) {
+        packageName = FullIdent.createFullIdent(packageDef.getLastChild()
+                .getPreviousSibling());
+    }
+
+    /**
+     * If not inner class then change current class name.
+     *
+     * @param classOrRecordDef node for class or record definition
+     */
+    private void visitClassOrRecordDef(DetailAST classOrRecordDef) {
+        // we are not use inner classes because they can not
+        // have static methods
+        if (classDepth == 0) {
+            final DetailAST ident =
+                    NullUtil.notNull(classOrRecordDef.findFirstToken(TokenTypes.IDENT));
+            currentClass = packageName.getText() + "." + ident.getText();
+            classDepth++;
+        }
+    }
+
+    /**
+     * Checks method definition if this is
+     * {@code public static void main(String[])}.
+     *
+     * @param method method definition node
+     */
+    private void visitMethodDef(DetailAST method) {
+        if (classDepth == 1
+                // method not in inner class or in interface definition
+                && checkClassName()
+                && checkName(method)
+                && checkModifiers(method)
+                && checkType(method)
+                && checkParams(method)) {
+            log(method, MSG_KEY);
+        }
+    }
+
+    /**
+     * Checks that current class is not excluded.
+     *
+     * @return true if check passed, false otherwise
+     */
+    private boolean checkClassName() {
+        return !excludedClasses.matcher(currentClass).find();
+    }
+
+    /**
+     * Checks that method name is @quot;main@quot;.
+     *
+     * @param method the METHOD_DEF node
+     * @return true if check passed, false otherwise
+     */
+    private static boolean checkName(DetailAST method) {
+        final DetailAST ident = NullUtil.notNull(method.findFirstToken(TokenTypes.IDENT));
+        return "main".equals(ident.getText());
+    }
+
+    /**
+     * Checks that method has final and static modifiers.
+     *
+     * @param method the METHOD_DEF node
+     * @return true if check passed, false otherwise
+     */
+    private static boolean checkModifiers(DetailAST method) {
+        final DetailAST modifiers =
+            NullUtil.notNull(method.findFirstToken(TokenTypes.MODIFIERS));
+
+        return modifiers.findFirstToken(TokenTypes.LITERAL_PUBLIC) != null
+            && modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null;
+    }
+
+    /**
+     * Checks that return type is {@code void}.
+     *
+     * @param method the METHOD_DEF node
+     * @return true if check passed, false otherwise
+     */
+    private static boolean checkType(DetailAST method) {
+        final DetailAST type =
+            NullUtil.notNull(method.findFirstToken(TokenTypes.TYPE)).getFirstChild();
+        return type.getType() == TokenTypes.LITERAL_VOID;
+    }
+
+    /**
+     * Checks that method has only {@code String[]} or only {@code String...} param.
+     *
+     * @param method the METHOD_DEF node
+     * @return true if check passed, false otherwise
+     */
+    private static boolean checkParams(DetailAST method) {
+        boolean checkPassed = false;
+        final DetailAST params =
+                NullUtil.notNull(method.findFirstToken(TokenTypes.PARAMETERS));
+
+        if (params.getChildCount() == 1) {
+            final DetailAST parameterType =
+                    NullUtil.notNull(params.getFirstChild()
+                            .findFirstToken(TokenTypes.TYPE));
+            final boolean isArrayDeclaration =
+                parameterType.findFirstToken(TokenTypes.ARRAY_DECLARATOR) != null;
+            final Optional<DetailAST> varargs = Optional.ofNullable(
+                params.getFirstChild().findFirstToken(TokenTypes.ELLIPSIS));
+
+            if (isArrayDeclaration || varargs.isPresent()) {
+                checkPassed = isStringType(parameterType.getFirstChild());
+            }
+        }
+        return checkPassed;
+    }
+
+    /**
+     * Whether the type is java.lang.String.
+     *
+     * @param typeAst the type to check.
+     * @return true, if the type is java.lang.String.
+     */
+    private static boolean isStringType(DetailAST typeAst) {
+        final FullIdent type = FullIdent.createFullIdent(typeAst);
+        return STRING_PARAMETER_NAMES.contains(type.getText());
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/UniquePropertiesCheck.java SHA256 524d1cc38f468fc89cd7bc2705bbafad789ab757ea7e1f6b072f88fab9babf27
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks;
+
+import java.io.File;
+import java.io.InputStream;
+import java.io.Serial;
+import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractFileSetCheck;
+import com.puppycrawl.tools.checkstyle.api.FileText;
+
+/**
+ * <div>
+ * Detects duplicated keys in properties files.
+ * </div>
+ *
+ * <p>
+ * Rationale: Multiple property keys usually appear after merge or rebase of
+ * several branches. While there are no problems in runtime, there can be a confusion
+ * due to having different values for the duplicated properties.
+ * </p>
+ *
+ * @since 5.7
+ */
+@StatelessCheck
+public class UniquePropertiesCheck extends AbstractFileSetCheck {
+
+    /**
+     * Localization key for check violation.
+     */
+    public static final String MSG_KEY = "properties.duplicate.property";
+    /**
+     * Localization key for IO exception occurred on file open.
+     */
+    public static final String MSG_IO_EXCEPTION_KEY = "unable.open.cause";
+
+    /**
+     * Pattern matching single space.
+     */
+    private static final Pattern SPACE_PATTERN = Pattern.compile(" ");
+
+    /**
+     * Compiled pattern for all system newlines.
+     */
+    private static final Pattern ALL_NEW_LINES = Pattern.compile("\\R");
+
+    /**
+     * Construct the check with default values.
+     */
+    public UniquePropertiesCheck() {
+        setFileExtensions("properties");
+    }
+
+    /**
+     * Setter to specify the file extensions of the files to process.
+     *
+     * @param extensions the set of file extensions. A missing
+     *         initial '.' character of an extension is automatically added.
+     * @throws IllegalArgumentException is argument is null
+     */
+    @Override
+    public final void setFileExtensions(String... extensions) {
+        super.setFileExtensions(extensions);
+    }
+
+    @Override
+    protected void processFiltered(File file, FileText fileText) {
+        final UniqueProperties properties = new UniqueProperties();
+        try (InputStream inputStream = Files.newInputStream(file.toPath())) {
+            properties.load(inputStream);
+        }
+        // -@cs[IllegalCatch] Properties.load can throw unchecked exceptions such as
+        // IllegalArgumentException on a malformed unicode escape, so any exception
+        // from reading the file is reported rather than aborting the audit.
+        catch (final Exception exc) {
+            log(1, MSG_IO_EXCEPTION_KEY, file.getPath(),
+                    exc.getLocalizedMessage());
+        }
+
+        for (Entry<String, Integer> duplication : properties
+                .getDuplicatedKeys().entrySet()) {
+            final String keyName = duplication.getKey();
+            final int lineNumber = getLineNumber(fileText, keyName);
+            // Number of occurrences is number of duplications + 1
+            log(lineNumber, MSG_KEY,
+                    ALL_NEW_LINES.matcher(keyName).replaceAll("\\\\n"),
+                    duplication.getValue() + 1);
+        }
+    }
+
+    /**
+     * Method returns line number the key is detected in the checked properties files first.
+     *
+     * @param fileText
+     *            {@link FileText} object contains the lines to process
+     * @param keyName
+     *            key name to look for
+     * @return line number of first occurrence. If no key found in properties file, 1 is returned
+     */
+    private static int getLineNumber(FileText fileText, String keyName) {
+        final Pattern keyPattern = getKeyPattern(keyName);
+        int lineNumber = 1;
+        final Matcher matcher = keyPattern.matcher("");
+        for (int index = 0; index < fileText.size(); index++) {
+            final String line = fileText.get(index);
+            matcher.reset(line);
+            if (matcher.matches()) {
+                break;
+            }
+            ++lineNumber;
+        }
+        // -1 as check seeks for the first duplicate occurrence in file,
+        // so it cannot be the last line.
+        if (lineNumber > fileText.size() - 1) {
+            lineNumber = 1;
+        }
+        return lineNumber;
+    }
+
+    /**
+     * Method returns regular expression pattern given key name.
+     *
+     * @param keyName
+     *            key name to look for
+     * @return regular expression pattern given key name
+     */
+    private static Pattern getKeyPattern(String keyName) {
+        final String keyNameWithEscapedSpaces = SPACE_PATTERN.matcher(keyName)
+                .replaceAll(Matcher.quoteReplacement("\\ "));
+        final String keyPatternString = "^"
+                + Pattern.quote(keyNameWithEscapedSpaces)
+                + "[\\s:=].*$";
+        return Pattern.compile(keyPatternString);
+    }
+
+    /**
+     * Properties subclass to store duplicated property keys in a separate map.
+     *
+     * @noinspection ClassExtendsConcreteCollection
+     * @noinspectionreason ClassExtendsConcreteCollection - we require custom
+     *      {@code put} method to find duplicate keys
+     */
+    private static final class UniqueProperties extends Properties {
+
+        /** A unique serial version identifier. */
+        @Serial
+        private static final long serialVersionUID = 1L;
+        /**
+         * Map, holding duplicated keys and their count. Keys are added here only if they
+         * already exist in Properties' inner map.
+         */
+        private final Map<String, Integer> duplicatedKeys = new HashMap<>();
+
+        /**
+         * Creates a new {@code UniqueProperties} instance.
+         */
+        private UniqueProperties() {
+            // no code by default
+        }
+
+        /**
+         * Puts the value into properties by the key specified.
+         *
+         * @noinspection UseOfPropertiesAsHashtable
+         * @noinspectionreason We must override put to intercept properties loading.
+         */
+        @Override
+        public synchronized Object put(Object key, Object value) {
+            final Object oldValue = super.put(key, value);
+            if (oldValue != null && key instanceof final String keyString) {
+
+                duplicatedKeys.put(keyString,
+                        duplicatedKeys.getOrDefault(keyString, 0) + 1);
+            }
+            return oldValue;
+        }
+
+        /**
+         * Retrieves a collections of duplicated properties keys.
+         *
+         * @return A collection of duplicated keys.
+         */
+        /* package */ Map<String, Integer> getDuplicatedKeys() {
+            return new HashMap<>(duplicatedKeys);
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/UpperEllCheck.java SHA256 883cc46d4ec4f85e80687b73fc340247391505b7b941f58ceb8b507b4df93096
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Checks that long constants are defined with an upper ell. That is {@code 'L'}
+ * and not {@code 'l'}. This is in accordance with the Java Language Specification,
+ * <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-3.html#jls-3.10.1">
+ * Section 3.10.1</a>.
+ * </div>
+ *
+ * <p>
+ * Rationale: The lower-case ell {@code 'l'} looks a lot like {@code 1}.
+ * </p>
+ *
+ * @since 3.0
+ */
+@StatelessCheck
+public class UpperEllCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "upperEll";
+
+    /**
+     * Creates a new {@code UpperEllCheck} instance.
+     */
+    public UpperEllCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.NUM_LONG};
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (ast.getText().endsWith("l")) {
+            log(ast, MSG_KEY);
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/AnnotationLocationCheck.java SHA256 3eec051d356126db2050b2756f60aa2ba8f8cfbcdd3563346d341e81fd173923
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.NullUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks location of annotation on language elements.
+ * By default, Check enforce to locate annotations before target element,
+ * annotation should be located on separate line from target element.
+ * This check also verifies that the annotations are on the same indenting level
+ * as the annotated element if they are not on the same line.
+ * </div>
+ *
+ * <p>
+ * Attention: Elements that cannot have JavaDoc comments like local variables are not in the
+ * scope of this check even though a token type like {@code VARIABLE_DEF} would match them.
+ * </p>
+ *
+ * <p>
+ * Attention: Annotations among modifiers are ignored (looks like false-negative)
+ * as there might be a problem with annotations for return types:
+ * </p>
+ * {@snippet lang="text" :
+ * public @Nullable Long getStartTimeOrNull() { ... }
+ * }
+ *
+ * <p>
+ * Such annotations are better to keep close to type.
+ * Due to limitations, Checkstyle can not examine the target of an annotation.
+ * </p>
+ *
+ * <p>
+ * Example:
+ * </p>
+ * {@snippet lang="text" :
+ * @Override
+ * @Nullable
+ * public String getNameIfPresent() { ... }
+ * }
+ *
+ * <p>
+ * Notes:
+ * This check does <strong>not</strong> enforce annotations to be placed
+ * immediately after the documentation block. If that behavior is desired, consider also using
+ * <a href="https://checkstyle.org/checks/javadoc/invalidjavadocposition.html#InvalidJavadocPosition">
+ * InvalidJavadocPosition</a>.
+ * </p>
+ *
+ * <p>
+ * The property {@code allowSamelineMultipleAnnotations} has the
+ * dominant effect and allows both single and multiple annotations on
+ * the same line, regardless of whether they are parameterized or parameterless.
+ * </p>
+ *
+ * @since 6.0
+ */
+@StatelessCheck
+public class AnnotationLocationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_LOCATION_ALONE = "annotation.location.alone";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_LOCATION = "annotation.location";
+
+    /**
+     * Allow single parameterless annotation to be located on the same line as target element.
+     */
+    private boolean allowSamelineSingleParameterlessAnnotation = true;
+
+    /**
+     * Allow one and only parameterized annotation to be located on the same line as target element.
+     */
+    private boolean allowSamelineParameterizedAnnotation;
+
+    /**
+     * Allow annotation(s) to be located on the same line as target element.
+     */
+    private boolean allowSamelineMultipleAnnotations;
+
+    /**
+     * Creates a new {@code AnnotationLocationCheck} instance.
+     */
+    public AnnotationLocationCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to allow single parameterless annotation to be located on the same line as
+     * target element.
+     *
+     * @param allow User's value of allowSamelineSingleParameterlessAnnotation.
+     * @since 6.1
+     */
+    public final void setAllowSamelineSingleParameterlessAnnotation(boolean allow) {
+        allowSamelineSingleParameterlessAnnotation = allow;
+    }
+
+    /**
+     * Setter to allow one and only parameterized annotation to be located on the same line as
+     * target element.
+     *
+     * @param allow User's value of allowSamelineParameterizedAnnotation.
+     * @since 6.4
+     */
+    public final void setAllowSamelineParameterizedAnnotation(boolean allow) {
+        allowSamelineParameterizedAnnotation = allow;
+    }
+
+    /**
+     * Setter to allow annotation(s) to be located on the same line as target element.
+     *
+     * @param allow User's value of allowSamelineMultipleAnnotations.
+     * @since 6.0
+     */
+    public final void setAllowSamelineMultipleAnnotations(boolean allow) {
+        allowSamelineMultipleAnnotations = allow;
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.PACKAGE_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.MODULE_DEF,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.PACKAGE_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.ANNOTATION_FIELD_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.MODULE_DEF,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        // ignore variable def tokens that are not field definitions
+        if (ast.getType() != TokenTypes.VARIABLE_DEF
+                || ast.getParent().getType() == TokenTypes.OBJBLOCK
+                || ast.getParent().getType() == TokenTypes.COMPACT_COMPILATION_UNIT) {
+            final DetailAST node = getAnnotationParent(ast);
+            checkAnnotations(node, getExpectedAnnotationIndentation(node));
+        }
+    }
+
+    /**
+     * Returns the node holding the annotations of the given ast.
+     *
+     * @param annotatedNodeAst node being visited.
+     * @return the MODIFIERS node, or, if absent, the ANNOTATIONS node.
+     *
+     * @notNull because  absence of MODIFIERS on such a token means it is a package declaration,
+     *                 which by grammar always carries an ANNOTATIONS node.
+     */
+    private static DetailAST getAnnotationParent(DetailAST annotatedNodeAst) {
+        DetailAST node = annotatedNodeAst.findFirstToken(TokenTypes.MODIFIERS);
+        if (node == null) {
+            node = NullUtil.notNull(annotatedNodeAst.findFirstToken(TokenTypes.ANNOTATIONS));
+        }
+        return node;
+    }
+
+    /**
+     * Returns an expected annotation indentation.
+     * The expected indentation should be the same as the indentation of the target node.
+     *
+     * @param node modifiers or annotations node.
+     * @return the annotation indentation.
+     */
+    private static int getExpectedAnnotationIndentation(DetailAST node) {
+        return node.getColumnNo();
+    }
+
+    /**
+     * Checks annotations positions in code:
+     * 1) Checks whether the annotations locations are correct.
+     * 2) Checks whether the annotations have the valid indentation level.
+     *
+     * @param annotationParent node.
+     * @param correctIndentation correct indentation of the annotation.
+     */
+    private void checkAnnotations(DetailAST annotationParent, int correctIndentation) {
+        DetailAST annotation = annotationParent.getFirstChild();
+
+        while (annotation != null && annotation.getType() == TokenTypes.ANNOTATION) {
+            final boolean hasParameters = isParameterized(annotation);
+
+            if (!isCorrectLocation(annotation, hasParameters)) {
+                log(annotation,
+                        MSG_KEY_ANNOTATION_LOCATION_ALONE, getAnnotationName(annotation));
+            }
+            else if (annotation.getColumnNo() != correctIndentation && !hasNodeBefore(annotation)) {
+                log(annotation, MSG_KEY_ANNOTATION_LOCATION,
+                    getAnnotationName(annotation), annotation.getColumnNo(), correctIndentation);
+            }
+            annotation = annotation.getNextSibling();
+        }
+    }
+
+    /**
+     * Checks whether an annotation has parameters.
+     *
+     * @param annotation annotation node.
+     * @return true if the annotation has parameters.
+     */
+    private static boolean isParameterized(DetailAST annotation) {
+        return TokenUtil.findFirstTokenByPredicate(annotation, ast -> {
+            return ast.getType() == TokenTypes.EXPR
+                || ast.getType() == TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR;
+        }).isPresent();
+    }
+
+    /**
+     * Returns the name of the given annotation.
+     *
+     * @param annotation annotation node.
+     * @return annotation name.
+     *
+     * @notNull because method operates only on annotation ast nodes;
+     *          absence of IDENT as a direct child of the annotation means
+     *          it has a fully qualified name expressed via DOT and IDENT.
+     */
+    private static String getAnnotationName(DetailAST annotation) {
+        DetailAST identNode = annotation.findFirstToken(TokenTypes.IDENT);
+        if (identNode == null) {
+            final DetailAST dotNode = NullUtil.notNull(annotation.findFirstToken(TokenTypes.DOT));
+            identNode = NullUtil.notNull(dotNode.findFirstToken(TokenTypes.IDENT));
+        }
+        return identNode.getText();
+    }
+
+    /**
+     * Checks whether an annotation has a correct location.
+     * Annotation location is considered correct
+     * if {@link AnnotationLocationCheck#allowSamelineMultipleAnnotations} is set to true.
+     * The method also:
+     * 1) checks parameterized annotation location considering
+     * the value of {@link AnnotationLocationCheck#allowSamelineParameterizedAnnotation};
+     * 2) checks parameterless annotation location considering
+     * the value of {@link AnnotationLocationCheck#allowSamelineSingleParameterlessAnnotation};
+     * 3) checks annotation location;
+     *
+     * @param annotation annotation node.
+     * @param hasParams whether an annotation has parameters.
+     * @return true if the annotation has a correct location.
+     */
+    private boolean isCorrectLocation(DetailAST annotation, boolean hasParams) {
+        final boolean allowingCondition;
+
+        if (hasParams) {
+            allowingCondition = allowSamelineParameterizedAnnotation;
+        }
+        else {
+            allowingCondition = allowSamelineSingleParameterlessAnnotation;
+        }
+        return allowSamelineMultipleAnnotations
+            || allowingCondition && !hasNodeBefore(annotation)
+            || !hasNodeBeside(annotation);
+    }
+
+    /**
+     * Checks whether an annotation node has any node before on the same line.
+     *
+     * @param annotation annotation node.
+     * @return true if an annotation node has any node before on the same line.
+     */
+    private static boolean hasNodeBefore(DetailAST annotation) {
+        final int annotationLineNo = annotation.getLineNo();
+        final DetailAST previousNode = annotation.getPreviousSibling();
+
+        return previousNode != null && annotationLineNo == previousNode.getLineNo();
+    }
+
+    /**
+     * Checks whether an annotation node has any node before or after on the same line.
+     *
+     * @param annotation annotation node.
+     * @return true if an annotation node has any node before or after on the same line.
+     */
+    private static boolean hasNodeBeside(DetailAST annotation) {
+        return hasNodeBefore(annotation) || hasNodeAfter(annotation);
+    }
+
+    /**
+     * Checks whether an annotation node has any node after on the same line.
+     *
+     * @param annotation annotation node.
+     * @return true if an annotation node has any node after on the same line.
+     */
+    private static boolean hasNodeAfter(DetailAST annotation) {
+        final int annotationLineNo = annotation.getLineNo();
+        DetailAST nextNode = annotation.getNextSibling();
+
+        if (nextNode == null) {
+            nextNode = annotation.getParent().getNextSibling();
+        }
+
+        return annotationLineNo == nextNode.getLineNo();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/AnnotationOnSameLineCheck.java SHA256 61d20c0bbee33fbdc9a9448fcce6d5808bf23256364579834391559edbb93b98
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks that annotations are located on the same line with their targets.
+ * Verifying with this check is not good practice, but it is using by some style guides.
+ * </div>
+ *
+ * @since 8.2
+ */
+@StatelessCheck
+public class AnnotationOnSameLineCheck extends AbstractCheck {
+
+    /** A key is pointing to the warning message text in "messages.properties" file. */
+    public static final String MSG_KEY_ANNOTATION_ON_SAME_LINE = "annotation.same.line";
+
+    /**
+     * Creates a new {@code AnnotationOnSameLineCheck} instance.
+     */
+    public AnnotationOnSameLineCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.PARAMETER_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.TYPECAST,
+            TokenTypes.LITERAL_THROWS,
+            TokenTypes.IMPLEMENTS_CLAUSE,
+            TokenTypes.TYPE_ARGUMENT,
+            TokenTypes.LITERAL_NEW,
+            TokenTypes.DOT,
+            TokenTypes.ANNOTATION_FIELD_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        DetailAST nodeWithAnnotations = ast;
+        if (ast.getType() == TokenTypes.TYPECAST) {
+            nodeWithAnnotations = ast.findFirstToken(TokenTypes.TYPE);
+        }
+        DetailAST modifiersNode = nodeWithAnnotations.findFirstToken(TokenTypes.MODIFIERS);
+        if (modifiersNode == null) {
+            modifiersNode = nodeWithAnnotations.findFirstToken(TokenTypes.ANNOTATIONS);
+        }
+        if (modifiersNode != null) {
+            for (DetailAST annotationNode = modifiersNode.getFirstChild();
+                    annotationNode != null;
+                    annotationNode = annotationNode.getNextSibling()) {
+                if (annotationNode.getType() == TokenTypes.ANNOTATION
+                        && !TokenUtil.areOnSameLine(annotationNode,
+                        modifiersNode.getNextSibling())) {
+                    log(annotationNode, MSG_KEY_ANNOTATION_ON_SAME_LINE,
+                          getAnnotationName(annotationNode));
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the name of the given annotation.
+     *
+     * @param annotation annotation node.
+     * @return annotation name.
+     */
+    private static String getAnnotationName(DetailAST annotation) {
+        DetailAST identNode = annotation.findFirstToken(TokenTypes.IDENT);
+        if (identNode == null) {
+            identNode = annotation.findFirstToken(TokenTypes.DOT).getLastChild();
+        }
+        return identNode.getText();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/AnnotationUseStyleCheck.java SHA256 02d5ff145abfcd04982ed1f905511de6cadbcbe7c81b2ca66ea2753e8e07fe29
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import java.util.Locale;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Checks the style of elements in annotations.
+ * </div>
+ *
+ * <p>
+ * Annotations have three element styles starting with the least verbose.
+ * </p>
+ * <ul>
+ * <li>
+ * {@code ElementStyleOption.COMPACT_NO_ARRAY}
+ * </li>
+ * <li>
+ * {@code ElementStyleOption.COMPACT}
+ * </li>
+ * <li>
+ * {@code ElementStyleOption.EXPANDED}
+ * </li>
+ * </ul>
+ *
+ * <p>
+ * To not enforce an element style a {@code ElementStyleOption.IGNORE} type is provided.
+ * The desired style can be set through the {@code elementStyle} property.
+ * </p>
+ *
+ * <p>
+ * Using the {@code ElementStyleOption.EXPANDED} style is more verbose.
+ * The expanded version is sometimes referred to as "named parameters" in other languages.
+ * </p>
+ *
+ * <p>
+ * Using the {@code ElementStyleOption.COMPACT} style is less verbose.
+ * This style can only be used when there is an element called 'value' which is either
+ * the sole element or all other elements have default values.
+ * </p>
+ *
+ * <p>
+ * Using the {@code ElementStyleOption.COMPACT_NO_ARRAY} style is less verbose.
+ * It is similar to the {@code ElementStyleOption.COMPACT} style but single value arrays are
+ * flagged.
+ * With annotations a single value array does not need to be placed in an array initializer.
+ * </p>
+ *
+ * <p>
+ * The ending parenthesis are optional when using annotations with no elements.
+ * To always require ending parenthesis use the {@code ClosingParensOption.ALWAYS} type.
+ * To never have ending parenthesis use the {@code ClosingParensOption.NEVER} type.
+ * To not enforce a closing parenthesis preference a {@code ClosingParensOption.IGNORE} type is
+ * provided.
+ * Set this through the {@code closingParens} property.
+ * </p>
+ *
+ * <p>
+ * Annotations also allow you to specify arrays of elements in a standard format.
+ * As with normal arrays, a trailing comma is optional.
+ * To always require a trailing comma use the {@code TrailingArrayCommaOption.ALWAYS} type.
+ * To never have a trailing comma use the {@code TrailingArrayCommaOption.NEVER} type.
+ * To not enforce a trailing array comma preference a {@code TrailingArrayCommaOption.IGNORE} type
+ * is provided. Set this through the {@code trailingArrayComma} property.
+ * </p>
+ *
+ * <p>
+ * By default, the {@code ElementStyleOption} is set to {@code COMPACT_NO_ARRAY},
+ * the {@code TrailingArrayCommaOption} is set to {@code NEVER},
+ * and the {@code ClosingParensOption} is set to {@code NEVER}.
+ * </p>
+ *
+ * <p>
+ * According to the JLS, it is legal to include a trailing comma
+ * in arrays used in annotations but Sun's Java 5 {@literal &} 6 compilers will not
+ * compile with this syntax. This may in be a bug in Sun's compilers
+ * since eclipse 3.4's built-in compiler does allow this syntax as
+ * defined in the JLS. Note: this was tested with compilers included with
+ * JDK versions 1.5.0.17 and 1.6.0.11 and the compiler included with eclipse 3.4.1.
+ * </p>
+ *
+ * <p>
+ * See <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-9.html#jls-9.7">
+ * Java Language specification, &#167;9.7</a>.
+ * </p>
+ *
+ * @since 5.0
+ */
+@StatelessCheck
+public final class AnnotationUseStyleCheck extends AbstractCheck {
+
+    /**
+     * Defines the styles for defining elements in an annotation.
+     */
+    public enum ElementStyleOption {
+
+        /**
+         * Expanded example: {@code @SuppressWarnings(value={"unchecked","unused",})}.
+         */
+        EXPANDED,
+
+        /**
+         * Compact example
+         * <br>
+         * {@code @SuppressWarnings({"unchecked","unused",})}
+         * <br>or<br>
+         * {@code @SuppressWarnings("unchecked")}.
+         */
+        COMPACT,
+
+        /**
+         * Compact example: {@code @SuppressWarnings("unchecked")}.
+         */
+        COMPACT_NO_ARRAY,
+
+        /**
+         * Mixed styles.
+         */
+        IGNORE,
+
+    }
+
+    /**
+     * Defines the two styles for defining elements in an annotation.
+     *
+     */
+    public enum TrailingArrayCommaOption {
+
+        /**
+         * With comma example: {@code @SuppressWarnings(value={"unchecked","unused",})}.
+         */
+        ALWAYS,
+
+        /**
+         * Without comma example: {@code @SuppressWarnings(value={"unchecked","unused"})}.
+         */
+        NEVER,
+
+        /**
+         * Mixed styles.
+         */
+        IGNORE,
+
+    }
+
+    /**
+     * Defines the two styles for defining elements in an annotation.
+     *
+     */
+    public enum ClosingParensOption {
+
+        /**
+         * With parens example :
+         * {@code @Deprecated()}.
+         */
+        ALWAYS,
+
+        /**
+         * Without parens example: {@code @Deprecated}.
+         */
+        NEVER,
+
+        /**
+         * Mixed styles.
+         */
+        IGNORE,
+
+    }
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_INCORRECT_STYLE =
+        "annotation.incorrect.style";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_PARENS_MISSING =
+        "annotation.parens.missing";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_PARENS_PRESENT =
+        "annotation.parens.present";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_TRAILING_COMMA_MISSING =
+        "annotation.trailing.comma.missing";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_TRAILING_COMMA_PRESENT =
+        "annotation.trailing.comma.present";
+
+    /**
+     * The element name used to receive special linguistic support for annotation use.
+     */
+    private static final String ANNOTATION_ELEMENT_SINGLE_NAME =
+            "value";
+
+    /**
+     * Define the annotation element styles.
+     */
+    private ElementStyleOption elementStyle = ElementStyleOption.COMPACT_NO_ARRAY;
+
+    // defaulting to NEVER because of the strange compiler behavior
+    /**
+     * Define the policy for trailing comma in arrays.
+     */
+    private TrailingArrayCommaOption trailingArrayComma = TrailingArrayCommaOption.NEVER;
+
+    /**
+     * Define the policy for ending parenthesis.
+     */
+    private ClosingParensOption closingParens = ClosingParensOption.NEVER;
+
+    /**
+     * Creates a new {@code AnnotationUseStyleCheck} instance.
+     */
+    public AnnotationUseStyleCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to define the annotation element styles.
+     *
+     * @param style string representation
+     * @since 5.0
+     */
+    public void setElementStyle(final String style) {
+        elementStyle = getOption(ElementStyleOption.class, style);
+    }
+
+    /**
+     * Setter to define the policy for trailing comma in arrays.
+     *
+     * @param comma string representation
+     * @since 5.0
+     */
+    public void setTrailingArrayComma(final String comma) {
+        trailingArrayComma = getOption(TrailingArrayCommaOption.class, comma);
+    }
+
+    /**
+     * Setter to define the policy for ending parenthesis.
+     *
+     * @param parens string representation
+     * @since 5.0
+     */
+    public void setClosingParens(final String parens) {
+        closingParens = getOption(ClosingParensOption.class, parens);
+    }
+
+    /**
+     * Retrieves an {@code Enum} type from a {@code String}.
+     *
+     * @param <T> the enum type
+     * @param enumClass the enum class
+     * @param value the string representing the enum
+     * @return the enum type
+     * @throws IllegalArgumentException when unable to parse value
+     */
+    private static <T extends Enum<T>> T getOption(final Class<T> enumClass,
+        final String value) {
+        try {
+            return Enum.valueOf(enumClass, value.trim().toUpperCase(Locale.ENGLISH));
+        }
+        catch (final IllegalArgumentException iae) {
+            throw new IllegalArgumentException("unable to parse " + value, iae);
+        }
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.ANNOTATION,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public void visitToken(final DetailAST ast) {
+        checkStyleType(ast);
+        checkCheckClosingParensOption(ast);
+        checkTrailingComma(ast);
+    }
+
+    /**
+     * Checks to see if the
+     * {@link ElementStyleOption AnnotationElementStyleOption} is correct.
+     *
+     * @param annotation the annotation token
+     */
+    private void checkStyleType(final DetailAST annotation) {
+        if (elementStyle == ElementStyleOption.COMPACT_NO_ARRAY) {
+            checkCompactNoArrayStyle(annotation);
+        }
+        else if (elementStyle == ElementStyleOption.COMPACT) {
+            checkCompactStyle(annotation);
+        }
+        else if (elementStyle == ElementStyleOption.EXPANDED) {
+            checkExpandedStyle(annotation);
+        }
+    }
+
+    /**
+     * Checks for expanded style type violations.
+     *
+     * @param annotation the annotation token
+     */
+    private void checkExpandedStyle(final DetailAST annotation) {
+        final int valuePairCount =
+            annotation.getChildCount(TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR);
+
+        if (valuePairCount == 0 && hasArguments(annotation)) {
+            log(annotation, MSG_KEY_ANNOTATION_INCORRECT_STYLE, ElementStyleOption.EXPANDED);
+        }
+    }
+
+    /**
+     * Checks that annotation has arguments.
+     *
+     * @param annotation to check
+     * @return true if annotation has arguments, false otherwise
+     */
+    private static boolean hasArguments(DetailAST annotation) {
+        final DetailAST firstToken = annotation.findFirstToken(TokenTypes.LPAREN);
+        return firstToken != null && firstToken.getNextSibling().getType() != TokenTypes.RPAREN;
+    }
+
+    /**
+     * Checks for compact style type violations.
+     *
+     * @param annotation the annotation token
+     */
+    private void checkCompactStyle(final DetailAST annotation) {
+        final int valuePairCount =
+            annotation.getChildCount(
+                TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR);
+
+        final DetailAST valuePair =
+            annotation.findFirstToken(
+                TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR);
+
+        if (valuePairCount == 1
+            && ANNOTATION_ELEMENT_SINGLE_NAME.equals(
+                valuePair.getFirstChild().getText())) {
+            log(annotation, MSG_KEY_ANNOTATION_INCORRECT_STYLE,
+                ElementStyleOption.COMPACT);
+        }
+    }
+
+    /**
+     * Checks for compact no array style type violations.
+     *
+     * @param annotation the annotation token
+     */
+    private void checkCompactNoArrayStyle(final DetailAST annotation) {
+        final DetailAST arrayInit =
+            annotation.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
+
+        // in compact style with one value
+        if (arrayInit != null
+            && arrayInit.getChildCount(TokenTypes.EXPR) == 1) {
+            log(annotation, MSG_KEY_ANNOTATION_INCORRECT_STYLE,
+                ElementStyleOption.COMPACT_NO_ARRAY);
+        }
+        // in expanded style with pairs
+        else {
+            DetailAST ast = annotation.getFirstChild();
+            while (ast != null) {
+                final DetailAST nestedArrayInit =
+                    ast.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
+                if (nestedArrayInit != null
+                    && nestedArrayInit.getChildCount(TokenTypes.EXPR) == 1) {
+                    log(annotation, MSG_KEY_ANNOTATION_INCORRECT_STYLE,
+                        ElementStyleOption.COMPACT_NO_ARRAY);
+                }
+                ast = ast.getNextSibling();
+            }
+        }
+    }
+
+    /**
+     * Checks to see if the trailing comma is present if required or prohibited.
+     *
+     * @param annotation the annotation token
+     */
+    private void checkTrailingComma(final DetailAST annotation) {
+        if (trailingArrayComma != TrailingArrayCommaOption.IGNORE) {
+            DetailAST child = annotation.getFirstChild();
+
+            while (child != null) {
+                DetailAST arrayInit = null;
+
+                if (child.getType() == TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) {
+                    arrayInit = child.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
+                }
+                else if (child.getType() == TokenTypes.ANNOTATION_ARRAY_INIT) {
+                    arrayInit = child;
+                }
+
+                if (arrayInit != null) {
+                    logCommaViolation(arrayInit);
+                }
+                child = child.getNextSibling();
+            }
+        }
+    }
+
+    /**
+     * Logs a trailing array comma violation if one exists.
+     *
+     * @param ast the array init
+     *     {@link TokenTypes#ANNOTATION_ARRAY_INIT ANNOTATION_ARRAY_INIT}.
+     */
+    private void logCommaViolation(final DetailAST ast) {
+        final DetailAST rCurly = ast.findFirstToken(TokenTypes.RCURLY);
+
+        // comma can be null if array is empty
+        final DetailAST comma = rCurly.getPreviousSibling();
+
+        if (trailingArrayComma == TrailingArrayCommaOption.NEVER) {
+            if (comma != null && comma.getType() == TokenTypes.COMMA) {
+                log(comma, MSG_KEY_ANNOTATION_TRAILING_COMMA_PRESENT);
+            }
+        }
+        else if (comma == null || comma.getType() != TokenTypes.COMMA) {
+            log(rCurly, MSG_KEY_ANNOTATION_TRAILING_COMMA_MISSING);
+        }
+    }
+
+    /**
+     * Checks to see if the closing parenthesis are present if required or prohibited.
+     *
+     * @param ast the annotation token
+     */
+    private void checkCheckClosingParensOption(final DetailAST ast) {
+        if (closingParens != ClosingParensOption.IGNORE) {
+            final DetailAST paren = ast.getLastChild();
+
+            if (closingParens == ClosingParensOption.NEVER) {
+                if (paren.getPreviousSibling().getType() == TokenTypes.LPAREN) {
+                    log(ast, MSG_KEY_ANNOTATION_PARENS_PRESENT);
+                }
+            }
+            else if (paren.getType() != TokenTypes.RPAREN) {
+                log(ast, MSG_KEY_ANNOTATION_PARENS_MISSING);
+            }
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/MissingDeprecatedCheck.java SHA256 6f31f379bb34e0db30f6d38a02ec618c8f5d15422d1cb40221f7a9426e9f3dfc
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import java.util.BitSet;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.DetailNode;
+import com.puppycrawl.tools.checkstyle.api.JavadocCommentsTokenTypes;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.checks.javadoc.AbstractJavadocCheck;
+import com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTagInfo;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Verifies that the annotation {@code @Deprecated} and the Javadoc tag
+ * {@code @deprecated} are both present when either of them is present.
+ * </div>
+ *
+ * <p>
+ * Both ways of flagging deprecation serve their own purpose.
+ * The &#64;Deprecated annotation is used for compilers and development tools.
+ * The &#64;deprecated javadoc tag is used to document why something is deprecated
+ * and what, if any, alternatives exist.
+ * </p>
+ *
+ * <p>
+ * In order to properly mark something as deprecated both forms of
+ * deprecation should be present.
+ * </p>
+ *
+ * <p>
+ * Package deprecation is an exception to the rule of always using the
+ * javadoc tag and annotation to deprecate. It is not clear if the javadoc
+ * tool will support it or not as newer versions keep flip-flopping on if
+ * it is supported or will cause an error. See
+ * <a href="https://bugs.openjdk.org/browse/JDK-8160601">JDK-8160601</a>.
+ * The deprecated javadoc tag is currently the only way to say why the package
+ * is deprecated and what to use instead. Until this is resolved, if you don't
+ * want to print violations on package-info, you can use a
+ * <a href="https://checkstyle.org/filters/index.html">filter</a> to ignore
+ * these files until the javadoc tool faithfully supports it. An example config
+ * using SuppressionSingleFilter is:
+ * </p>
+ * {@snippet lang="text" :
+ * <!-- required till https://bugs.openjdk.org/browse/JDK-8160601 -->
+ * <module name="SuppressionSingleFilter">
+ *     <property name="checks" value="MissingDeprecatedCheck"/>
+ *     <property name="files" value="package-info\.java"/>
+ * </module>
+ * }
+ *
+ * @since 5.0
+ */
+@StatelessCheck
+public final class MissingDeprecatedCheck extends AbstractJavadocCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_MISSING_DEPRECATED =
+            "annotation.missing.deprecated";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_JAVADOC_DUPLICATE_TAG =
+            "javadoc.duplicateTag";
+
+    /** {@link Deprecated Deprecated} annotation name. */
+    private static final String DEPRECATED = "Deprecated";
+
+    /** Fully-qualified {@link Deprecated Deprecated} annotation name. */
+    private static final String FQ_DEPRECATED = "java.lang." + DEPRECATED;
+
+    /** Token types to find parent of. */
+    private static final BitSet TYPES_HASH_SET = TokenUtil.asBitSet(
+            TokenTypes.TYPE, TokenTypes.MODIFIERS, TokenTypes.ANNOTATION,
+            TokenTypes.ANNOTATIONS, TokenTypes.ARRAY_DECLARATOR,
+            TokenTypes.TYPE_PARAMETERS, TokenTypes.DOT);
+
+    /**
+     * Creates a new {@code MissingDeprecatedCheck} instance.
+     */
+    public MissingDeprecatedCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultJavadocTokens() {
+        return getRequiredJavadocTokens();
+    }
+
+    @Override
+    public int[] getRequiredJavadocTokens() {
+        return new int[] {
+            JavadocCommentsTokenTypes.JAVADOC_CONTENT,
+        };
+    }
+
+    /**
+     * Setter to control when to print violations if the Javadoc being examined by this check
+     * violates the tight html rules defined at
+     * <a href="https://checkstyle.org/writing-javadoc-checks.html#Tight-HTML_rules">
+     *     Tight-HTML Rules</a>.
+     *
+     * @param shouldReportViolation value to which the field shall be set to
+     * @since 8.3
+     * @propertySince 8.24
+     */
+    @Override
+    public void setViolateExecutionOnNonTightHtml(boolean shouldReportViolation) {
+        super.setViolateExecutionOnNonTightHtml(shouldReportViolation);
+    }
+
+    @Override
+    public void visitJavadocToken(DetailNode ast) {
+        final DetailAST parentAst = getParent(getBlockCommentAst());
+
+        final boolean containsAnnotation =
+            AnnotationUtil.containsAnnotation(parentAst, DEPRECATED)
+            || AnnotationUtil.containsAnnotation(parentAst, FQ_DEPRECATED);
+
+        final boolean containsJavadocTag = containsDeprecatedTag(ast);
+
+        if (containsAnnotation ^ containsJavadocTag) {
+            log(parentAst.getLineNo(), MSG_KEY_ANNOTATION_MISSING_DEPRECATED);
+        }
+    }
+
+    /**
+     * Checks to see if the javadoc contains a deprecated tag.
+     *
+     * @param javadoc the javadoc of the AST
+     * @return true if contains the tag
+     */
+    private boolean containsDeprecatedTag(DetailNode javadoc) {
+        boolean found = false;
+        DetailNode node = javadoc.getFirstChild();
+        while (node != null) {
+            if (node.getType() == JavadocCommentsTokenTypes.JAVADOC_BLOCK_TAG
+                    && node.getFirstChild().getType()
+                            == JavadocCommentsTokenTypes.DEPRECATED_BLOCK_TAG) {
+                if (found) {
+                    log(node.getLineNumber(), MSG_KEY_JAVADOC_DUPLICATE_TAG,
+                            JavadocTagInfo.DEPRECATED.getText());
+                }
+                found = true;
+            }
+            node = node.getNextSibling();
+        }
+        return found;
+    }
+
+    /**
+     * Returns the parent node of the comment.
+     *
+     * @param commentBlock child node.
+     * @return parent node.
+     */
+    private static DetailAST getParent(DetailAST commentBlock) {
+        DetailAST result = commentBlock.getParent();
+
+        if (TokenUtil.isRootNode(result)) {
+            result = commentBlock.getNextSibling();
+        }
+
+        while (true) {
+            final int type = result.getType();
+            if (TYPES_HASH_SET.get(type)) {
+                result = result.getParent();
+            }
+            else if (type == TokenTypes.SINGLE_LINE_COMMENT) {
+                result = result.getNextSibling();
+            }
+            else {
+                break;
+            }
+        }
+
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/MissingOverrideCheck.java SHA256 29a8112f53d04d0e3cb581926d67e95f6dcd2398019e1b6a186d0fa9372b2f4d
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTagInfo;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+
+/**
+ * <div>
+ * Verifies that the {@code @Override} annotation is present
+ * when the {@code @inheritDoc} javadoc tag is present.
+ * </div>
+ *
+ * <p>
+ * Rationale: The &#64;Override annotation helps
+ * compiler tools ensure that an override is actually occurring.  It is
+ * quite easy to accidentally overload a method or hide a static method
+ * and using the &#64;Override annotation points out these problems.
+ * </p>
+ *
+ * <p>
+ * This check will log a violation if using the &#64;inheritDoc tag on a method that
+ * is not valid (ex: private, or static method).
+ * </p>
+ *
+ * <p>
+ * There is a slight difference between the &#64;Override annotation in Java 5 versus
+ * Java 6 and above. In Java 5, any method overridden from an interface cannot
+ * be annotated with &#64;Override. In Java 6 this behavior is allowed.
+ * </p>
+ *
+ * <p>
+ * As a result of the aforementioned difference between Java 5 and Java 6, a
+ * property called {@code javaFiveCompatibility} is available. This
+ * property will only check classes, interfaces, etc. that do not contain the
+ * extends or implements keyword or are not anonymous classes. This means it
+ * only checks methods overridden from {@code java.lang.Object}.
+ * <b>Java 5 Compatibility mode severely limits this check. It is recommended to
+ * only use it on Java 5 source.</b>
+ * </p>
+ *
+ * @since 5.0
+ */
+@StatelessCheck
+public final class MissingOverrideCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_TAG_NOT_VALID_ON = "tag.not.valid.on";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_MISSING_OVERRIDE =
+        "annotation.missing.override";
+
+    /** Compiled regexp to match Javadoc tags with no argument and {}. */
+    private static final Pattern MATCH_INHERIT_DOC =
+            CommonUtil.createPattern("\\{\\s*@(inheritDoc)\\s*\\}");
+
+    /**
+     * Enable java 5 compatibility mode.
+     */
+    private boolean javaFiveCompatibility;
+
+    /**
+     * Creates a new {@code MissingOverrideCheck} instance.
+     */
+    public MissingOverrideCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to enable java 5 compatibility mode.
+     *
+     * @param compatibility compatibility or not
+     * @since 5.0
+     */
+    public void setJavaFiveCompatibility(final boolean compatibility) {
+        javaFiveCompatibility = compatibility;
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[]
+        {TokenTypes.METHOD_DEF, };
+    }
+
+    @Override
+    public void visitToken(final DetailAST ast) {
+        final boolean containsTag = containsInheritDocTag(ast);
+        if (containsTag && !JavadocTagInfo.INHERIT_DOC.isValidOn(ast)) {
+            log(ast, MSG_KEY_TAG_NOT_VALID_ON,
+                JavadocTagInfo.INHERIT_DOC.getText());
+        }
+        else if (containsTag
+                && !AnnotationUtil.hasOverrideAnnotation(ast)
+                && (!javaFiveCompatibility || doesOverrideOnlyObjectMethods(ast))) {
+            log(ast, MSG_KEY_ANNOTATION_MISSING_OVERRIDE);
+        }
+    }
+
+    /**
+     * Checks whether the method's enclosing type can only be overriding methods
+     * declared in {@code java.lang.Object}. This is the case when the enclosing type
+     * does not extend or implement anything and is not an anonymous class. A top-level
+     * method in a compact source file has no enclosing type node ({@code defOrNew} is
+     * null); its implicit class satisfies this condition as well.
+     *
+     * @param ast method AST node
+     * @return true if the method's enclosing type can only override
+     *     {@code java.lang.Object} methods
+     */
+    private static boolean doesOverrideOnlyObjectMethods(DetailAST ast) {
+        final DetailAST defOrNew = ast.getParent().getParent();
+        return defOrNew == null
+            || defOrNew.findFirstToken(TokenTypes.EXTENDS_CLAUSE) == null
+                && defOrNew.findFirstToken(TokenTypes.IMPLEMENTS_CLAUSE) == null
+                && defOrNew.getType() != TokenTypes.LITERAL_NEW;
+    }
+
+    /**
+     * Checks to see if the ast contains a inheritDoc tag.
+     *
+     * @param ast method AST node
+     * @return true if contains the tag
+     */
+    private static boolean containsInheritDocTag(DetailAST ast) {
+        final DetailAST modifiers = ast.getFirstChild();
+        final DetailAST startNode;
+        if (modifiers.hasChildren()) {
+            startNode = Optional.ofNullable(ast.getFirstChild()
+                    .findFirstToken(TokenTypes.ANNOTATION))
+                .orElse(modifiers);
+        }
+        else {
+            startNode = ast.findFirstToken(TokenTypes.TYPE);
+        }
+        final Optional<String> javadoc =
+            Stream.iterate(startNode.getLastChild(), Objects::nonNull,
+                    DetailAST::getPreviousSibling)
+            .filter(node -> node.getType() == TokenTypes.BLOCK_COMMENT_BEGIN)
+            .map(DetailAST::getFirstChild)
+            .map(DetailAST::getText)
+            .filter(JavadocUtil::isJavadocComment)
+            .findFirst();
+        return javadoc.isPresent()
+                && MATCH_INHERIT_DOC.matcher(javadoc.orElseThrow()).find();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/MissingOverrideOnRecordAccessorCheck.java SHA256 e76e3e2406633e95d8a2722f7a47a2ccd6a642f68bc8735fb7ed532456522361
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Verifies that explicitly declared record accessor methods include
+ * the {@code @Override} annotation.
+ * </div>
+ *
+ * <p>
+ * Per <a href="https://openjdk.org/jeps/395">JEP 395</a>, the meaning of the
+ * {@code @Override} annotation was extended to include explicitly declared
+ * accessor methods for record components.
+ * </p>
+ *
+ * <p>
+ * This check focuses only on record component accessor methods. It does not
+ * attempt to detect general method overrides from interfaces or superclasses,
+ * due to Checkstyle's single-file analysis limitations.
+ * </p>
+ *
+ * @since 13.1.0
+ */
+@StatelessCheck
+public class MissingOverrideOnRecordAccessorCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "annotation.missing.override.record.accessor";
+
+    /**
+     * Creates a new {@code MissingOverrideOnRecordAccessorCheck} instance.
+     */
+    public MissingOverrideOnRecordAccessorCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.METHOD_DEF};
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (isRecordAccessorMethod(ast) && !AnnotationUtil.hasOverrideAnnotation(ast)) {
+            log(ast, MSG_KEY);
+        }
+    }
+
+    /**
+     * Checks if the given method is an explicitly declared accessor for a record component.
+     *
+     * @param ast the METHOD_DEF AST node
+     * @return true if this method is a record accessor
+     */
+    private static boolean isRecordAccessorMethod(DetailAST ast) {
+        boolean result = false;
+        final DetailAST grandParent = ast.getParent().getParent();
+        if (grandParent != null && grandParent.getType() == TokenTypes.RECORD_DEF) {
+            final DetailAST parameters = ast.findFirstToken(TokenTypes.PARAMETERS);
+            if (parameters.getChildCount() == 0) {
+                final String methodName = getMethodName(ast);
+                result = getRecordComponentNames(grandParent).contains(methodName);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Gets the method name from a method definition AST.
+     *
+     * @param methodDef the METHOD_DEF AST node
+     * @return the method name
+     */
+    private static String getMethodName(DetailAST methodDef) {
+        return TokenUtil.getIdent(methodDef).getText();
+    }
+
+    /**
+     * Gets the set of record component names from a record definition.
+     *
+     * @param recordDef the RECORD_DEF AST node
+     * @return set of component names
+     */
+    private static Set<String> getRecordComponentNames(DetailAST recordDef) {
+        final Set<String> names = new HashSet<>();
+        final DetailAST recordComponents = recordDef.findFirstToken(TokenTypes.RECORD_COMPONENTS);
+        DetailAST child = recordComponents.getFirstChild();
+        while (child != null) {
+            if (child.getType() == TokenTypes.RECORD_COMPONENT_DEF) {
+                names.add(TokenUtil.getIdent(child).getText());
+            }
+            child = child.getNextSibling();
+        }
+        return names;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/OpenjdkAnnotationLocationCheck.java SHA256 3933037bebefe6320aef7563427e9aff04666e842ebbf4c58571018f9bda71be
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Verifies that annotations are properly placed by
+ * <a href="https://cr.openjdk.org/~alundblad/styleguide/index-v6.html#toc-annotations">
+ * OpenJDK Style</a>.
+ * Declaration annotations must either reside entirely on a single line or
+ * have each annotation placed on its own separate line. Annotations may share
+ * a line with the target declaration only when all annotations and the complete
+ * target declaration are on that same line.
+ * </div>
+ *
+ * <p>
+ * Attention: Checkstyle ignores annotations placed among modifiers due to a technical limitation.
+ * The parser cannot distinguish whether an annotation applies to the method itself
+ * or to its return type.
+ * </p>
+ *
+ * @since 13.9.0
+ */
+@StatelessCheck
+public class OpenjdkAnnotationLocationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_ALONE_OR_SAME = "annotation.alone.or.same";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_ANNOTATION_ON_TARGET_LINE = "annotation.on.target.line";
+
+    /**
+     * Creates a new {@code OpenjdkAnnotationLocationCheck} instance.
+     */
+    public OpenjdkAnnotationLocationCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.PACKAGE_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.ANNOTATION_FIELD_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.MODULE_DEF,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST annotationParentNode = getAnnotationsNode(ast);
+        final DetailAST startOfTargetNode = getStartingAst(annotationParentNode);
+        final List<DetailAST> annotationList = getAnnotations(annotationParentNode);
+
+        final boolean areAnnotationsOnSameLine = areAllOnSameLine(annotationList);
+        if (!areAnnotationsOnSameLine && !areAllOnSeparateLines(annotationList)) {
+            log(startOfTargetNode, MSG_KEY_ANNOTATION_ALONE_OR_SAME, getTargetName(ast));
+        }
+        if (isAnyOnTargetLine(annotationList, startOfTargetNode)
+                && !(areAnnotationsOnSameLine
+                        && isSingleLineTarget(startOfTargetNode, ast))) {
+            log(startOfTargetNode, MSG_KEY_ANNOTATION_ON_TARGET_LINE, getTargetName(ast));
+        }
+    }
+
+    /**
+     * Finds the first node other than the annotation node in target ast.
+     *
+     * @param targetNode target node.
+     * @return the ast of the starting point
+     */
+    private static DetailAST getStartingAst(DetailAST targetNode) {
+        DetailAST annotation = targetNode.getFirstChild();
+        while (annotation != null && annotation.getType() == TokenTypes.ANNOTATION) {
+            annotation = annotation.getNextSibling();
+        }
+
+        final DetailAST startingAst;
+        if (annotation != null) {
+            startingAst = annotation;
+        }
+        else {
+            startingAst = targetNode.getNextSibling();
+        }
+        return startingAst;
+    }
+
+    /**
+     * Gets the parent node of annotations.
+     *
+     * @param ast token.
+     * @return the parent of annotations.
+     */
+    private static DetailAST getAnnotationsNode(DetailAST ast) {
+        DetailAST annotationParentNode = ast.findFirstToken(TokenTypes.MODIFIERS);
+        if (annotationParentNode == null) {
+            annotationParentNode = ast.findFirstToken(TokenTypes.ANNOTATIONS);
+        }
+        return annotationParentNode;
+    }
+
+    /**
+     * Gets all annotations of a target node.
+     *
+     * @param annotationParentNode parent node of annotations.
+     * @return the list of annotations.
+     */
+    private static List<DetailAST> getAnnotations(DetailAST annotationParentNode) {
+        final List<DetailAST> annotationList = new ArrayList<>();
+        DetailAST annotation = annotationParentNode.getFirstChild();
+        while (annotation != null && annotation.getType() == TokenTypes.ANNOTATION) {
+            annotationList.add(annotation);
+            annotation = annotation.getNextSibling();
+        }
+        return annotationList;
+    }
+
+    /**
+     * Checks whether all annotations are on the same line.
+     *
+     * @param annotationList list of annotations.
+     * @return true if all annotations are on the same line.
+     */
+    private static boolean areAllOnSameLine(List<DetailAST> annotationList) {
+        return annotationList.isEmpty()
+                || annotationList.getFirst().getLineNo() == annotationList.getLast().getLineNo();
+    }
+
+    /**
+     * Checks whether all annotations are on a separate line.
+     *
+     * @param annotationList list of annotations.
+     * @return true if all annotations are on separate lines.
+     */
+    private static boolean areAllOnSeparateLines(List<DetailAST> annotationList) {
+        boolean areOnSeparateLine = true;
+        for (int index = 0; index < annotationList.size() - 1; index++) {
+            if (annotationList.get(index).getLineNo()
+                    == annotationList.get(index + 1).getLineNo()) {
+                areOnSeparateLine = false;
+            }
+        }
+        return areOnSeparateLine;
+    }
+
+    /**
+     * Checks whether an annotation is on the target line.
+     *
+     * @param annotationList list of annotations.
+     * @param startOfTargetNode ast of starting point of target node.
+     * @return true if an annotation is on the target line.
+     */
+    private static boolean isAnyOnTargetLine(Iterable<DetailAST> annotationList,
+            DetailAST startOfTargetNode) {
+        boolean isOnTargetLine = false;
+        for (final DetailAST annotation : annotationList) {
+            if (TokenUtil.areOnSameLine(annotation, startOfTargetNode)) {
+                isOnTargetLine = true;
+            }
+        }
+        return isOnTargetLine;
+    }
+
+    /**
+     * Checks whether a target is single line or not.
+     *
+     * @param startOfTargetNode first node of the target after annotations.
+     * @param targetNode ast of target node.
+     * @return true if the target is single line.
+     */
+    private static boolean isSingleLineTarget(DetailAST startOfTargetNode,
+            DetailAST targetNode) {
+        DetailAST lastToken = targetNode;
+        while (lastToken.hasChildren()) {
+            lastToken = lastToken.getLastChild();
+        }
+        return TokenUtil.areOnSameLine(startOfTargetNode, lastToken);
+    }
+
+    /**
+     * Returns the name of the given target node.
+     *
+     * @param targetNode target node.
+     * @return target name.
+     */
+    private static String getTargetName(DetailAST targetNode) {
+        DetailAST identNode = targetNode.findFirstToken(TokenTypes.IDENT);
+        if (identNode == null) {
+            identNode = targetNode.findFirstToken(TokenTypes.DOT).findFirstToken(TokenTypes.IDENT);
+        }
+        return identNode.getText();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/PackageAnnotationCheck.java SHA256 2e517495642dc2d54a86c5ea04f988d9f1c569aba73beea24b3481d28528d789
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+
+/**
+ * <div>
+ * Checks that all package annotations are in the package-info.java file.
+ * </div>
+ *
+ * <p>
+ * For Java SE8 and above, placement of package annotations in the package-info.java
+ * file is enforced by the compiler and this check is not necessary.
+ * </p>
+ *
+ * <p>
+ * For Java SE7 and below, the Java Language Specification highly recommends
+ * but doesn't require that annotations are placed in the package-info.java file,
+ * and this check can help to enforce that placement.
+ * </p>
+ *
+ * <p>
+ * See <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-7.html#jls-7.4.1">
+ * Java Language Specification, &#167;7.4.1</a> for more info.
+ * </p>
+ *
+ * @since 5.0
+ */
+@StatelessCheck
+public class PackageAnnotationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "annotation.package.location";
+
+    /**
+     * Creates a new {@code PackageAnnotationCheck} instance.
+     */
+    public PackageAnnotationCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.PACKAGE_DEF,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public void visitToken(final DetailAST ast) {
+        final boolean containsAnnotation =
+            AnnotationUtil.containsAnnotation(ast);
+
+        if (containsAnnotation && !CheckUtil.isPackageInfo(getFilePath())) {
+            log(ast, MSG_KEY);
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/SuppressWarningsCheck.java SHA256 fd14487a76108922fe003ddd472816018c113ccf4a1f66c816ba0810228eb17e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * <div>
+ * Allows to specify what warnings that
+ * {@code @SuppressWarnings} is not allowed to suppress.
+ * You can also specify a list of TokenTypes that the configured warning(s) cannot be suppressed on.
+ * </div>
+ *
+ * <p>
+ * Limitations:  This check does not consider conditionals
+ * inside the &#64;SuppressWarnings annotation.
+ * </p>
+ *
+ * <p>
+ * For example:
+ * {@code @SuppressWarnings((false) ? (true) ? "unchecked" : "foo" : "unused")}.
+ * According to the above example, the "unused" warning is being suppressed
+ * not the "unchecked" or "foo" warnings.  All of these warnings will be
+ * considered and matched against regardless of what the conditional evaluates to.
+ * The check also does not support code like {@code @SuppressWarnings("un" + "used")},
+ * {@code @SuppressWarnings((String) "unused")} or
+ * {@code @SuppressWarnings({('u' + (char)'n') + (""+("used" + (String)"")),})}.
+ * </p>
+ *
+ * <p>
+ * By default, any warning specified will be disallowed on
+ * all legal TokenTypes unless otherwise specified via the tokens property.
+ * </p>
+ *
+ * <p>
+ * Also, by default warnings that are empty strings or all
+ * whitespace (regex: ^$|^\s+$) are flagged.  By specifying,
+ * the format property these defaults no longer apply.
+ * </p>
+ *
+ * <p>This check can be configured so that the "unchecked"
+ * and "unused" warnings cannot be suppressed on anything but variable and parameter declarations.
+ * See below of an example.
+ * </p>
+ *
+ * @since 5.0
+ */
+@StatelessCheck
+public class SuppressWarningsCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_SUPPRESSED_WARNING_NOT_ALLOWED =
+        "suppressed.warning.not.allowed";
+
+    /** {@link SuppressWarnings SuppressWarnings} annotation name. */
+    private static final String SUPPRESS_WARNINGS = "SuppressWarnings";
+
+    /**
+     * Fully-qualified {@link SuppressWarnings SuppressWarnings} annotation name.
+     */
+    private static final String FQ_SUPPRESS_WARNINGS =
+        "java.lang." + SUPPRESS_WARNINGS;
+
+    /**
+     * Specify the RegExp to match against warnings. Any warning
+     * being suppressed matching this pattern will be flagged.
+     */
+    private Pattern format = Pattern.compile("^\\s*+$");
+
+    /**
+     * Creates a new {@code SuppressWarningsCheck} instance.
+     */
+    public SuppressWarningsCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify the RegExp to match against warnings. Any warning
+     * being suppressed matching this pattern will be flagged.
+     *
+     * @param pattern the new pattern
+     * @since 5.0
+     */
+    public final void setFormat(Pattern pattern) {
+        format = pattern;
+    }
+
+    @Override
+    public final int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public final int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.ANNOTATION_FIELD_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.PARAMETER_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.PATTERN_VARIABLE_DEF,
+            TokenTypes.MODULE_DEF,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(final DetailAST ast) {
+        final DetailAST annotation = getSuppressWarnings(ast);
+
+        if (annotation != null) {
+            final DetailAST warningHolder =
+                findWarningsHolder(annotation);
+            final DetailAST token =
+                    warningHolder.findFirstToken(TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR);
+
+            // case like '@SuppressWarnings(value = UNUSED)'
+            final DetailAST parent = Objects.requireNonNullElse(token, warningHolder);
+            final DetailAST warning = parent.findFirstToken(TokenTypes.EXPR);
+
+            if (warning == null) {
+                // check to see if empty warnings are forbidden -- are by default
+                logMatch(warningHolder, "");
+            }
+            else {
+                processWarnings(warning);
+            }
+        }
+    }
+
+    /**
+     * Processes all warning expressions starting from the given AST node.
+     *
+     * @param warning the first warning expression node to process
+     */
+    private void processWarnings(final DetailAST warning) {
+        for (DetailAST current = warning; current != null; current = current.getNextSibling()) {
+            if (current.getType() == TokenTypes.EXPR) {
+                processWarningExpr(current.getFirstChild(), current);
+            }
+        }
+    }
+
+    /**
+     * Processes a single warning expression.
+     *
+     * @param firstChild  the first child AST of the expression
+     * @param warning the parent warning AST node
+     */
+    private void processWarningExpr(final DetailAST firstChild, final DetailAST warning) {
+        switch (firstChild.getType()) {
+            case TokenTypes.STRING_LITERAL -> logMatch(warning,
+                    removeQuotes(warning.getFirstChild().getText()));
+
+            case TokenTypes.QUESTION ->
+                // ex: @SuppressWarnings((false) ? (true) ? "unchecked" : "foo" : "unused")
+                walkConditional(firstChild);
+
+            default -> {
+            // Known limitation: cases like @SuppressWarnings("un" + "used") or
+            // @SuppressWarnings((String) "unused") are not properly supported,
+            // but they should not cause exceptions.
+            // Also constants as params:
+            // ex: public static final String UNCHECKED = "unchecked";
+            // @SuppressWarnings(UNCHECKED)
+            // or
+            // @SuppressWarnings(SomeClass.UNCHECKED)
+            }
+        }
+    }
+
+    /**
+     * Gets the {@link SuppressWarnings SuppressWarnings} annotation
+     * that is annotating the AST.  If the annotation does not exist
+     * this method will return {@code null}.
+     *
+     * @param ast the AST
+     * @return the {@code SuppressWarnings SuppressWarnings} annotation
+     */
+    private static DetailAST getSuppressWarnings(DetailAST ast) {
+        DetailAST annotation = AnnotationUtil.getAnnotation(ast, SUPPRESS_WARNINGS);
+
+        if (annotation == null) {
+            annotation = AnnotationUtil.getAnnotation(ast, FQ_SUPPRESS_WARNINGS);
+        }
+        return annotation;
+    }
+
+    /**
+     * This method looks for a warning that matches a configured expression.
+     * If found it logs a violation at the given AST.
+     *
+     * @param ast the location to place the violation
+     * @param warningText the warning.
+     */
+    private void logMatch(DetailAST ast, final String warningText) {
+        final Matcher matcher = format.matcher(warningText);
+        if (matcher.matches()) {
+            log(ast,
+                    MSG_KEY_SUPPRESSED_WARNING_NOT_ALLOWED, warningText);
+        }
+    }
+
+    /**
+     * Find the parent (holder) of the of the warnings (Expr).
+     *
+     * @param annotation the annotation
+     * @return a Token representing the expr.
+     */
+    private static DetailAST findWarningsHolder(final DetailAST annotation) {
+        final DetailAST annValuePair =
+            annotation.findFirstToken(TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR);
+
+        final DetailAST annArrayInitParent = Objects.requireNonNullElse(annValuePair, annotation);
+        final DetailAST annArrayInit = annArrayInitParent
+                .findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
+        return Objects.requireNonNullElse(annArrayInit, annotation);
+    }
+
+    /**
+     * Strips a single double quote from the front and back of a string.
+     *
+     * <p>For example:</p>
+     * {@snippet lang="text" :
+     *     Input String = "unchecked"
+     * }
+     * Output String = unchecked
+     *
+     * @param warning the warning string
+     * @return the string without two quotes
+     */
+    private static String removeQuotes(final String warning) {
+        return warning.substring(1, warning.length() - 1);
+    }
+
+    /**
+     * Walks a conditional expression checking the left and right sides, checking for matches and
+     * logging violations.
+     *
+     * @param cond a Conditional type
+     *     {@link TokenTypes#QUESTION QUESTION}
+     */
+    private void walkConditional(final DetailAST cond) {
+        final Deque<DetailAST> condStack = new ArrayDeque<>();
+        condStack.push(cond);
+
+        while (!condStack.isEmpty()) {
+            final DetailAST currentCond = condStack.pop();
+            if (currentCond.getType() == TokenTypes.QUESTION) {
+                condStack.push(getCondRight(currentCond));
+                condStack.push(getCondLeft(currentCond));
+            }
+            else if (currentCond.getType() == TokenTypes.STRING_LITERAL) {
+                final String warningText = removeQuotes(currentCond.getText());
+                logMatch(currentCond, warningText);
+            }
+            // else: unsupported forms inside a ternary branch (string concatenation,
+            // casts, constant references, etc.) cannot be resolved to a literal value.
+            // These are silently skipped.
+        }
+    }
+
+    /**
+     * Retrieves the left side of a conditional.
+     *
+     * @param cond cond a conditional type
+     *     {@link TokenTypes#QUESTION QUESTION}
+     * @return either the value or another conditional
+     */
+    private static DetailAST getCondLeft(final DetailAST cond) {
+        final DetailAST colon = cond.findFirstToken(TokenTypes.COLON);
+        return colon.getPreviousSibling();
+    }
+
+    /**
+     * Retrieves the right side of a conditional.
+     *
+     * @param cond a conditional type
+     *     {@link TokenTypes#QUESTION QUESTION}
+     * @return either the value or another conditional
+     */
+    private static DetailAST getCondRight(final DetailAST cond) {
+        final DetailAST colon = cond.findFirstToken(TokenTypes.COLON);
+        return colon.getNextSibling();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/annotation/package-info.java SHA256 be63153ab24f136ae1803c2bbd8814b3b694a95210ed658d29373ecca6a49239
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Contains the <span class="xdocspagetitle">Annotation checks</span> that are
+ * bundled with the main distribution.
+ */
+package com.puppycrawl.tools.checkstyle.checks.annotation;
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/AvoidNestedBlocksCheck.java SHA256 441d9dd20daffda81b18462d90a86dbfbc1e59900079230b779da7de5e5e2f57
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.blocks;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Finds nested blocks (blocks that are used freely in the code).
+ * </div>
+ *
+ * <p>
+ * Rationale: Nested blocks are often leftovers from the
+ * debugging process, they confuse the reader.
+ * </p>
+ *
+ * <p>
+ * For example, this check finds the obsolete braces in
+ * </p>
+ * {@snippet :
+ * public void guessTheOutput()
+ * {
+ *   int whichIsWhich = 0;
+ *   {
+ *     whichIsWhich = 2;
+ *   }
+ *   System.out.println("value = " + whichIsWhich);
+ * }
+ * }
+ *
+ * <p>
+ * and debugging / refactoring leftovers such as
+ * </p>
+ * {@snippet :
+ * // if (conditionThatIsNotUsedAnyLonger)
+ * {
+ *   System.out.println("unconditional");
+ * }
+ * }
+ *
+ * <p>
+ * A case in a switch statement does not implicitly form a block.
+ * Thus, to be able to introduce local variables that have case scope
+ * it is necessary to open a nested block. This is supported, set
+ * the allowInSwitchCase property to true and include all statements of the case in the block.
+ * </p>
+ *
+ * @since 3.1
+ */
+@StatelessCheck
+public class AvoidNestedBlocksCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_BLOCK_NESTED = "block.nested";
+
+    /**
+     * Allow nested blocks if they are the only child of a switch case.
+     */
+    private boolean allowInSwitchCase;
+
+    /**
+     * Creates a new {@code AvoidNestedBlocksCheck} instance.
+     */
+    public AvoidNestedBlocksCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.SLIST};
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST parent = ast.getParent();
+        if (parent.getType() == TokenTypes.SLIST
+                && (!allowInSwitchCase || hasSiblings(ast))) {
+            log(ast, MSG_KEY_BLOCK_NESTED);
+        }
+    }
+
+    /**
+     * Checks whether the AST node has any siblings or not.
+     *
+     * @param ast node to examine
+     * @return {@code true} if the node has one or more siblings
+     */
+    private static boolean hasSiblings(DetailAST ast) {
+        return ast.getPreviousSibling() != null || ast.getNextSibling() != null;
+    }
+
+    /**
+     * Setter to allow nested blocks if they are the only child of a switch case.
+     *
+     * @param allowInSwitchCase whether nested blocks are allowed
+     *                 if they are the only child of a switch case.
+     * @since 3.2
+     */
+    public void setAllowInSwitchCase(boolean allowInSwitchCase) {
+        this.allowInSwitchCase = allowInSwitchCase;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/BlockOption.java SHA256 e52e3bc3835f4fe8707b71425888e18d3d5b285acfa25f072a21471f6d705a62
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.blocks;
+
+/**
+ * Represents the policy for checking block statements.
+ *
+ * @see EmptyBlockCheck
+ */
+public enum BlockOption {
+
+    /**
+     * Represents the policy that there is some text in the block. For example:
+     *
+     * {@snippet lang="text" :
+     * catch (Exception ex) {
+     *     // This is a bad coding practice
+     * }
+     * }
+     */
+    TEXT,
+
+    /**
+     * Represents the policy that there is a statement in the block. For example:
+     *
+     * {@snippet lang="text" :
+     * finally {
+     *     lock.release();
+     * }
+     * }
+     */
+    STATEMENT,
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/EmptyBlockCheck.java SHA256 4ca92a632b2e3a4d5d894641ec4eb3bd94baadb468480d63282f8f3185b797be
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.blocks;
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Optional;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CodePointUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * <div>
+ * Checks for empty blocks.
+ * </div>
+ *
+ * <p>
+ * This check does not validate sequential blocks. This check does not violate fallthrough.
+ * </p>
+ *
+ * <p>
+ * NOTE: This check processes LITERAL_CASE and LITERAL_DEFAULT separately.
+ * Verification empty block is done for single nearest {@code case} or {@code default}.
+ * </p>
+ *
+ * @since 3.0
+ */
+@StatelessCheck
+public class EmptyBlockCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_BLOCK_NO_STATEMENT = "block.noStatement";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_BLOCK_EMPTY = "block.empty";
+
+    /** Specify the policy on block contents. */
+    private BlockOption option = BlockOption.STATEMENT;
+
+    /**
+     * Creates a new {@code EmptyBlockCheck} instance.
+     */
+    public EmptyBlockCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify the policy on block contents.
+     *
+     * @param optionStr string to decode option from
+     * @throws IllegalArgumentException if unable to decode
+     * @since 3.0
+     */
+    public void setOption(String optionStr) {
+        option = BlockOption.valueOf(optionStr.trim().toUpperCase(Locale.ENGLISH));
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.LITERAL_WHILE,
+            TokenTypes.LITERAL_TRY,
+            TokenTypes.LITERAL_FINALLY,
+            TokenTypes.LITERAL_DO,
+            TokenTypes.LITERAL_IF,
+            TokenTypes.LITERAL_ELSE,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.INSTANCE_INIT,
+            TokenTypes.STATIC_INIT,
+            TokenTypes.LITERAL_SWITCH,
+            TokenTypes.LITERAL_SYNCHRONIZED,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.LITERAL_WHILE,
+            TokenTypes.LITERAL_TRY,
+            TokenTypes.LITERAL_CATCH,
+            TokenTypes.LITERAL_FINALLY,
+            TokenTypes.LITERAL_DO,
+            TokenTypes.LITERAL_IF,
+            TokenTypes.LITERAL_ELSE,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.INSTANCE_INIT,
+            TokenTypes.STATIC_INIT,
+            TokenTypes.LITERAL_SWITCH,
+            TokenTypes.LITERAL_SYNCHRONIZED,
+            TokenTypes.LITERAL_CASE,
+            TokenTypes.LITERAL_DEFAULT,
+            TokenTypes.ARRAY_INIT,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final Optional<DetailAST> leftCurly = getLeftCurly(ast);
+        if (leftCurly.isPresent()) {
+            final DetailAST leftCurlyAST = leftCurly.orElseThrow();
+            if (option == BlockOption.STATEMENT) {
+                final boolean emptyBlock;
+                if (leftCurlyAST.getType() == TokenTypes.LCURLY) {
+                    final DetailAST nextSibling = leftCurlyAST.getNextSibling();
+                    emptyBlock = nextSibling.getType() != TokenTypes.CASE_GROUP
+                            && nextSibling.getType() != TokenTypes.SWITCH_RULE;
+                }
+                else {
+                    emptyBlock = leftCurlyAST.getChildCount() <= 1;
+                }
+                if (emptyBlock) {
+                    log(leftCurlyAST,
+                        MSG_KEY_BLOCK_NO_STATEMENT);
+                }
+            }
+            else if (!hasText(leftCurlyAST)) {
+                log(leftCurlyAST,
+                    MSG_KEY_BLOCK_EMPTY,
+                    ast.getText());
+            }
+        }
+    }
+
+    /**
+     * Checks if SLIST token contains any text.
+     *
+     * @param slistAST a {@code DetailAST} value
+     * @return whether the SLIST token contains any text.
+     */
+    private boolean hasText(final DetailAST slistAST) {
+        final DetailAST rightCurly = slistAST.findFirstToken(TokenTypes.RCURLY);
+        final DetailAST rcurlyAST;
+
+        if (rightCurly == null) {
+            rcurlyAST = slistAST.getParent().findFirstToken(TokenTypes.RCURLY);
+        }
+        else {
+            rcurlyAST = rightCurly;
+        }
+        final int slistLineNo = slistAST.getLineNo();
+        final int slistColNo = slistAST.getColumnNo();
+        final int rcurlyLineNo = rcurlyAST.getLineNo();
+        final int rcurlyColNo = rcurlyAST.getColumnNo();
+        boolean returnValue = false;
+        if (slistLineNo == rcurlyLineNo) {
+            // Handle braces on the same line
+            final int[] txt = Arrays.copyOfRange(getLineCodePoints(slistLineNo - 1),
+                    slistColNo + 1, rcurlyColNo);
+
+            if (!CodePointUtil.isBlank(txt)) {
+                returnValue = true;
+            }
+        }
+        else {
+            final int[] codePointsFirstLine = getLineCodePoints(slistLineNo - 1);
+            final int[] firstLine = Arrays.copyOfRange(codePointsFirstLine,
+                    slistColNo + 1, codePointsFirstLine.length);
+            final int[] codePointsLastLine = getLineCodePoints(rcurlyLineNo - 1);
+            final int[] lastLine = Arrays.copyOfRange(codePointsLastLine, 0, rcurlyColNo);
+            // check if all lines are also only whitespace
+            returnValue = !(CodePointUtil.isBlank(firstLine) && CodePointUtil.isBlank(lastLine))
+                    || !checkIsAllLinesAreWhitespace(slistLineNo, rcurlyLineNo);
+        }
+        return returnValue;
+    }
+
+    /**
+     * Checks is all lines from 'lineFrom' to 'lineTo' (exclusive) contain whitespaces only.
+     *
+     * @param lineFrom
+     *            check from this line number
+     * @param lineTo
+     *            check to this line numbers
+     * @return true if lines contain only whitespaces
+     */
+    private boolean checkIsAllLinesAreWhitespace(int lineFrom, int lineTo) {
+        boolean result = true;
+        for (int index = lineFrom; index < lineTo - 1; index++) {
+            if (!CodePointUtil.isBlank(getLineCodePoints(index))) {
+                result = false;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Calculates the left curly corresponding to the block to be checked.
+     *
+     * @param ast a {@code DetailAST} value
+     * @return the left curly corresponding to the block to be checked
+     */
+    private static Optional<DetailAST> getLeftCurly(DetailAST ast) {
+        final DetailAST parent = ast.getParent();
+        final int parentType = parent.getType();
+        final Optional<DetailAST> leftCurly;
+
+        if (parentType == TokenTypes.SWITCH_RULE) {
+            // get left curly of a case or default that is in switch rule
+            leftCurly = Optional.ofNullable(parent.findFirstToken(TokenTypes.SLIST));
+        }
+        else if (parentType == TokenTypes.CASE_GROUP) {
+            // get left curly of a case or default that is in switch statement
+            leftCurly = Optional.ofNullable(ast.getNextSibling())
+                         .map(DetailAST::getFirstChild)
+                         .filter(node -> node.getType() == TokenTypes.SLIST);
+        }
+        else if (ast.findFirstToken(TokenTypes.SLIST) != null) {
+            // we have a left curly that is part of a statement list, but not in a case or default
+            leftCurly = Optional.of(ast.findFirstToken(TokenTypes.SLIST));
+        }
+        else {
+            // get the first left curly that we can find, if it is present
+            leftCurly = Optional.ofNullable(ast.findFirstToken(TokenTypes.LCURLY));
+        }
+        return leftCurly;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/EmptyCatchBlockCheck.java SHA256 c7a4998d17409ad9effc890454db7cc442b46f69dedcb9dc5d05814d1b458151
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.blocks;
+
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.NullUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks for empty catch blocks.
+ * By default, check allows empty catch block with any comment inside.
+ * </div>
+ *
+ * <p>
+ * Notes:
+ * There are two options to make validation more precise: <b>exceptionVariableName</b> and
+ * <b>commentFormat</b>.
+ * If both options are specified - they are applied by <b>any of them is matching</b>.
+ * </p>
+ *
+ * @since 6.4
+ */
+@StatelessCheck
+public class EmptyCatchBlockCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_CATCH_BLOCK_EMPTY = "catch.block.empty";
+
+    /**
+     * A pattern to split on line ends.
+     */
+    private static final Pattern LINE_END_PATTERN = Pattern.compile("\\r?+\\n|\\r");
+
+    /**
+     * Specify the RegExp for the name of the variable associated with exception.
+     * If check meets variable name matching specified value - empty block is suppressed.
+     */
+    private Pattern exceptionVariableName = Pattern.compile("^$");
+
+    /**
+     * Specify the RegExp for the first comment inside empty catch block.
+     * If check meets comment inside empty catch block matching specified format - empty
+     * block is suppressed. If it is multi-line comment - only its first line is analyzed.
+     */
+    private Pattern commentFormat = Pattern.compile(".*");
+
+    /**
+     * Creates a new {@code EmptyCatchBlockCheck} instance.
+     */
+    public EmptyCatchBlockCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify the RegExp for the name of the variable associated with exception.
+     * If check meets variable name matching specified value - empty block is suppressed.
+     *
+     * @param exceptionVariablePattern
+     *        pattern of exception's variable name.
+     * @since 6.4
+     */
+    public void setExceptionVariableName(Pattern exceptionVariablePattern) {
+        exceptionVariableName = exceptionVariablePattern;
+    }
+
+    /**
+     * Setter to specify the RegExp for the first comment inside empty catch block.
+     * If check meets comment inside empty catch block matching specified format - empty
+     * block is suppressed. If it is multi-line comment - only its first line is analyzed.
+     *
+     * @param commentPattern
+     *        pattern of comment.
+     * @since 6.4
+     */
+    public void setCommentFormat(Pattern commentPattern) {
+        commentFormat = commentPattern;
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.LITERAL_CATCH,
+        };
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        visitCatchBlock(ast);
+    }
+
+    /**
+     * Visits catch ast node, if it is empty catch block - checks it according to
+     *  Check's options. If exception's variable name or comment inside block are matching
+     *   specified regexp - skips from consideration, else - puts violation.
+     *
+     * @param catchAst {@link TokenTypes#LITERAL_CATCH LITERAL_CATCH}
+     */
+    private void visitCatchBlock(DetailAST catchAst) {
+        if (isEmptyCatchBlock(catchAst)) {
+            final String commentContent = getCommentFirstLine(catchAst);
+            if (isVerifiable(catchAst, commentContent)) {
+                log(catchAst.findFirstToken(TokenTypes.SLIST), MSG_KEY_CATCH_BLOCK_EMPTY);
+            }
+        }
+    }
+
+    /**
+     * Gets the first line of comment in catch block. If comment is single-line -
+     *  returns it fully, else if comment is multi-line - returns the first line.
+     *
+     * @param catchAst {@link TokenTypes#LITERAL_CATCH LITERAL_CATCH}
+     * @return the first line of comment in catch block, "" if no comment was found.
+     */
+    private static String getCommentFirstLine(DetailAST catchAst) {
+        final DetailAST slistToken = catchAst.getLastChild();
+        final DetailAST firstElementInBlock = slistToken.getFirstChild();
+        String commentContent = "";
+        if (firstElementInBlock.getType() == TokenTypes.SINGLE_LINE_COMMENT) {
+            commentContent = firstElementInBlock.getFirstChild().getText();
+        }
+        else if (firstElementInBlock.getType() == TokenTypes.BLOCK_COMMENT_BEGIN) {
+            commentContent = firstElementInBlock.getFirstChild().getText();
+            final String[] lines = LINE_END_PATTERN.split(commentContent, -1);
+            for (String line : lines) {
+                if (!line.isEmpty()) {
+                    commentContent = line;
+                    break;
+                }
+            }
+        }
+        return commentContent;
+    }
+
+    /**
+     * Checks if current empty catch block is verifiable according to Check's options
+     *  (exception's variable name and comment format are both in consideration).
+     *
+     * @param emptyCatchAst empty catch {@link TokenTypes#LITERAL_CATCH LITERAL_CATCH} block.
+     * @param commentContent text of comment.
+     * @return true if empty catch block is verifiable by Check.
+     */
+    private boolean isVerifiable(DetailAST emptyCatchAst, String commentContent) {
+        final String variableName = getExceptionVariableName(emptyCatchAst);
+        final boolean isMatchingVariableName = exceptionVariableName
+                .matcher(variableName).find();
+        final boolean isMatchingCommentContent = !commentContent.isEmpty()
+                 && commentFormat.matcher(commentContent).find();
+        return !isMatchingVariableName && !isMatchingCommentContent;
+    }
+
+    /**
+     * Checks if catch block is empty or contains only comments.
+     *
+     * @param catchAst {@link TokenTypes#LITERAL_CATCH LITERAL_CATCH}
+     * @return true if catch block is empty.
+     */
+    private static boolean isEmptyCatchBlock(DetailAST catchAst) {
+        boolean result = true;
+        final DetailAST slistToken = catchAst.findFirstToken(TokenTypes.SLIST);
+        DetailAST catchBlockStmt = slistToken.getFirstChild();
+        while (catchBlockStmt.getType() != TokenTypes.RCURLY) {
+            if (catchBlockStmt.getType() != TokenTypes.SINGLE_LINE_COMMENT
+                 && catchBlockStmt.getType() != TokenTypes.BLOCK_COMMENT_BEGIN) {
+                result = false;
+                break;
+            }
+            catchBlockStmt = catchBlockStmt.getNextSibling();
+        }
+        return result;
+    }
+
+    /**
+     * Gets variable's name associated with exception.
+     *
+     * @param catchAst {@link TokenTypes#LITERAL_CATCH LITERAL_CATCH}
+     * @return Variable's name associated with exception.
+     */
+    private static String getExceptionVariableName(DetailAST catchAst) {
+        final DetailAST parameterDef = NullUtil.notNull(
+                catchAst.findFirstToken(TokenTypes.PARAMETER_DEF));
+        final DetailAST variableName = TokenUtil.getIdent(parameterDef);
+        return variableName.getText();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/GoogleRightCurlyCheck.java SHA256 336b3d3c802a4197c67f17212c2fd800bbc5fe9f533b7aa9cfcaa4877316e51c
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.blocks;
+
+import javax.annotation.Nullable;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.NullUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks the placement of right curly braces (<code>'}'</code>) for code blocks, following
+ * the <a href="https://google.github.io/styleguide/javaguide.html#s4.1-braces">
+ *     Google Java Style Guide </a>.
+ * <p>
+ * For nonempty blocks the right curly brace must begin its own line,
+ * unless it is followed by {@code else}, {@code catch}, {@code finally}, or a comma,
+ * in which case no line break follows it.
+ * </p>
+ * <p>
+ * For empty blocks, either {@code K&R} style or the concise {@code {}} form is
+ * allowed, except within a multi-block statement ({@code if/else}, {@code try/catch/finally}).
+ * </p>
+ * </div>
+ *
+ * @since 14.2.0
+ */
+@StatelessCheck
+public class GoogleRightCurlyCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_LINE_ALONE = "line.alone";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_LINE_BREAK_AFTER = "line.break.after";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_LINE_BREAK_BEFORE = "line.break.before";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_CONCISE_BLOCK = "empty.block.concise";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_LINE_SAME = "line.same";
+
+    /**
+     * Creates a new {@code GoogleRightCurlyCheck} instance.
+     */
+    public GoogleRightCurlyCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.LITERAL_IF,
+            TokenTypes.LITERAL_ELSE,
+            TokenTypes.LITERAL_TRY,
+            TokenTypes.LITERAL_CATCH,
+            TokenTypes.LITERAL_FINALLY,
+            TokenTypes.LITERAL_DO,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.LITERAL_WHILE,
+            TokenTypes.LITERAL_SWITCH,
+            TokenTypes.LITERAL_CASE,
+            TokenTypes.LITERAL_DEFAULT,
+            TokenTypes.STATIC_INIT,
+            TokenTypes.INSTANCE_INIT,
+            TokenTypes.LITERAL_SYNCHRONIZED,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        DetailAST rightCurly = null;
+        switch (ast.getType()) {
+            case TokenTypes.CLASS_DEF, TokenTypes.INTERFACE_DEF,
+                 TokenTypes.ANNOTATION_DEF, TokenTypes.RECORD_DEF, TokenTypes.ENUM_DEF -> {
+                final DetailAST child =
+                        NullUtil.notNull(ast.findFirstToken(TokenTypes.OBJBLOCK));
+                rightCurly = NullUtil.notNull(child.findFirstToken(TokenTypes.RCURLY));
+            }
+
+            case TokenTypes.LITERAL_SWITCH -> rightCurly = ast.getLastChild();
+
+            case TokenTypes.LITERAL_CASE, TokenTypes.LITERAL_DEFAULT -> handleCaseAndDefault(ast);
+
+            default -> {
+                final DetailAST child = ast.findFirstToken(TokenTypes.SLIST);
+                if (child != null) {
+                    rightCurly = child.getLastChild();
+                }
+            }
+        }
+        if (rightCurly != null) {
+            checkRightBrace(ast, rightCurly);
+        }
+    }
+
+    /**
+     * Checks the right curly brace placement for {@code case} and
+     * {@code default} blocks, covering both old style {@code case X:}
+     * and new style {@code case X ->} switch syntax.
+     *
+     * <p>For old-style syntax, a case label may be followed by multiple
+     * {@code {}} blocks in sequence, and each such block's right curly
+     * brace is checked. For new-style syntax, the block following the
+     * arrow (e.g. {@code case X -> { ... }}) is checked,
+     * expression with no block (e.g. {@code case X -> expr;}) is skipped.
+     *
+     * @param ast the {@code case} or {@code default} token
+     */
+    private void handleCaseAndDefault(DetailAST ast) {
+        DetailAST startToken = ast;
+        if (ast.getParent().getType() == TokenTypes.CASE_GROUP) {
+            final DetailAST nextSibling = startToken.getNextSibling();
+            if (nextSibling != null) {
+                startToken = nextSibling.findFirstToken(TokenTypes.SLIST);
+            }
+        }
+        for (DetailAST current = startToken; current != null;
+             current = current.getNextSibling()) {
+            if (current.getType() == TokenTypes.SLIST) {
+                final DetailAST rightBrace = NullUtil.notNull(current.getLastChild());
+                checkRightBrace(ast, rightBrace);
+            }
+        }
+    }
+
+    /**
+     * Logs violation message for given brace token.
+     *
+     * @param message the violation message key.
+     * @param brace the right curly brace.
+     */
+    private void logViolations(String message, DetailAST brace) {
+        log(brace, message, brace.getText(), brace.getColumnNo() + 1);
+    }
+
+    /**
+     * Checks that a right curly brace is placed correctly.
+     *
+     * <p>If the block is part of a multi-block statement (e.g. {@code if/else},
+     * {@code try/catch/finally}, or {@code do/while}), the closing brace must be
+     * on the same line as the next block's starting keyword. Otherwise, the
+     * brace must be alone on its own line, unless the block is empty, in which
+     * case the concise {@code {}} form is allowed.
+     *
+     * @param currentBlock the block whose right curly brace is being checked
+     * @param brace the right curly brace token
+     */
+    private void checkRightBrace(DetailAST currentBlock, DetailAST brace) {
+        final DetailAST nextToken = getNextToken(brace);
+        final boolean hasContentAround = contentAround(brace, nextToken);
+        if (nextToken != null && isPartOfMultiBlock(currentBlock, nextToken)) {
+            checkMultiBlockStatement(currentBlock, brace, nextToken);
+        }
+        else if (currentBlock.getParent().getType() == TokenTypes.LITERAL_ELSE
+                || TokenUtil.isOfType(currentBlock, TokenTypes.LITERAL_ELSE,
+                TokenTypes.LITERAL_CATCH, TokenTypes.LITERAL_FINALLY)) {
+            if (hasContentAround) {
+                logViolations(MSG_KEY_LINE_ALONE, brace);
+            }
+        }
+        else if (isEmpty(brace)) {
+            verifyEmptyBlock(brace, nextToken);
+        }
+        else if (hasContentAround) {
+            logViolations(MSG_KEY_LINE_ALONE, brace);
+        }
+    }
+
+    /**
+     * Checks that the right curly brace of a multi-block statement (e.g. {@code if/else},
+     * {@code try/catch/finally}, {@code do/while}) is placed correctly relative to the next block.
+     *
+     * @param currentBlock the current block
+     * @param brace the right curly brace
+     * @param nextBlock the next block in multi-block statement
+     */
+    private void checkMultiBlockStatement(DetailAST currentBlock, DetailAST brace,
+        DetailAST nextBlock) {
+        if (TokenUtil.areOnSameLine(brace, nextBlock)) {
+            if (hasContentOnLeftSide(brace) && !(currentBlock.getType() == TokenTypes.LITERAL_DO
+                    && isEmpty(brace))) {
+                logViolations(MSG_KEY_LINE_BREAK_BEFORE, brace);
+            }
+        }
+        else {
+            logViolations(MSG_KEY_LINE_SAME, brace);
+        }
+    }
+
+    /**
+     * Checks empty block which should be concise and alone.
+     *
+     * @param brace the right curly token.
+     * @param nextToken the token after right curly brace.
+     */
+    private void verifyEmptyBlock(DetailAST brace, @Nullable DetailAST nextToken) {
+        if (isNotConcise(brace)) {
+            logViolations(MSG_KEY_CONCISE_BLOCK, brace);
+        }
+        else if (nextToken != null
+                && hasContentOnRightSide(brace, nextToken)) {
+            logViolations(MSG_KEY_LINE_BREAK_AFTER, brace);
+        }
+    }
+
+    /**
+     * Checks if the right curly has content around.
+     *
+     * @param brace the right curly brace
+     * @param nextToken the next token after right curly
+     * @return {@code true} if right curly has content on its left or right.
+     */
+    private static boolean contentAround(DetailAST brace, @Nullable DetailAST nextToken) {
+        return nextToken != null
+                && hasContentOnRightSide(brace, nextToken)
+                || hasContentOnLeftSide(brace);
+    }
+
+    /**
+     * Checks whether the current block is part of a multi-block statement ({@code if/else},
+     * {@code try/catch/finally}, or {@code do/while}).
+     *
+     * @param currentBlock the current block
+     * @param nextBlock the block following {@code ast}
+     * @return {@code true} if {@code ast} and {@code nextBlock} belong to
+     *         the same multi-block statement
+     */
+    private static boolean isPartOfMultiBlock(DetailAST currentBlock, DetailAST nextBlock) {
+        final int nextBlockType = nextBlock.getType();
+        return switch (currentBlock.getType()) {
+            case TokenTypes.LITERAL_IF ->
+                nextBlockType == TokenTypes.LITERAL_ELSE;
+            case TokenTypes.LITERAL_TRY, TokenTypes.LITERAL_CATCH ->
+                nextBlockType == TokenTypes.LITERAL_CATCH
+                    || nextBlockType == TokenTypes.LITERAL_FINALLY;
+            case TokenTypes.LITERAL_DO -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * Checks if the block is not concise and has content on left side of right brace.
+     *
+     * @param brace the right curly brace token
+     * @return {@code true} if the brace has content on left.
+     */
+    private static boolean hasContentOnLeftSide(DetailAST brace) {
+        DetailAST previousToken = brace.getPreviousSibling();
+        if (previousToken == null) {
+            previousToken = brace.getParent();
+        }
+        if (previousToken.getType() != TokenTypes.SLIST) {
+            while (previousToken.hasChildren()) {
+                previousToken = previousToken.getLastChild();
+            }
+        }
+
+        return TokenUtil.areOnSameLine(brace, previousToken)
+                && !TokenUtil.isOfType(brace.getPreviousSibling(),
+                TokenTypes.ENUM_CONSTANT_DEF, TokenTypes.COMMA);
+    }
+
+    /**
+     * Checks if the right curly brace is part multi-block statement or no
+     * content on right side of right brace.
+     *
+     * @param brace the right curly brace token
+     * @param nextToken the next token of right curly.
+     * @return {@code true} if the brace is on the same line as the previous sibling
+     *     or parent if no sibling exists
+     */
+    private static boolean hasContentOnRightSide(DetailAST brace, DetailAST nextToken) {
+        final boolean nextIsValid = TokenUtil.isOfType(nextToken.getPreviousSibling(),
+                TokenTypes.EXPR, TokenTypes.VARIABLE_DEF, TokenTypes.ELIST, TokenTypes.LAMBDA)
+                || TokenUtil.isCommentType(nextToken.getType());
+        return !nextIsValid && TokenUtil.areOnSameLine(brace, nextToken);
+    }
+
+    /**
+     * Checks if block is empty.
+     *
+     * @param brace the right curly brace.
+     * @return {@code true} if the block is empty.
+     */
+    private static boolean isEmpty(DetailAST brace) {
+        final DetailAST previousSibling = brace.getPreviousSibling();
+        return previousSibling == null || previousSibling.getType() == TokenTypes.LCURLY;
+    }
+
+    /**
+     * Checks if the block is not {@code K&R} style or concise {@code {}}.
+     *
+     * @param brace right curly token
+     * @return {@code true} if block is not concise.
+     */
+    private static boolean isNotConcise(DetailAST brace) {
+        final DetailAST lcurly = brace.getParent();
+        return lcurly.getLineNo() == brace.getLineNo()
+                && lcurly.getColumnNo() + 1 != brace.getColumnNo();
+    }
+
+    /**
+     * Traverses up the AST to find the next sibling token after the right curly brace.
+     *
+     * @param node ast token
+     * @return the next sibling token, or {@code null} if none exists
+     */
+    @Nullable
+    private static DetailAST getNextToken(DetailAST node) {
+        DetailAST current = node;
+        DetailAST nextToken = null;
+        while (current != null && nextToken == null) {
+            nextToken = current.getNextSibling();
+            current = current.getParent();
+        }
+        return nextToken;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/LeftCurlyCheck.java SHA256 9192558435266bf3136508f24d3d5a06c5443eafdb2696380be7add4c27f75a5
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.blocks;
+
+import java.util.Locale;
+import java.util.Optional;
+
+import javax.annotation.Nullable;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CodePointUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.NullUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks for the placement of left curly braces (<code>'{'</code>) for code blocks.
+ * </div>
+ *
+ * @since 3.0
+ */
+@StatelessCheck
+public class LeftCurlyCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_LINE_NEW = "line.new";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_LINE_PREVIOUS = "line.previous";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_LINE_BREAK_AFTER = "line.break.after";
+
+    /** Open curly brace literal. */
+    private static final String OPEN_CURLY_BRACE = "{";
+
+    /** Allow to ignore enums when left curly brace policy is EOL. */
+    private boolean ignoreEnums = true;
+
+    /**
+     * Specify the policy on placement of a left curly brace (<code>'{'</code>).
+     */
+    private LeftCurlyOption option = LeftCurlyOption.EOL;
+
+    /**
+     * Creates a new {@code LeftCurlyCheck} instance.
+     */
+    public LeftCurlyCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify the policy on placement of a left curly brace (<code>'{'</code>).
+     *
+     * @param optionStr string to decode option from
+     * @throws IllegalArgumentException if unable to decode
+     * @since 3.0
+     */
+    public void setOption(String optionStr) {
+        option = LeftCurlyOption.valueOf(optionStr.trim().toUpperCase(Locale.ENGLISH));
+    }
+
+    /**
+     * Setter to allow to ignore enums when left curly brace policy is EOL.
+     *
+     * @param ignoreEnums check's option for ignoring enums.
+     * @since 6.9
+     */
+    public void setIgnoreEnums(boolean ignoreEnums) {
+        this.ignoreEnums = ignoreEnums;
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.LAMBDA,
+            TokenTypes.LITERAL_CASE,
+            TokenTypes.LITERAL_CATCH,
+            TokenTypes.LITERAL_DEFAULT,
+            TokenTypes.LITERAL_DO,
+            TokenTypes.LITERAL_ELSE,
+            TokenTypes.LITERAL_FINALLY,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.LITERAL_IF,
+            TokenTypes.LITERAL_SWITCH,
+            TokenTypes.LITERAL_SYNCHRONIZED,
+            TokenTypes.LITERAL_TRY,
+            TokenTypes.LITERAL_WHILE,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.OBJBLOCK,
+            TokenTypes.STATIC_INIT,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.SWITCH_RULE,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    /**
+     * Visits token.
+     *
+     * @param ast the token to process
+     * @noinspection SwitchStatementWithTooManyBranches
+     * @noinspectionreason SwitchStatementWithTooManyBranches - we cannot reduce
+     *      the number of branches in this switch statement, since many tokens
+     *      require specific methods to find the first left curly
+     */
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST startToken;
+        final DetailAST brace = switch (ast.getType()) {
+            case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF, TokenTypes.COMPACT_CTOR_DEF -> {
+                startToken = skipModifierAnnotations(ast);
+                yield ast.findFirstToken(TokenTypes.SLIST);
+            }
+            case TokenTypes.INTERFACE_DEF, TokenTypes.CLASS_DEF, TokenTypes.ANNOTATION_DEF,
+                 TokenTypes.ENUM_DEF, TokenTypes.ENUM_CONSTANT_DEF, TokenTypes.RECORD_DEF -> {
+                startToken = skipModifierAnnotations(ast);
+                yield ast.findFirstToken(TokenTypes.OBJBLOCK);
+            }
+            case TokenTypes.LITERAL_WHILE, TokenTypes.LITERAL_CATCH,
+                 TokenTypes.LITERAL_SYNCHRONIZED, TokenTypes.LITERAL_FOR, TokenTypes.LITERAL_TRY,
+                 TokenTypes.LITERAL_FINALLY, TokenTypes.LITERAL_DO,
+                 TokenTypes.LITERAL_IF, TokenTypes.STATIC_INIT, TokenTypes.LAMBDA,
+                 TokenTypes.SWITCH_RULE -> {
+                startToken = ast;
+                yield ast.findFirstToken(TokenTypes.SLIST);
+            }
+            case TokenTypes.LITERAL_ELSE -> {
+                startToken = ast;
+                yield getBraceAsFirstChild(ast);
+            }
+            case TokenTypes.LITERAL_CASE, TokenTypes.LITERAL_DEFAULT -> {
+                startToken = ast;
+                yield getBraceFromSwitchMember(ast);
+            }
+            case TokenTypes.OBJBLOCK -> {
+                startToken = ast;
+                DetailAST braceToken = null;
+                if (ast.getParent().getType() == TokenTypes.LITERAL_NEW) {
+                    braceToken = ast;
+                }
+                yield braceToken;
+            }
+            default -> {
+                // only expected DEFAULT Token is LITERAL_SWITCH
+                startToken = ast;
+                yield ast.findFirstToken(TokenTypes.LCURLY);
+            }
+        };
+
+        if (brace != null) {
+            verifyBrace(brace, startToken);
+        }
+    }
+
+    /**
+     * Gets the brace of a switch statement/ expression member.
+     *
+     * @param ast {@code DetailAST}.
+     * @return {@code DetailAST} if the first child is {@code TokenTypes.SLIST},
+     *     {@code null} otherwise.
+     */
+    @Nullable
+    private static DetailAST getBraceFromSwitchMember(DetailAST ast) {
+        final DetailAST brace;
+        final DetailAST parent = ast.getParent();
+        if (parent.getType() == TokenTypes.SWITCH_RULE) {
+            brace = parent.findFirstToken(TokenTypes.SLIST);
+        }
+        else {
+            brace = getBraceAsFirstChild(ast.getNextSibling());
+        }
+        return brace;
+    }
+
+    /**
+     * Gets a SLIST if it is the first child of the AST.
+     *
+     * @param ast {@code DetailAST}.
+     * @return {@code DetailAST} if the first child is {@code TokenTypes.SLIST},
+     *     {@code null} otherwise.
+     */
+    @Nullable
+    private static DetailAST getBraceAsFirstChild(DetailAST ast) {
+        DetailAST brace = null;
+        if (ast != null) {
+            final DetailAST candidate = ast.getFirstChild();
+            if (candidate != null && candidate.getType() == TokenTypes.SLIST) {
+                brace = candidate;
+            }
+        }
+        return brace;
+    }
+
+    /**
+     * Skip all {@code TokenTypes.ANNOTATION}s to the first non-annotation.
+     *
+     * @param ast {@code DetailAST}.
+     * @return {@code DetailAST} or null if there are no annotations.
+     */
+    private static DetailAST skipModifierAnnotations(DetailAST ast) {
+        DetailAST resultNode = ast;
+        final DetailAST modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
+
+        if (modifiers != null) {
+            resultNode = findLastAnnotation(modifiers)
+                    .map(annotation -> {
+                        final DetailAST nextNode;
+                        if (annotation.getNextSibling() == null) {
+                            nextNode = modifiers.getNextSibling();
+                        }
+                        else {
+                            nextNode = annotation.getNextSibling();
+                        }
+                        return nextNode;
+                    })
+                    .orElse(resultNode);
+        }
+        return resultNode;
+    }
+
+    /**
+     * Find the last token of type {@code TokenTypes.ANNOTATION} under the given set of modifiers.
+     *
+     * @param modifiers {@code DetailAST}.
+     * @return Optional containing the last annotation, if found.
+     */
+    private static Optional<DetailAST> findLastAnnotation(DetailAST modifiers) {
+        DetailAST annotation = modifiers.findFirstToken(TokenTypes.ANNOTATION);
+        while (annotation != null && annotation.getNextSibling() != null
+               && annotation.getNextSibling().getType() == TokenTypes.ANNOTATION) {
+            annotation = annotation.getNextSibling();
+        }
+        return Optional.ofNullable(annotation);
+    }
+
+    /**
+     * Verifies that a specified left curly brace is placed correctly
+     * according to policy, using the code points of the line containing the brace.
+     *
+     * @param brace token for left curly brace
+     * @param startToken token for start of expression
+     */
+    private void verifyBrace(final DetailAST brace,
+                             final DetailAST startToken) {
+        final int[] braceLine = getLineCodePoints(brace.getLineNo() - 1);
+
+        // Check for being told to ignore, or have '{}' which is a special case
+        if (braceLine.length <= brace.getColumnNo() + 1
+                || braceLine[brace.getColumnNo() + 1] != '}') {
+            if (option == LeftCurlyOption.NL) {
+                if (!CodePointUtil.hasWhitespaceBefore(brace.getColumnNo(), braceLine)) {
+                    log(brace, MSG_KEY_LINE_NEW, OPEN_CURLY_BRACE, brace.getColumnNo() + 1);
+                }
+            }
+            else if (option == LeftCurlyOption.EOL) {
+                validateEol(startToken, brace);
+            }
+            else if (option == LeftCurlyOption.NL_OR_SINGLELINE) {
+                validateNlOrSingleline(brace, braceLine);
+            }
+            else if (!TokenUtil.areOnSameLine(startToken, brace)) {
+                validateNewLinePosition(brace, startToken, braceLine);
+            }
+        }
+    }
+
+    /**
+     * Validate NL_OR_SINGLELINE case. A brace that opens a block which ends on
+     * the same line is allowed to stay at the end of that line, otherwise the NL rule is applied.
+     *
+     * @param brace brace AST
+     * @param braceLine line content
+     */
+    private void validateNlOrSingleline(DetailAST brace, int... braceLine) {
+        if (!isSingleLineBlock(brace)
+                && !CodePointUtil.hasWhitespaceBefore(brace.getColumnNo(), braceLine)) {
+            log(brace, MSG_KEY_LINE_NEW, OPEN_CURLY_BRACE, brace.getColumnNo() + 1);
+        }
+    }
+
+    /**
+     * Checks whether the block opened by the given left curly brace ends on the
+     * same line, that is, its matching right curly brace is on that same line.
+     *
+     * @param brace token for left curly brace
+     * @return true if the whole block fits on a single line
+     */
+    private static boolean isSingleLineBlock(DetailAST brace) {
+        final DetailAST block;
+        if (brace.getType() == TokenTypes.LCURLY) {
+            block = brace.getParent();
+        }
+        else {
+            block = brace;
+        }
+        return TokenUtil.areOnSameLine(brace, block.getLastChild());
+    }
+
+    /**
+     * Validate EOL case.
+     *
+     * @param startToken token for start of expression.
+     * @param brace brace AST
+     */
+    private void validateEol(DetailAST startToken, DetailAST brace) {
+        if (!isOnLineWithBlockPreviousToken(brace)) {
+            log(brace, MSG_KEY_LINE_PREVIOUS, OPEN_CURLY_BRACE, brace.getColumnNo() + 1);
+        }
+        if (!hasLineBreakAfter(startToken, brace)) {
+            log(brace, MSG_KEY_LINE_BREAK_AFTER, OPEN_CURLY_BRACE, brace.getColumnNo() + 1);
+        }
+    }
+
+    /**
+     * Validate token on new Line position.
+     *
+     * @param brace brace AST
+     * @param startToken start Token
+     * @param braceLine code points of the line containing the brace
+     */
+    private void validateNewLinePosition(DetailAST brace, DetailAST startToken, int... braceLine) {
+        // not on the same line
+        if (startToken.getLineNo() + 1 == brace.getLineNo()) {
+            if (CodePointUtil.hasWhitespaceBefore(brace.getColumnNo(), braceLine)) {
+                log(brace, MSG_KEY_LINE_PREVIOUS, OPEN_CURLY_BRACE, brace.getColumnNo() + 1);
+            }
+            else {
+                log(brace, MSG_KEY_LINE_NEW, OPEN_CURLY_BRACE, brace.getColumnNo() + 1);
+            }
+        }
+        else if (!CodePointUtil.hasWhitespaceBefore(brace.getColumnNo(), braceLine)) {
+            log(brace, MSG_KEY_LINE_NEW, OPEN_CURLY_BRACE, brace.getColumnNo() + 1);
+        }
+    }
+
+    /**
+     * Checks if left curly has line break after.
+     *
+     * @param startToken token for start of expression.
+     * @param curlyBrace
+     *        Left curly token.
+     * @return
+     *        True, left curly has line break after.
+     */
+    private boolean hasLineBreakAfter(DetailAST startToken, DetailAST curlyBrace) {
+        DetailAST nextToken = curlyBrace.getNextSibling();
+        if (curlyBrace.getType() == TokenTypes.OBJBLOCK
+                && (!ignoreEnums || startToken.getType() != TokenTypes.ENUM_DEF)) {
+            nextToken = NullUtil.notNull(curlyBrace.findFirstToken(TokenTypes.LCURLY))
+                    .getNextSibling();
+
+        }
+        else if (curlyBrace.getType() == TokenTypes.SLIST) {
+            nextToken = curlyBrace.getFirstChild();
+        }
+        if (nextToken != null && nextToken.getType() == TokenTypes.INSTANCE_INIT
+                && startToken.getType() == TokenTypes.OBJBLOCK) {
+            nextToken = null;
+        }
+        return nextToken == null
+                || nextToken.getType() == TokenTypes.RCURLY
+                || !TokenUtil.areOnSameLine(curlyBrace, nextToken);
+    }
+
+    /**
+     * Checks if the given brace is with a token of a block.
+     *
+     * @param brace the brace token to check
+     * @return true if the brace is on the same line as its previous token
+     */
+    private static boolean isOnLineWithBlockPreviousToken(DetailAST brace) {
+        DetailAST endToken = brace.getPreviousSibling();
+        if (brace.getParent().getType() == TokenTypes.SLIST) {
+            endToken = brace.getParent().getPreviousSibling();
+        }
+        while (endToken != null && endToken.hasChildren()) {
+            endToken = endToken.getLastChild();
+        }
+        if (endToken == null || brace.getParent().getType() == TokenTypes.LAMBDA) {
+            endToken = brace.getParent();
+        }
+        return TokenUtil.areOnSameLine(brace, endToken);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/LeftCurlyOption.java SHA256 b840132cef09dd6af9931d5663c7578936d18cd03b376cac61004476ece834db
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.blocks;
+
+/**
+ * Represents the options for placing the left curly brace <code>'{'</code>.
+ *
+ */
+public enum LeftCurlyOption {
+
+    /**
+     * Represents the policy for placing the brace at the end of line. For example:
+     * <pre>
+     * if (condition) {
+     *     ...
+     * </pre>
+     */
+    EOL,
+
+    /**
+     * Represents the policy that if the brace will fit on the first line of
+     * the statement, then apply {@code EOL} rule.
+     * Otherwise apply the {@code NL} rule.
+     * {@code NLOW} is a mnemonic for "new line on wrap".
+     *
+     * <p>For the example above Checkstyle will enforce:
+     *
+     * <pre>
+     * if (condition) {
+     *     ...
+     * </pre>
+     *
+     * <p>But for a statement spanning multiple lines, Checkstyle will enforce:
+     *
+     * <pre>
+     * if (condition1 &amp;&amp; condition2 &amp;&amp;
+     *     condition3 &amp;&amp; condition4)
+     * {
+     *     ...
+     * </pre>
+     *
+     */
+    NLOW,
+
+    /**
+     * Represents the policy that the brace must always be on a new line. For example:
+     * <pre>
+     * if (condition)
+     * {
+     *     ...
+     * </pre>
+     */
+    NL,
+
+    /**
+     * Represents the policy that if the whole block fits on a single line,
+     * then apply the {@code EOL} rule.
+     * Otherwise apply the {@code NL} rule.
+     *
+     * <p>Checkstyle will allow a block that opens and closes on one line:
+     *
+     * {@snippet lang="text" :
+     * if (condition) { doSomething(); }
+     * }
+     *
+     * <p>But for a block spanning multiple lines, Checkstyle will enforce:
+     *
+     * {@snippet lang="text" :
+     * if (condition)
+     * {
+     *     ...
+     * }
+     * }
+     *
+     * @since 14.4.0
+     */
+    NL_OR_SINGLELINE,
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/blocks/NeedBracesCheck.java SHA256 bd823a4b01b18d1cb51d969b23c5f0b06218bc4af05edfd72a2ece4533d82ec0
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser 

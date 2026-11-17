@@ -1,0 +1,66 @@
+123|    public DefaultLogger(OutputStream infoStream,
+124|                         OutputStreamOptions infoStreamOptions,
+125|                         OutputStream errorStream,
+126|                         OutputStreamOptions errorStreamOptions,
+127|                         AuditEventFormatter messageFormatter) {
+128|        if (infoStreamOptions == null) {
+129|            throw new IllegalArgumentException(getLocalizedMessage(
+130|                    DefaultLogger.class,
+131|                    "DefaultLogger.infoStreamException"));
+132|        }
+133|        closeInfo = infoStreamOptions == OutputStreamOptions.CLOSE;
+134|        if (errorStreamOptions == null) {
+135|            throw new IllegalArgumentException(getLocalizedMessage(
+136|                    DefaultLogger.class,
+137|                    "DefaultLogger.errorStreamException"));
+138|        }
+139|        closeError = errorStreamOptions == OutputStreamOptions.CLOSE;
+140|        final Writer infoStreamWriter = new OutputStreamWriter(infoStream, StandardCharsets.UTF_8);
+141|        infoWriter = new PrintWriter(infoStreamWriter);
+142|
+143|        if (infoStream == errorStream) {
+144|            errorWriter = infoWriter;
+145|        }
+146|        else {
+147|            final Writer errorStreamWriter = new OutputStreamWriter(errorStream,
+148|                    StandardCharsets.UTF_8);
+149|            errorWriter = new PrintWriter(errorStreamWriter);
+150|        }
+151|        formatter = messageFormatter;
+152|    }
+153|
+154|    @Override
+155|    protected void finishLocalSetup() {
+156|        // No code by default
+157|    }
+158|
+159|    /**
+---CHECKER---
+CL 705
+127|    /** Cache file. */
+129|    private PropertyCacheFile cacheFile;
+147|     * Sets cache file.
+149|     * @param fileName the cache file.
+152|    public void setCacheFile(String fileName) throws IOException {
+154|        cacheFile = new PropertyCacheFile(configuration, fileName);
+155|        cacheFile.load();
+182|        if (cacheFile != null) {
+184|                cacheFile.persist();
+188|                        getLocalizedMessage("Checker.cacheFilesException") + ": "
+189|                                + cacheFile.getFileName(), exc);
+214|        if (cacheFile != null) {
+215|            cacheFile.putExternalResources(getExternalResourceLocations());
+270|     *      the cache and wrap failures.
+282|                if (cacheFile != null && cacheFile.isInCache(fileName, timestamp)
+286|                if (cacheFile != null) {
+287|                    cacheFile.put(fileName, timestamp);
+297|                if (fileName != null && cacheFile != null) {
+298|                    cacheFile.remove(fileName);
+306|                if (fileName != null && cacheFile != null) {
+307|                    cacheFile.remove(fileName);
+407|        if (hasNonFilteredViolations && cacheFile != null) {
+408|            cacheFile.remove(fileName);
+617|     * Clears the cache.
+619|    public void clearCache() {
+620|        if (cacheFile != null) {
+621|            cacheFile.reset();

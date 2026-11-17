@@ -1,0 +1,128 @@
+LINES 241
+   1|///////////////////////////////////////////////////////////////////////////////////////////////
+   2|// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+   3|// Copyright (C) 2001-2026 the original author or authors.
+   4|//
+   5|// This library is free software; you can redistribute it and/or
+   6|// modify it under the terms of the GNU Lesser General Public
+   7|// License as published by the Free Software Foundation; either
+   8|// version 2.1 of the License, or (at your option) any later version.
+   9|//
+  10|// This library is distributed in the hope that it will be useful,
+  11|// but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12|// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  13|// Lesser General Public License for more details.
+  14|//
+  15|// You should have received a copy of the GNU Lesser General Public
+  16|// License along with this library; if not, write to the Free Software
+  17|// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  18|///////////////////////////////////////////////////////////////////////////////////////////////
+  19|
+  20|package com.puppycrawl.tools.checkstyle;
+  21|
+  22|import java.io.OutputStream;
+  23|import java.io.OutputStreamWriter;
+  24|import java.io.PrintWriter;
+  25|import java.io.Writer;
+  26|import java.nio.charset.StandardCharsets;
+  27|
+  28|import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+  29|import com.puppycrawl.tools.checkstyle.api.AuditListener;
+  30|import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
+  31|import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+  32|
+  33|/**
+  34| * Simple plain logger for text output.
+  35| * This is maybe not very suitable for a text output into a file since it
+  36| * does not need all 'audit finished' and so on stuff, but it looks good on
+  37| * stdout anyway. If there is really a problem this is what XMLLogger is for.
+  38| * It gives structure.
+  39| *
+  40| * @see XMLLogger
+  41| */
+  42|public class DefaultLogger extends AbstractAutomaticBean implements AuditListener {
+  43|
+  44|    /**
+  45|     * A key pointing to the add exception message in the "messages.properties" file.
+  46|     */
+  47|    public static final String ADD_EXCEPTION_MESSAGE = "DefaultLogger.addException";
+  48|    /**
+  49|     * A key pointing to the started audit message in the "messages.properties" file.
+  50|     */
+  51|    public static final String AUDIT_STARTED_MESSAGE = "DefaultLogger.auditStarted";
+  52|    /**
+  53|     * A key pointing to the finished audit message in the "messages.properties" file.
+  54|     */
+  55|    public static final String AUDIT_FINISHED_MESSAGE = "DefaultLogger.auditFinished";
+  56|
+  57|    /** Where to write info messages. */
+  58|    private final PrintWriter infoWriter;
+  59|    /** Close info stream after use. */
+  60|    private final boolean closeInfo;
+  61|
+  62|    /** Where to write error messages. */
+  63|    private final PrintWriter errorWriter;
+  64|    /** Close error stream after use. */
+  65|    private final boolean closeError;
+  66|
+  67|    /** Formatter for the log message. */
+  68|    private final AuditEventFormatter formatter;
+  69|
+  70|    /**
+  71|     * Creates a new {@code DefaultLogger} instance.
+  72|     *
+  73|     * @param outputStream where to log audit events
+  74|     * @param outputStreamOptions if {@code CLOSE} that should be closed in auditFinished()
+  75|     * @noinspection deprecation
+  76|     * @noinspectionreason We are forced to keep AutomaticBean compatibility
+  77|     *     because of maven-checkstyle-plugin. Until #12873.
+  78|     */
+  79|    public DefaultLogger(OutputStream outputStream,
+  80|                         AutomaticBean.OutputStreamOptions outputStreamOptions) {
+  81|        this(outputStream, OutputStreamOptions.valueOf(outputStreamOptions.name()));
+  87|     * @param outputStream where to log audit events
+  88|     * @param outputStreamOptions if {@code CLOSE} that should be closed in auditFinished()
+  90|    public DefaultLogger(OutputStream outputStream, OutputStreamOptions outputStreamOptions) {
+  91|        // no need to close oS twice
+  92|        this(outputStream, outputStreamOptions, outputStream, OutputStreamOptions.NONE);
+  98|     * @param infoStream the {@code OutputStream} for info messages.
+  99|     * @param infoStreamOptions if {@code CLOSE} info should be closed in auditFinished()
+ 100|     * @param errorStream the {@code OutputStream} for error messages.
+ 101|     * @param errorStreamOptions if {@code CLOSE} error should be closed in auditFinished()
+ 103|    public DefaultLogger(OutputStream infoStream,
+ 104|                         OutputStreamOptions infoStreamOptions,
+ 105|                         OutputStream errorStream,
+ 106|                         OutputStreamOptions errorStreamOptions) {
+ 107|        this(infoStream, infoStreamOptions, errorStream, errorStreamOptions,
+ 114|     * @param infoStream the {@code OutputStream} for info messages
+ 115|     * @param infoStreamOptions if {@code CLOSE} info should be closed in auditFinished()
+ 116|     * @param errorStream the {@code OutputStream} for error messages
+ 117|     * @param errorStreamOptions if {@code CLOSE} error should be closed in auditFinished()
+ 123|    public DefaultLogger(OutputStream infoStream,
+ 124|                         OutputStreamOptions infoStreamOptions,
+ 125|                         OutputStream errorStream,
+ 126|                         OutputStreamOptions errorStreamOptions,
+ 128|        if (infoStreamOptions == null) {
+ 131|                    "DefaultLogger.infoStreamException"));
+ 133|        closeInfo = infoStreamOptions == OutputStreamOptions.CLOSE;
+ 134|        if (errorStreamOptions == null) {
+ 137|                    "DefaultLogger.errorStreamException"));
+ 139|        closeError = errorStreamOptions == OutputStreamOptions.CLOSE;
+ 140|        final Writer infoStreamWriter = new OutputStreamWriter(infoStream, StandardCharsets.UTF_8);
+ 141|        infoWriter = new PrintWriter(infoStreamWriter);
+ 143|        if (infoStream == errorStream) {
+ 147|            final Writer errorStreamWriter = new OutputStreamWriter(errorStream,
+ 149|            errorWriter = new PrintWriter(errorStreamWriter);
+ 166|    public void addError(AuditEvent event) {
+ 167|        final SeverityLevel severityLevel = event.getSeverityLevel();
+ 168|        if (severityLevel != SeverityLevel.IGNORE) {
+ 175|    public void addException(AuditEvent event, Throwable throwable) {
+ 184|    public void auditStarted(AuditEvent event) {
+ 192|    public void auditFinished(AuditEvent event) {
+ 196|        closeStreams();
+ 210|     * Flushes the output streams and closes them if needed.
+ 212|    private void closeStreams() {
+ 214|        if (closeInfo) {
+ 215|            infoWriter.close();
+ 219|        if (closeError) {
+ 220|            errorWriter.close();

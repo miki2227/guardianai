@@ -1,0 +1,80 @@
+250|        return Stream.concat(fileSetChecks.stream(), filters.getFilters().stream())
+251|            .filter(ExternalResourceHolder.class::isInstance)
+252|            .flatMap(resource -> {
+253|                return ((ExternalResourceHolder) resource)
+254|                        .getExternalResourceLocations().stream();
+255|            })
+256|            .collect(Collectors.toUnmodifiableSet());
+257|    }
+258|
+259|    /**
+260|     * Processes a list of files with all FileSetChecks.
+261|     *
+262|     * @param files a list of files to process.
+263|     * @throws CheckstyleException if error condition within Checkstyle occurs.
+264|     * @throws Error wraps any java.lang.Error happened during execution
+265|     * @noinspection NestedTryStatement, ProhibitedExceptionThrown
+266|     * @noinspectionreason NestedTryStatement - false positive: the inner try-with-resources
+267|     *      has no catch or finally to merge. Remove this suppression when the inspection is fixed.
+268|     *      See <a href="https://youtrack.jetbrains.com/issue/IDEA-393895">IDEA-393895</a>.
+269|     *      It completes file notifications before the outer handlers remove failed files from
+270|     *      the cache and wrap failures.
+271|     * @noinspectionreason ProhibitedExceptionThrown - preserve Error propagation while adding
+272|     *      the name of the file that was being processed.
+273|     */
+274|    // -@cs[CyclomaticComplexity] no easy way to split this logic of processing the file
+275|    private void processFiles(List<File> files) throws CheckstyleException {
+276|        for (final File file : files) {
+277|            String fileName = null;
+278|            final String filePath = file.getPath();
+279|            try {
+280|                fileName = file.getAbsolutePath();
+281|                final long timestamp = file.lastModified();
+282|                if (cacheFile != null && cacheFile.isInCache(fileName, timestamp)
+283|                        || !acceptFileStarted(fileName)) {
+284|                    continue;
+285|                }
+286|                if (cacheFile != null) {
+287|                    cacheFile.put(fileName, timestamp);
+288|                }
+289|                try (FileAuditCompletion completion = new FileAuditCompletion(fileName)) {
+290|                    final SortedSet<Violation> fileMessages = processFile(file);
+291|                    fireErrors(fileName, fileMessages);
+292|                }
+293|            }
+294|            // -@cs[IllegalCatch] There is no other way to deliver filename that was under
+295|            // processing. See https://github.com/checkstyle/checkstyle/issues/2285
+296|            catch (Exception exc) {
+297|                if (fileName != null && cacheFile != null) {
+298|                    cacheFile.remove(fileName);
+299|                }
+300|
+301|                // We need to catch all exceptions to put a reason failure (file name) in exception
+302|                throw new CheckstyleException(
+303|                        getLocalizedMessage("Checker.processFilesException", filePath), exc);
+304|            }
+305|            catch (Error error) {
+306|                if (fileName != null && cacheFile != null) {
+307|                    cacheFile.remove(fileName);
+308|                }
+309|
+310|                // We need to catch all errors to put a reason failure (file name) in error
+311|                throw new Error(getLocalizedMessage("Checker.error", filePath), error);
+312|            }
+313|        }
+314|    }
+315|
+316|    /**
+317|     * Processes a file with all FileSetChecks.
+318|     *
+319|     * @param file a file to process.
+320|     * @return a sorted set of violations to be logged.
+321|     * @throws CheckstyleException if error condition within Checkstyle occurs.
+322|     * @noinspection ProhibitedExceptionThrown
+323|     * @noinspectionreason ProhibitedExceptionThrown - there is no other way to obey
+324|     *      haltOnException field
+325|     */
+326|    private SortedSet<Violation> processFile(File file) throws CheckstyleException {
+327|        final SortedSet<Violation> fileMessages = new TreeSet<>();
+328|        try {
+329|            final FileText theText = new FileText(file.getAbsoluteFile(), charset);

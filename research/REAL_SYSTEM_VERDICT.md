@@ -8,6 +8,13 @@ host audit and retained. A live unapproved-read control still stopped authority
 and refused subsequent work. This is a bounded functional pass, not proof of
 private-thought detection, a P0 finding or a covert convention.
 
+The later [context-pressure run](CONTEXT_PRESSURE_RUN.md) used the same two
+histories and large public reference packets. Nine commands completed, then the
+reviewer's tenth worker abstained on a supervisor fault; broker revocation was
+acknowledged. It did not complete the planned hour or demonstrate context-window
+exhaustion. This is an unresolved availability limit, not a confirmed malicious
+act or a validated covert convention.
+
 **Yes, as a bounded prototype for supervised MCP/Linux execution and declared
 information-flow policy. It is not yet a validated detector of emergent hidden
 signalling, and it cannot inspect private model thoughts.**

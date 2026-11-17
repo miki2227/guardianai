@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "tsc src/lib/evidence.ts --target ES2022 --module ES2022 --moduleResolution bundler --outDir .test-build --skipLibCheck && node --test tests/evidence.test.mjs",
+    "sync-demo": "node scripts/sync-demo.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -15,8 +17,11 @@
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^5.2.0",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^7.3.8"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

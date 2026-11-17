@@ -1,0 +1,315 @@
+FILE DetailAstImpl.java N 548
+-- 40-70
+40: */
+41:public final class DetailAstImpl implements DetailAST {
+42:
+43:    /** Constant to indicate if not calculated the child count. */
+44:    private static final int NOT_INITIALIZED = Integer.MIN_VALUE;
+45:
+46:    /** The line number. */
+47:    private int lineNo = NOT_INITIALIZED;
+48:    /** The column number. */
+49:    private int columnNo = NOT_INITIALIZED;
+50:
+51:    /** Number of children. */
+52:    private int childCount;
+53:    /** The parent token. */
+54:    private DetailAstImpl parent;
+55:    /** Previous sibling. */
+56:    private DetailAstImpl previousSibling;
+57:
+58:    /** First child of this DetailAST. */
+59:    private DetailAstImpl firstChild;
+60:
+61:    /** First sibling of this DetailAST.*/
+62:    private DetailAstImpl nextSibling;
+63:
+64:    /** Text of this DetailAST. */
+65:    private String text;
+66:
+67:    /** The type of this DetailAST. */
+68:    private int type;
+69:
+70:    /**
+-- 155-185
+155:            astImpl.setNextSibling(sibling);
+156:
+157:            setNextSibling(astImpl);
+158:        }
+159:    }
+160:
+161:    /**
+162:     * Adds a new child to the current AST.
+163:     *
+164:     * @param child to DetailAST to add as child
+165:     */
+166:    public void addChild(DetailAST child) {
+167:        clearBranchTokenTypes();
+168:        clearChildCountCache(this);
+169:        if (child != null) {
+170:            final DetailAstImpl astImpl = (DetailAstImpl) child;
+171:            astImpl.setParent(this);
+172:        }
+173:        DetailAST temp = firstChild;
+174:        if (temp == null) {
+175:            firstChild = (DetailAstImpl) child;
+176:        }
+177:        else {
+178:            while (temp.getNextSibling() != null) {
+179:                temp = temp.getNextSibling();
+180:            }
+181:
+182:            ((DetailAstImpl) temp).setNextSibling(child);
+183:        }
+184:    }
+185:
+-- 430-470
+430:
+431:    @Override
+432:    public int getNumberOfChildren() {
+433:        return getChildCount();
+434:    }
+435:
+436:    @Override
+437:    public boolean hasChildren() {
+438:        return firstChild != null;
+439:    }
+440:
+441:    /**
+442:     * Clears the child count for the ast instance.
+443:     *
+444:     * @param ast The ast to clear.
+445:     */
+446:    private static void clearChildCountCache(DetailAstImpl ast) {
+447:        if (ast != null) {
+448:            ast.childCount = NOT_INITIALIZED;
+449:        }
+450:    }
+451:
+452:    /**
+453:     * Clears branchTokenTypes cache for all parents of the current DetailAST instance, and the
+454:     * child count for the current DetailAST instance.
+455:     */
+456:    private void clearBranchTokenTypes() {
+457:        DetailAstImpl prevParent = parent;
+458:        while (prevParent != null) {
+459:            prevParent.branchTokenTypes = null;
+460:            prevParent = prevParent.parent;
+461:        }
+462:    }
+463:
+464:    /**
+465:     * Sets the next sibling of this AST.
+466:     *
+467:     * @param nextSibling the DetailAST to set as sibling
+468:     */
+469:    public void setNextSibling(DetailAST nextSibling) {
+470:        clearBranchTokenTypes();
+-- 500-545
+500:    }
+501:
+502:    /**
+503:     * Get list of tokens on COMMENTS channel to the left of the
+504:     * current token up to the preceding token on the DEFAULT_TOKEN_CHANNEL.
+505:     *
+506:     * @return list of comment tokens
+507:     */
+508:    public List<Token> getHiddenBefore() {
+509:        List<Token> returnList = null;
+510:        if (hiddenBefore != null) {
+511:            returnList = UnmodifiableCollectionUtil.unmodifiableList(hiddenBefore);
+512:        }
+513:        return returnList;
+514:    }
+515:
+516:    /**
+517:     * Get list tokens on COMMENTS channel to the right of the current
+518:     * token up to the next token on the DEFAULT_TOKEN_CHANNEL.
+519:     *
+520:     * @return list of comment tokens
+521:     */
+522:    public List<Token> getHiddenAfter() {
+523:        List<Token> returnList = null;
+524:        if (hiddenAfter != null) {
+525:            returnList = UnmodifiableCollectionUtil.unmodifiableList(hiddenAfter);
+526:        }
+527:        return returnList;
+528:    }
+529:
+530:    /**
+531:     * Sets the hiddenBefore token field.
+532:     *
+533:     * @param hiddenBefore comment token preceding this DetailAstImpl
+534:     */
+535:    public void setHiddenBefore(List<Token> hiddenBefore) {
+536:        this.hiddenBefore = UnmodifiableCollectionUtil.unmodifiableList(hiddenBefore);
+537:    }
+538:
+539:    /**
+540:     * Sets the hiddenAfter token field.
+541:     *
+542:     * @param hiddenAfter comment token following this DetailAstImpl
+543:     */
+544:    public void setHiddenAfter(List<Token> hiddenAfter) {
+545:        this.hiddenAfter = UnmodifiableCollectionUtil.unmodifiableList(hiddenAfter);
+FILE Checker.java N 705
+-- 200-230
+200:        listeners.remove(listener);
+201:    }
+202:
+203:    /**
+204:     * Sets base directory.
+205:     *
+206:     * @param basedir the base directory to strip off in file names
+207:     */
+208:    public void setBasedir(String basedir) {
+209:        this.basedir = basedir;
+210:    }
+211:
+212:    @Override
+213:    public int process(List<File> files) throws CheckstyleException {
+214:        if (cacheFile != null) {
+215:            cacheFile.putExternalResources(getExternalResourceLocations());
+216:        }
+217:
+218:        // Prepare to start
+219:        final int errorCount;
+220:        try (AuditCompletion auditCompletion = new AuditCompletion()) {
+221:            for (final FileSetCheck fsc : fileSetChecks) {
+222:                fsc.beginProcessing(charset);
+223:            }
+224:
+225:            final List<File> targetFiles = files.stream()
+226:                    .filter(file -> CommonUtil.matchesFileExtension(file, fileExtensions))
+227:                    .toList();
+228:            processFiles(targetFiles);
+229:
+230:            // Finish up
+-- 260-330
+260:     * Processes a list of files with all FileSetChecks.
+261:     *
+262:     * @param files a list of files to process.
+263:     * @throws CheckstyleException if error condition within Checkstyle occurs.
+264:     * @throws Error wraps any java.lang.Error happened during execution
+265:     * @noinspection NestedTryStatement, ProhibitedExceptionThrown
+266:     * @noinspectionreason NestedTryStatement - false positive: the inner try-with-resources
+267:     *      has no catch or finally to merge. Remove this suppression when the inspection is fixed.
+268:     *      See <a href="https://youtrack.jetbrains.com/issue/IDEA-393895">IDEA-393895</a>.
+269:     *      It completes file notifications before the outer handlers remove failed files from
+270:     *      the cache and wrap failures.
+271:     * @noinspectionreason ProhibitedExceptionThrown - preserve Error propagation while adding
+272:     *      the name of the file that was being processed.
+273:     */
+274:    // -@cs[CyclomaticComplexity] no easy way to split this logic of processing the file
+275:    private void processFiles(List<File> files) throws CheckstyleException {
+276:        for (final File file : files) {
+277:            String fileName = null;
+278:            final String filePath = file.getPath();
+279:            try {
+280:                fileName = file.getAbsolutePath();
+281:                final long timestamp = file.lastModified();
+282:                if (cacheFile != null && cacheFile.isInCache(fileName, timestamp)
+283:                        || !acceptFileStarted(fileName)) {
+284:                    continue;
+285:                }
+286:                if (cacheFile != null) {
+287:                    cacheFile.put(fileName, timestamp);
+288:                }
+289:                try (FileAuditCompletion completion = new FileAuditCompletion(fileName)) {
+290:                    final SortedSet<Violation> fileMessages = processFile(file);
+291:                    fireErrors(fileName, fileMessages);
+292:                }
+293:            }
+294:            // -@cs[IllegalCatch] There is no other way to deliver filename that was under
+295:            // processing. See https://github.com/checkstyle/checkstyle/issues/2285
+296:            catch (Exception exc) {
+297:                if (fileName != null && cacheFile != null) {
+298:                    cacheFile.remove(fileName);
+299:                }
+300:
+301:                // We need to catch all exceptions to put a reason failure (file name) in exception
+302:                throw new CheckstyleException(
+303:                        getLocalizedMessage("Checker.processFilesException", filePath), exc);
+304:            }
+305:            catch (Error error) {
+306:                if (fileName != null && cacheFile != null) {
+307:                    cacheFile.remove(fileName);
+308:                }
+309:
+310:                // We need to catch all errors to put a reason failure (file name) in error
+311:                throw new Error(getLocalizedMessage("Checker.error", filePath), error);
+312:            }
+313:        }
+314:    }
+315:
+316:    /**
+317:     * Processes a file with all FileSetChecks.
+318:     *
+319:     * @param file a file to process.
+320:     * @return a sorted set of violations to be logged.
+321:     * @throws CheckstyleException if error condition within Checkstyle occurs.
+322:     * @noinspection ProhibitedExceptionThrown
+323:     * @noinspectionreason ProhibitedExceptionThrown - there is no other way to obey
+324:     *      haltOnException field
+325:     */
+326:    private SortedSet<Violation> processFile(File file) throws CheckstyleException {
+327:        final SortedSet<Violation> fileMessages = new TreeSet<>();
+328:        try {
+329:            final FileText theText = new FileText(file.getAbsoluteFile(), charset);
+330:            for (final FileSetCheck fsc : fileSetChecks) {
+FILE DefaultLogger.java N 241
+-- 85-100
+85:     * Creates a new {@code DefaultLogger} instance.
+86:     *
+87:     * @param outputStream where to log audit events
+88:     * @param outputStreamOptions if {@code CLOSE} that should be closed in auditFinished()
+89:     */
+90:    public DefaultLogger(OutputStream outputStream, OutputStreamOptions outputStreamOptions) {
+91:        // no need to close oS twice
+92:        this(outputStream, outputStreamOptions, outputStream, OutputStreamOptions.NONE);
+93:    }
+94:
+95:    /**
+96:     * Creates a new {@code DefaultLogger} instance.
+97:     *
+98:     * @param infoStream the {@code OutputStream} for info messages.
+99:     * @param infoStreamOptions if {@code CLOSE} info should be closed in auditFinished()
+100:     * @param errorStream the {@code OutputStream} for error messages.
+-- 190-225
+190:
+191:    @Override
+192:    public void auditFinished(AuditEvent event) {
+193:        infoWriter.println(getLocalizedMessage(
+194:                DefaultLogger.class,
+195:                AUDIT_FINISHED_MESSAGE));
+196:        closeStreams();
+197:    }
+198:
+199:    @Override
+200:    public void fileStarted(AuditEvent event) {
+201:        // No need to implement this method in this class
+202:    }
+203:
+204:    @Override
+205:    public void fileFinished(AuditEvent event) {
+206:        infoWriter.flush();
+207:    }
+208:
+209:    /**
+210:     * Flushes the output streams and closes them if needed.
+211:     */
+212:    private void closeStreams() {
+213:        infoWriter.flush();
+214:        if (closeInfo) {
+215:            infoWriter.close();
+216:        }
+217:
+218:        errorWriter.flush();
+219:        if (closeError) {
+220:            errorWriter.close();
+221:        }
+222:    }
+223:
+224:    /**
+225:     * Extracts localized messages from properties files.
+TEST_EXISTS True SIZE 30925

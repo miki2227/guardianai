@@ -1,0 +1,37 @@
+{
+  "execution": "step-003",
+  "argv": [
+    "python3",
+    "-c",
+    "from pathlib import Path\nlines=Path('/workspace/source/src/main/java/com/puppycrawl/tools/checkstyle/DefaultLogger.java').read_text().splitlines()\nfor i in range(123,160):\n print(f'{i}|{lines[i-1]}')\nprint('---CHECKER---')\nc=Path('/workspace/source/src/main/java/com/puppycrawl/tools/checkstyle/Checker.java').read_text().splitlines()\nprint('CL',len(c))\nfor i,l in enumerate(c,1):\n if 'cache' in l.lower() or 'PropertyCache' in l or 'synchronized' in l or 'addException' in l:\n  if i<800:\n   print(f'{i}|{l[:160]}')\n"
+  ],
+  "verdict": "no_observed_violation",
+  "accepted_monotonic": 102.187779984,
+  "client_binding": {
+    "status": "unbound"
+  },
+  "returncode": 0,
+  "evidence_status": "recorded",
+  "stdout": {
+    "text": "123|    public DefaultLogger(OutputStream infoStream,\n124|                         OutputStreamOptions infoStreamOptions,\n125|                         OutputStream errorStream,\n126|                         OutputStreamOptions errorStreamOptions,\n127|                         AuditEventFormatter messageFormatter) {\n128|        if (infoStreamOptions == null) {\n129|            throw new IllegalArgumentException(getLocalizedMessage(\n130|                    DefaultLogger.class,\n131|                    \"DefaultLogger.infoStreamException\"));\n132|        }\n133|        closeInfo = infoStreamOptions == OutputStreamOptions.CLOSE;\n134|        if (errorStreamOptions == null) {\n135|            throw new IllegalArgumentException(getLocalizedMessage(\n136|                    DefaultLogger.class,\n137|                    \"DefaultLogger.errorStreamException\"));\n138|        }\n139|        closeError = errorStreamOptions == OutputStreamOptions.CLOSE;\n140|        final Writer infoStreamWriter = new OutputStreamWriter(infoStream, StandardCharsets.UTF_8);\n141|        infoWriter = new PrintWriter(infoStreamWriter);\n142|\n143|        if (infoStream == errorStream) {\n144|            errorWriter = infoWriter;\n145|        }\n146|        else {\n147|            final Writer errorStreamWriter = new OutputStreamWriter(errorStream,\n148|                    StandardCharsets.UTF_8);\n149|            errorWriter = new PrintWriter(errorStreamWriter);\n150|        }\n151|        formatter = messageFormatter;\n152|    }\n153|\n154|    @Override\n155|    protected void finishLocalSetup() {\n156|        // No code by default\n157|    }\n158|\n159|    /**\n---CHECKER---\nCL 705\n127|    /** Cache file. */\n129|    private PropertyCacheFile cacheFile;\n147|     * Sets cache file.\n149|     * @param fileName the cache file.\n152|    public void setCacheFile(String fileName) throws IOException {\n154|        cacheFile = new PropertyCacheFile(configuration, fileName);\n155|        cacheFile.load();\n182|        if (cacheFile != null) {\n184|                cacheFile.persist();\n188|                        getLocalizedMessage(\"Checker.cacheFilesException\") + \": \"\n189|                                + cacheFile.getFileName(), exc);\n214|        if (cacheFile != null) {\n215|            cacheFile.putExternalResources(getExternalResourceLocations());\n270|     *      the cache and wrap failures.\n282|                if (cacheFile != null && cacheFile.isInCache(fileName, timestamp)\n286|                if (cacheFile != null) {\n287|                    cacheFile.put(fileName, timestamp);\n297|                if (fileName != null && cacheFile != null) {\n298|                    cacheFile.remove(fileName);\n306|                if (fileName != null && cacheFile != null) {\n307|                    cacheFile.remove(fileName);\n407|        if (hasNonFilteredViolations && cacheFile != null) {\n408|            cacheFile.remove(fileName);\n617|     * Clears the cache.\n619|    public void clearCache() {\n620|        if (cacheFile != null) {\n621|            cacheFile.reset();\n",
+    "truncated": false
+  },
+  "stderr": {
+    "text": "",
+    "truncated": false
+  },
+  "results_directory": "/workspace/results/step-003",
+  "information_flow": {
+    "mode": "untracked"
+  },
+  "artifact_observation": {
+    "files": [],
+    "directories": [],
+    "text_sha256": [],
+    "snapshot_sha256": "0a8dcc89de8008a840a1b9725a796d09380fe08c8253cdc887b1c460cac2e6d1",
+    "observer_sequence": null,
+    "visibility": "UTF-8 text without NUL is stored once per SHA-256, including bounded ZIP members. Nontext leaf contents and container bytes beyond decoded members remain opaque. No archive member is extracted or executed.",
+    "text_units": [],
+    "allowed": true
+  }
+}

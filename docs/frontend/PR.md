@@ -1,27 +1,30 @@
-# PR: Add a local GuardianAI recorded-run evidence viewer
+# Add a local recorded-run viewer with audited multi-agent evidence
 
-## Summary
+GuardianAI's retained runs now have a local interface for presentation and
+inspection. The default view shows the completed Checkstyle workflow with two
+continuing Grok subjects, nine commands and two artifact handoffs. Command
+selection joins only the exact worker's runtime and manifest; missing evidence
+cannot borrow another worker's events or decisions.
 
-- Add a React/TypeScript/Vite read-only local viewer under `frontend/`.
-- Import recorded run folders in the browser, parse recognized session/summary
-  JSON, and expose worker commands, syscall details, Jev receipts, evidence
-  files, and lifecycle state.
-- Bundle unmodified JSON copies from the retained Grok completion and
-  owner-lifetime normal/cancelled runs.
-- Keep successful observation, violation, abstention, nonzero exit, interrupted
-  execution, incomplete capture, and unavailable verdict as distinct states.
-- Add setup, import, format-support, and limitation notes in
-  `docs/frontend/README.md`.
+The viewer exposes native syscall stacks, Jev receipts and input references,
+phase-level message observation, stdout/stderr, lifecycle state, saved host
+audits, handoffs and local file downloads. Historical policy-stop, timeout and
+owner-cancellation examples remain available. Imports stay in the browser and
+skip unsupported binary/oversized files with visible notes. There are no live
+execution controls.
 
-## Validation
+Validation: clean `npm ci`, seven adapter/integrity tests, TypeScript and
+production build pass. All 189 new bundled artifacts match source bytes and
+SHA-256 receipts. Chromium checks covered default rendering, exact Jev input
+references, output, cancellation and folder import; desktop and 390px mobile
+views have no page overflow or recorded browser errors. Resolved dependency
+audit reports zero known vulnerabilities. Screenshots and setup instructions
+are in `docs/frontend`.
 
-- `npm run build` — TypeScript check and Vite production build pass.
-- Open the local app against bundled Grok and owner-lifetime JSON; inspect
-  successful, policy-stopped, abstained, and interrupted/unknown examples.
-
-## Scope and known limitations
-
-Only `frontend/**` and `docs/frontend/**` are changed. Python/C runtime files and
-root dependencies are untouched. The first parser does not yet reconstruct the
-extended research dataset joins described in `TEAMMATE_FRONTEND.md`; the README
-lists unsupported schemas. No live-control button or API was added.
+The separate large-context attempt is retained with its raw evidence and audit:
+nine commands completed, then the reviewer's tenth worker abstained on a
+supervisor fault and broker revocation was acknowledged. That experiment did
+not complete the planned hour or establish context-window exhaustion. No covert
+convention, malicious intent or P0 is claimed. Original quarantine is unchanged.
+The offline evidence makes the bundle about 1.65 MB before compression; extended
+flow/identity/SQLite schemas are not fully reconstructed by the viewer.

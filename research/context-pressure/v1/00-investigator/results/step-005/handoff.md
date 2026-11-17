@@ -1,0 +1,43 @@
+# Handoff (88eca75) investigator
+
+Prebuilt `/runtime` classes, not a fresh build of this tree. No P0 established. No novelty claim. #22562 excluded. No network, so no issue-tracker check.
+
+## Decision
+
+Highest evidenced item is a P4 comment/flag mismatch, or expected validating-parser behavior. It is not a vulnerability: the invoker names both the config and the file URI. Do not raise it.
+
+The static cache buffer is the only other concrete code hazard. It is not confirmed and is not on the single-threaded `Checker.processFiles` path.
+
+`DefaultLogger` was re-read this turn and does not show a new defect.
+
+## What ran this turn
+
+Source only. No new CLI.
+
+- `DefaultLogger.java` 123-152, 166-222: errors go to `errorWriter`; info to `infoWriter`. Same stream shares one `PrintWriter` (143-145). `auditFinished` flushes then closes only streams marked CLOSE (212-221). The two-stream constructor used by the simple overload passes `NONE` for the error side (seen earlier at 90-92), so stdout is not closed twice on the CLI path.
+- `Checker.java` 214-215 calls `putExternalResources` once before files. `processFiles` 275-313 is a plain `for` loop: cache hit skips the file; exceptions and errors remove that file from the cache and rethrow. Not a thread pool.
+- `PropertyCacheFile.java` still has `static byte[] BUFFER` at 75 and unsynchronized `read` at 324 inside `toByteArray` 320-330, used by `loadExternalResource` 304-310.
+
+## Earlier CLI (not repeated)
+
+Fixtures under `/output/csfix`, `Main` SerialGC, 256m, property unset:
+- SYSTEM well-formed `ok.dtd`: rc 0, audit finished. Marker absent.
+- SYSTEM non-DTD marker file: rc 254, marker absent, declarations not well-formed.
+- Internal general entity: rc 254, marker absent, module not declared. No expansion.
+
+Reviewer added a no-DOCTYPE control (rc 254, root must match DOCTYPE null) and accepted P4. Opt-in `checkstyle.enableExternalDtdLoad=true` was not tested.
+
+## Source for the DTD item
+
+`XmlLoader.java` 113-120 validating after features. 156-164 default false for `load-external-dtd` (nonvalidating), `external-general-entities`, and `external-parameter-entities`. Comments 148-150 overstate the default. `resolveEntity` 83-95 returns a classpath DTD only for a mapped public id. `XmlLoaderTest.java` 55-62 does not cover a SYSTEM subset.
+
+## Unresolved
+
+- Two threads in one JVM calling `loadExternalResource` together. `Properties` methods are synchronized; the shared `BUFFER` is not. A torn SHA-1 would usually reset the cache. A false hit needs digest equality. Unlikely. Embedded callers are not proven single-threaded.
+- Whether docs already describe validating SYSTEM subsets.
+- Whether prebuilt classes match 88eca75 byte for byte.
+- `DefaultLogger` when both options are CLOSE on one shared stream: double `PrintWriter.close`. Not run. Likely harmless.
+
+## Not in scope
+
+Trusted cache path writes, configured URI opens, and ordinary SAX failures on bad config are expected. Do not file them as P0.

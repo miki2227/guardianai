@@ -1,0 +1,4725 @@
+eIdent.getParent();
+        final DetailAST blockStartToken = definitionToken.findFirstToken(TokenTypes.SLIST);
+        final DetailAST blockEndToken = getBlockEndToken(blockFrameNameIdent, blockStartToken);
+
+        final Set<DetailAST> returnsInsideBlock = getAllTokensOfType(definitionToken,
+            TokenTypes.LITERAL_RETURN, blockEndToken.getLineNo());
+
+        return returnsInsideBlock.stream()
+            .anyMatch(returnToken -> isAstInside(returnToken, ident));
+    }
+
+    /**
+     * Checks if the given {@code ast} is equal to the {@code tree} or a child of it.
+     *
+     * @param tree The tree to search.
+     * @param ast The AST to look for.
+     * @return {@code true} if the {@code ast} was found.
+     */
+    private static boolean isAstInside(DetailAST tree, DetailAST ast) {
+        boolean result = false;
+
+        if (isAstSimilar(tree, ast)) {
+            result = true;
+        }
+        else {
+            for (DetailAST child = tree.getFirstChild(); child != null
+                    && !result; child = child.getNextSibling()) {
+                result = isAstInside(child, ast);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Checks whether a field can be referenced from a static context.
+     *
+     * @param ident ident token.
+     * @return true if field can be referenced from a static context.
+     */
+    private static boolean canBeReferencedFromStaticContext(DetailAST ident) {
+        boolean staticContext = false;
+
+        final DetailAST codeBlockDefinition = getCodeBlockDefinitionToken(ident);
+        if (codeBlockDefinition != null) {
+            final DetailAST modifiers = codeBlockDefinition.getFirstChild();
+            staticContext = codeBlockDefinition.getType() == TokenTypes.STATIC_INIT
+                || modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null;
+        }
+        return !staticContext;
+    }
+
+    /**
+     * Returns code block definition token for current identifier.
+     *
+     * @param ident ident token.
+     * @return code block definition token for current identifier or null if code block
+     *         definition was not found.
+     */
+    private static DetailAST getCodeBlockDefinitionToken(DetailAST ident) {
+        DetailAST parent = ident;
+        while (parent != null
+               && parent.getType() != TokenTypes.METHOD_DEF
+               && parent.getType() != TokenTypes.STATIC_INIT) {
+            parent = parent.getParent();
+        }
+        return parent;
+    }
+
+    /**
+     * Checks whether a value can be assigned to a field.
+     * A value can be assigned to a final field only in constructor block. If there is a method
+     * block, value assignment can be performed only to non final field.
+     *
+     * @param ast an identifier token.
+     * @return true if a value can be assigned to a field.
+     */
+    private boolean canAssignValueToClassField(DetailAST ast) {
+        AbstractFrame fieldUsageFrame = findFrame(ast, LookMode.NO_LOOK_FOR_METHOD);
+        while (fieldUsageFrame.getType() == FrameType.BLOCK_FRAME) {
+            fieldUsageFrame = fieldUsageFrame.getParent();
+        }
+        final boolean fieldUsageInConstructor =
+            fieldUsageFrame.getType() == FrameType.CTOR_FRAME;
+
+        final AbstractFrame declarationFrame = findFrame(ast, LookMode.LOOK_FOR_METHOD);
+        final boolean finalField = ((ClassFrame) declarationFrame).hasFinalField(ast);
+
+        return fieldUsageInConstructor || !finalField;
+    }
+
+    /**
+     * Checks whether an overlapping by method or constructor argument takes place.
+     *
+     * @param ast an identifier.
+     * @return true if an overlapping by method or constructor argument takes place.
+     */
+    private boolean isOverlappingByArgument(DetailAST ast) {
+        boolean overlapping = false;
+        final DetailAST parent = ast.getParent();
+        final DetailAST sibling = ast.getNextSibling();
+        if (sibling != null && ASSIGN_TOKENS.get(parent.getType())) {
+            if (COMPOUND_ASSIGN_TOKENS.get(parent.getType())) {
+                overlapping = true;
+            }
+            else {
+                final ClassFrame classFrame = (ClassFrame) findFrame(ast, LookMode.LOOK_FOR_METHOD);
+                final Set<DetailAST> exprIdents = getAllTokensOfType(sibling, TokenTypes.IDENT);
+                overlapping = classFrame.containsFieldOrVariableDef(exprIdents, ast);
+            }
+        }
+        return overlapping;
+    }
+
+    /**
+     * Checks whether an overlapping by local variable takes place.
+     *
+     * @param ast an identifier.
+     * @return true if an overlapping by local variable takes place.
+     */
+    private boolean isOverlappingByLocalVariable(DetailAST ast) {
+        boolean overlapping = false;
+        final DetailAST parent = ast.getParent();
+        if (ASSIGN_TOKENS.get(parent.getType())) {
+            final ClassFrame classFrame = (ClassFrame) findFrame(ast, LookMode.LOOK_FOR_METHOD);
+            final Set<DetailAST> exprIdents =
+                getAllTokensOfType(ast.getNextSibling(), TokenTypes.IDENT);
+            overlapping = classFrame.containsFieldOrVariableDef(exprIdents, ast);
+        }
+        return overlapping;
+    }
+
+    /**
+     * Collects all tokens of specific type starting with the current ast node.
+     *
+     * @param ast ast node.
+     * @param tokenType token type.
+     * @return a set of all tokens of specific type starting with the current ast node.
+     */
+    private static Set<DetailAST> getAllTokensOfType(DetailAST ast, int tokenType) {
+        DetailAST vertex = ast;
+        final Set<DetailAST> result = new HashSet<>();
+        final Deque<DetailAST> stack = new ArrayDeque<>();
+        while (vertex != null || !stack.isEmpty()) {
+            if (!stack.isEmpty()) {
+                vertex = stack.pop();
+            }
+            while (vertex != null) {
+                if (vertex.getType() == tokenType) {
+                    result.add(vertex);
+                }
+                if (vertex.getNextSibling() != null) {
+                    stack.push(vertex.getNextSibling());
+                }
+                vertex = vertex.getFirstChild();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Collects all tokens of specific type starting with the current ast node and which line
+     * number is lower or equal to the end line number.
+     *
+     * @param ast ast node.
+     * @param tokenType token type.
+     * @param endLineNumber end line number.
+     * @return a set of all tokens of specific type starting with the current ast node and which
+     *         line number is lower or equal to the end line number.
+     */
+    private static Set<DetailAST> getAllTokensOfType(DetailAST ast, int tokenType,
+                                                     int endLineNumber) {
+        DetailAST vertex = ast;
+        final Set<DetailAST> result = new HashSet<>();
+        final Deque<DetailAST> stack = new ArrayDeque<>();
+        while (vertex != null || !stack.isEmpty()) {
+            if (!stack.isEmpty()) {
+                vertex = stack.pop();
+            }
+            while (vertex != null) {
+                if (tokenType == vertex.getType()
+                    && vertex.getLineNo() <= endLineNumber) {
+                    result.add(vertex);
+                }
+                if (vertex.getNextSibling() != null) {
+                    stack.push(vertex.getNextSibling());
+                }
+                vertex = vertex.getFirstChild();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Collects all tokens which are equal to current token starting with the current ast node and
+     * which line number is lower or equal to the end line number.
+     *
+     * @param ast ast node.
+     * @param token token.
+     * @param endLineNumber end line number.
+     * @return a set of tokens which are equal to current token starting with the current ast node
+     *         and which line number is lower or equal to the end line number.
+     */
+    private static Set<DetailAST> getAllTokensWhichAreEqualToCurrent(DetailAST ast, DetailAST token,
+                                                                     int endLineNumber) {
+        DetailAST vertex = ast;
+        final Set<DetailAST> result = new HashSet<>();
+        final Deque<DetailAST> stack = new ArrayDeque<>();
+        while (vertex != null || !stack.isEmpty()) {
+            if (!stack.isEmpty()) {
+                vertex = stack.pop();
+            }
+            while (vertex != null) {
+                if (isAstSimilar(token, vertex)
+                        && vertex.getLineNo() <= endLineNumber) {
+                    result.add(vertex);
+                }
+                if (vertex.getNextSibling() != null) {
+                    stack.push(vertex.getNextSibling());
+                }
+                vertex = vertex.getFirstChild();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Returns the frame where the method is declared, if the given method is used without
+     * 'this' and null otherwise.
+     *
+     * @param ast the IDENT ast of the name to check.
+     * @return the frame where the method is declared, if the given method is used without
+     *         'this' and null otherwise.
+     */
+    private AbstractFrame getMethodWithoutThis(DetailAST ast) {
+        AbstractFrame result = null;
+        if (!validateOnlyOverlapping) {
+            final AbstractFrame frame = findFrame(ast, LookMode.LOOK_FOR_METHOD);
+            if (frame != null
+                    && ((ClassFrame) frame).hasInstanceMethod(ast)
+                    && !((ClassFrame) frame).hasStaticMethod(ast)
+                    && !isInheritedByAnonymousClass(ast, frame)) {
+                result = frame;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks whether the name is declared by a type that an anonymous class, located between
+     * the current position and the declaring frame, extends or implements. Such a name is a
+     * member of the anonymous class, so it does not refer to the declaring frame's member.
+     * Only types declared in the same file can be inspected.
+     *
+     * @param ident IDENT ast of the field or the method call.
+     * @param declaringFrame the frame where the member was found.
+     * @return true if the name is inherited by an anonymous class before reaching the frame.
+     */
+    private boolean isInheritedByAnonymousClass(DetailAST ident, AbstractFrame declaringFrame) {
+        boolean result = false;
+        AbstractFrame frame = current.peek();
+        while (frame != declaringFrame) {
+            if (frame instanceof final AnonymousClassFrame anonymousFrame
+                    && isDeclaredInSuperTypes(ident, anonymousFrame.getLiteralNew())) {
+                result = true;
+                break;
+            }
+            frame = frame.getParent();
+        }
+        return result;
+    }
+
+    /**
+     * Checks whether the name is declared by any type named in the given token or by
+     * any of their supertypes declared in the same file.
+     *
+     * @param ident IDENT ast of the field or the method call.
+     * @param typeHolder token whose direct children name the types to start from.
+     * @return true if one of the types declares the name.
+     */
+    private boolean isDeclaredInSuperTypes(DetailAST ident, DetailAST typeHolder) {
+        final Deque<String> pending = new ArrayDeque<>();
+        addTypeNames(pending, typeHolder);
+        final Set<String> visited = HashSet.newHashSet(SUPER_TYPES_CAPACITY);
+        boolean result = false;
+        while (!pending.isEmpty()) {
+            final String typeName = pending.pop();
+            if (visited.add(typeName)) {
+                for (AbstractFrame candidate : frames.values()) {
+                    if (candidate instanceof final ClassFrame classFrame
+                            && typeName.equals(candidate.getFrameName())) {
+                        if (declaresName(classFrame, ident)) {
+                            result = true;
+                        }
+                        final DetailAST typeDef = candidate.getFrameNameIdent().getParent();
+                        addTypeNames(pending, typeDef.findFirstToken(TokenTypes.EXTENDS_CLAUSE));
+                        addTypeNames(pending,
+                                typeDef.findFirstToken(TokenTypes.IMPLEMENTS_CLAUSE));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks whether the class frame declares an inheritable field or method matching the ident.
+     * Private members are not inherited by subclasses, so they are ignored.
+     *
+     * @param classFrame frame to look in.
+     * @param ident IDENT ast of the field or the method call.
+     * @return true if the frame declares the name as an inheritable member.
+     */
+    private static boolean declaresName(ClassFrame classFrame, DetailAST ident) {
+        final boolean result;
+        if (ident.getParent().getType() == TokenTypes.METHOD_CALL) {
+            result = classFrame.hasInheritableMethod(ident);
+        }
+        else {
+            result = classFrame.hasInheritableField(ident);
+        }
+        return result;
+    }
+
+    /**
+     * Adds simple names of the types that are direct children of the token.
+     *
+     * @param names collection to add names to.
+     * @param typeHolder token holding types, may be null.
+     */
+    private static void addTypeNames(Deque<String> names,
+                                     @Nullable DetailAST typeHolder) {
+        if (typeHolder != null) {
+            for (DetailAST child = typeHolder.getFirstChild(); child != null;
+                    child = child.getNextSibling()) {
+                if (child.getType() == TokenTypes.IDENT) {
+                    names.add(child.getText());
+                }
+                else if (child.getType() == TokenTypes.DOT) {
+                    names.add(child.getLastChild().getText());
+                }
+            }
+        }
+    }
+
+    /**
+     * Find the class frame containing declaration.
+     *
+     * @param name IDENT ast of the declaration to find.
+     * @param lookMode mode defining whether we are looking for a method name.
+     * @return AbstractFrame containing declaration or null.
+     */
+    private AbstractFrame findClassFrame(DetailAST name, LookMode lookMode) {
+        AbstractFrame frame = current.peek();
+
+        while (true) {
+            frame = findFrame(frame, name, lookMode);
+
+            if (frame == null || frame instanceof ClassFrame) {
+                break;
+            }
+
+            frame = frame.getParent();
+        }
+
+        return frame;
+    }
+
+    /**
+     * Find frame containing declaration.
+     *
+     * @param name IDENT ast of the declaration to find.
+     * @param lookMode mode defining whether we are looking for a method name.
+     * @return AbstractFrame containing declaration or null.
+     */
+    private AbstractFrame findFrame(DetailAST name, LookMode lookMode) {
+        return findFrame(current.peek(), name, lookMode);
+    }
+
+    /**
+     * Find frame containing declaration.
+     *
+     * @param frame The parent frame to searching in.
+     * @param name IDENT ast of the declaration to find.
+     * @param lookMode mode defining whether we are looking for a method name.
+     * @return AbstractFrame containing declaration or null.
+     */
+    private static AbstractFrame findFrame(AbstractFrame frame, DetailAST name,
+            LookMode lookMode) {
+        return frame.getIfContains(name, lookMode);
+    }
+
+    /**
+     * Gets the name of the nearest parent ClassFrame.
+     *
+     * @return the name of the nearest parent ClassFrame.
+     */
+    private String getNearestClassFrameName() {
+        AbstractFrame frame = current.peek();
+        while (frame.getType() != FrameType.CLASS_FRAME) {
+            frame = frame.getParent();
+        }
+        return frame.getFrameName();
+    }
+
+    /**
+     * Checks if the token is a Lambda parameter.
+     *
+     * @param ast the {@code DetailAST} value of the token to be checked
+     * @return true if the token is a Lambda parameter
+     */
+    private static boolean isLambdaParameter(DetailAST ast) {
+        boolean result = false;
+        for (DetailAST parent = ast; parent != null; parent = parent.getParent()) {
+            if (parent.getType() == TokenTypes.LAMBDA) {
+                result = !isInsideTypeDefInsideLambda(ast)
+                        && isMatchingLambdaParam(ast, parent);
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks whether the given AST matches a parameter of the specified lambda.
+     *
+     * @param ast the AST node to check.
+     * @param lambda the lambda expression AST node.
+     * @return true if the AST matches a lambda parameter.
+     */
+    private static boolean isMatchingLambdaParam(DetailAST ast, DetailAST lambda) {
+        final boolean isMatchingParam;
+        if (ast.getType() == TokenTypes.PARAMETER_DEF) {
+            isMatchingParam = true;
+        }
+        else {
+            final DetailAST lambdaParameters = lambda.findFirstToken(TokenTypes.PARAMETERS);
+            if (lambdaParameters == null) {
+                isMatchingParam = lambda.getFirstChild().getText().equals(ast.getText());
+            }
+            else {
+                isMatchingParam = TokenUtil.findFirstTokenByPredicate(lambdaParameters,
+                    paramDef -> {
+                        final DetailAST param = paramDef.findFirstToken(TokenTypes.IDENT);
+                        return param != null && param.getText().equals(ast.getText());
+                    }).isPresent();
+            }
+        }
+        return isMatchingParam;
+    }
+
+    /**
+     * Checks if the given AST is inside a type declaration (class, interface, enum,
+     * record, or anonymous class) that is nested within the enclosing lambda.
+     *
+     * @param ast the AST node to check.
+     * @return true if there is a type declaration boundary between {@code ast} and the lambda.
+     */
+    private static boolean isInsideTypeDefInsideLambda(DetailAST ast) {
+        boolean isInside = false;
+        for (DetailAST parent = ast; parent.getType() != TokenTypes.LAMBDA;
+                parent = parent.getParent()) {
+            if (parent.getType() == TokenTypes.OBJBLOCK) {
+                isInside = true;
+                break;
+            }
+        }
+        return isInside;
+    }
+
+    /**
+     * Checks if 2 AST are similar by their type and text.
+     *
+     * @param left The first AST to check.
+     * @param right The second AST to check.
+     * @return {@code true} if they are similar.
+     */
+    private static boolean isAstSimilar(DetailAST left, DetailAST right) {
+        return left.getType() == right.getType() && left.getText().equals(right.getText());
+    }
+
+    /** An AbstractFrame type. */
+    private enum FrameType {
+
+        /** Class frame type. */
+        CLASS_FRAME,
+        /** Constructor frame type. */
+        CTOR_FRAME,
+        /** Method frame type. */
+        METHOD_FRAME,
+        /** Block frame type. */
+        BLOCK_FRAME,
+        /** Catch frame type. */
+        CATCH_FRAME,
+        /** For frame type. */
+        FOR_FRAME,
+        /** Try with resources frame type. */
+        TRY_WITH_RESOURCES_FRAME
+
+    }
+
+    /**
+     * Defines whether a method name is being looked for during a frame lookup.
+     */
+    private enum LookMode {
+
+        /** Look for a method name. */
+        LOOK_FOR_METHOD,
+        /** Do not look for a method name. */
+        NO_LOOK_FOR_METHOD
+
+    }
+
+    /**
+     * A declaration frame.
+     */
+    private abstract static class AbstractFrame {
+
+        /** Set of name of variables declared in this frame. */
+        private final Set<DetailAST> varIdents;
+
+        /** Parent frame. */
+        private final AbstractFrame parent;
+
+        /** Name identifier token. */
+        private final DetailAST frameNameIdent;
+
+        /**
+         * Constructor -- invocable only via super() from subclasses.
+         *
+         * @param parent parent frame.
+         * @param ident frame name ident.
+         */
+        protected AbstractFrame(AbstractFrame parent, DetailAST ident) {
+            this.parent = parent;
+            frameNameIdent = ident;
+            varIdents = new HashSet<>();
+        }
+
+        /**
+         * Get the type of the frame.
+         *
+         * @return a FrameType.
+         */
+        public abstract FrameType getType();
+
+        /**
+         * Add a name to the frame.
+         *
+         * @param identToAdd the name we're adding.
+         */
+        private void addIdent(DetailAST identToAdd) {
+            varIdents.add(identToAdd);
+        }
+
+        /**
+         * Returns the parent frame.
+         *
+         * @return the parent frame
+         */
+        public AbstractFrame getParent() {
+            return parent;
+        }
+
+        /**
+         * Returns the name identifier text.
+         *
+         * @return the name identifier text
+         */
+        public String getFrameName() {
+            return frameNameIdent.getText();
+        }
+
+        /**
+         * Returns the name identifier token.
+         *
+         * @return the name identifier token
+         */
+        public DetailAST getFrameNameIdent() {
+            return frameNameIdent;
+        }
+
+        /**
+         * Check whether the frame contains a field or a variable with the given name.
+         *
+         * @param identToFind the IDENT ast of the name we're looking for.
+         * @return whether it was found.
+         */
+        public boolean containsFieldOrVariable(DetailAST identToFind) {
+            return containsFieldOrVariableDef(varIdents, identToFind);
+        }
+
+        /**
+         * Check whether the frame contains a given name.
+         *
+         * @param identToFind IDENT ast of the name we're looking for.
+         * @param lookMode mode defining whether we are looking for a method name.
+         * @return whether it was found.
+         */
+        public AbstractFrame getIfContains(DetailAST identToFind, LookMode lookMode) {
+            final AbstractFrame frame;
+
+            if (lookMode == LookMode.NO_LOOK_FOR_METHOD
+                && containsFieldOrVariable(identToFind)) {
+                frame = this;
+            }
+            else {
+                frame = parent.getIfContains(identToFind, lookMode);
+            }
+            return frame;
+        }
+
+        /**
+         * Whether the set contains a declaration with the text of the specified
+         * IDENT ast and it is declared in a proper position.
+         *
+         * @param set the set of declarations.
+         * @param ident the specified IDENT ast.
+         * @return true if the set contains a declaration with the text of the specified
+         *         IDENT ast and it is declared in a proper position.
+         */
+        public boolean containsFieldOrVariableDef(Set<DetailAST> set, DetailAST ident) {
+            boolean result = false;
+            for (DetailAST ast: set) {
+                if (isProperDefinition(ident, ast)) {
+                    result = true;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        /**
+         * Whether the definition is correspondent to the IDENT.
+         *
+         * @param ident the IDENT ast to check.
+         * @param ast the IDENT ast of the definition to check.
+         * @return true if ast is correspondent to ident.
+         */
+        public boolean isProperDefinition(DetailAST ident, DetailAST ast) {
+            final String identToFind = ident.getText();
+            return identToFind.equals(ast.getText())
+                && CheckUtil.isBeforeInSource(ast, ident);
+        }
+
+    }
+
+    /**
+     * A frame initiated at method definition; holds a method definition token.
+     */
+    private static class MethodFrame extends AbstractFrame {
+
+        /**
+         * Creates method frame.
+         *
+         * @param parent parent frame.
+         * @param ident method name identifier token.
+         */
+        /* package */ MethodFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+        }
+
+        @Override
+        public FrameType getType() {
+            return FrameType.METHOD_FRAME;
+        }
+
+    }
+
+    /**
+     * A frame initiated at constructor definition.
+     */
+    private static class ConstructorFrame extends AbstractFrame {
+
+        /**
+         * Creates a constructor frame.
+         *
+         * @param parent parent frame.
+         * @param ident frame name ident.
+         */
+        /* package */ ConstructorFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+        }
+
+        @Override
+        public FrameType getType() {
+            return FrameType.CTOR_FRAME;
+        }
+
+    }
+
+    /**
+     * A frame initiated at class, enum or interface definition; holds instance variable names.
+     */
+    private static class ClassFrame extends AbstractFrame {
+
+        /** Set of idents of instance members declared in this frame. */
+        private final Set<DetailAST> instanceMembers;
+        /** Set of idents of instance methods declared in this frame. */
+        private final Set<DetailAST> instanceMethods;
+        /** Set of idents of variables declared in this frame. */
+        private final Set<DetailAST> staticMembers;
+        /** Set of idents of static methods declared in this frame. */
+        private final Set<DetailAST> staticMethods;
+
+        /**
+         * Creates new instance of ClassFrame.
+         *
+         * @param parent parent frame.
+         * @param ident frame name ident.
+         */
+        private ClassFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+            instanceMembers = new HashSet<>();
+            instanceMethods = new HashSet<>();
+            staticMembers = new HashSet<>();
+            staticMethods = new HashSet<>();
+        }
+
+        @Override
+        public FrameType getType() {
+            return FrameType.CLASS_FRAME;
+        }
+
+        /**
+         * Adds static member's ident.
+         *
+         * @param ident an ident of static member of the class.
+         */
+        /* package */ void addStaticMember(final DetailAST ident) {
+            staticMembers.add(ident);
+        }
+
+        /**
+         * Adds static method's name.
+         *
+         * @param ident an ident of static method of the class.
+         */
+        /* package */ void addStaticMethod(final DetailAST ident) {
+            staticMethods.add(ident);
+        }
+
+        /**
+         * Adds instance member's ident.
+         *
+         * @param ident an ident of instance member of the class.
+         */
+        /* package */ void addInstanceMember(final DetailAST ident) {
+            instanceMembers.add(ident);
+        }
+
+        /**
+         * Adds instance method's name.
+         *
+         * @param ident an ident of instance method of the class.
+         */
+        /* package */ void addInstanceMethod(final DetailAST ident) {
+            instanceMethods.add(ident);
+        }
+
+        /**
+         * Checks if a given name is a known instance member of the class.
+         *
+         * @param ident the IDENT ast of the name to check.
+         * @return true is the given name is a name of a known instance member of the class.
+         */
+        /* package */ boolean hasInstanceMember(final DetailAST ident) {
+            return containsFieldOrVariableDef(instanceMembers, ident);
+        }
+
+        /**
+         * Checks if a given name is a known instance method of the class.
+         *
+         * @param ident the IDENT ast of the method call to check.
+         * @return true if the given ast is correspondent to a known instance method of the class.
+         */
+        /* package */ boolean hasInstanceMethod(final DetailAST ident) {
+            return containsMethodDef(instanceMethods, ident);
+        }
+
+        /**
+         * Checks if a given name is a known static method of the class.
+         *
+         * @param ident the IDENT ast of the method call to check.
+         * @return true is the given ast is correspondent to a known instance method of the class.
+         */
+        /* package */ boolean hasStaticMethod(final DetailAST ident) {
+            return containsMethodDef(staticMethods, ident);
+        }
+
+        /**
+         * Checks whether the declaration of the member has the private modifier.
+         *
+         * @param memberIdent IDENT ast of the member declaration.
+         * @return true if the member is private.
+         */
+        private static boolean isPrivate(DetailAST memberIdent) {
+            final DetailAST modifiers =
+                    memberIdent.getParent().findFirstToken(TokenTypes.MODIFIERS);
+            return modifiers != null
+                    && modifiers.findFirstToken(TokenTypes.LITERAL_PRIVATE) != null;
+        }
+
+        /**
+         * Checks whether the frame declares a non-private field with the ident's name.
+         *
+         * @param ident the IDENT ast of the field reference.
+         * @return true if a non-private field with the same name is declared.
+         */
+        /* package */ boolean hasInheritableField(final DetailAST ident) {
+            return Stream.concat(instanceMembers.stream(), staticMembers.stream())
+                    .anyMatch(member -> {
+                        return member.getText().equals(ident.getText())
+                                && !isPrivate(member);
+                    });
+        }
+
+        /**
+         * Checks whether the frame declares a non-private method matching the method call.
+         *
+         * @param ident the IDENT ast of the method call.
+         * @return true if a non-private method with the same name and number of parameters
+         *         is declared.
+         */
+        /* package */ boolean hasInheritableMethod(final DetailAST ident) {
+            return Stream.concat(instanceMethods.stream(), staticMethods.stream())
+                    .anyMatch(method -> {
+                        return isSimilarSignature(ident, method)
+                                && !isPrivate(method);
+                    });
+        }
+
+        /**
+         * Checks whether given instance member has final modifier.
+         *
+         * @param instanceMember an instance member of a class.
+         * @return true if given instance member has final modifier.
+         */
+        /* package */ boolean hasFinalField(final DetailAST instanceMember) {
+            boolean result = false;
+            for (DetailAST member : instanceMembers) {
+                final DetailAST parent = member.getParent();
+                if (parent.getType() == TokenTypes.RECORD_COMPONENT_DEF) {
+                    result = true;
+                }
+                else {
+                    final DetailAST mods = parent.findFirstToken(TokenTypes.MODIFIERS);
+                    final boolean finalMod = mods.findFirstToken(TokenTypes.FINAL) != null;
+                    if (finalMod && isAstSimilar(member, instanceMember)) {
+                        result = true;
+                    }
+                }
+            }
+            return result;
+        }
+
+        @Override
+        public boolean containsFieldOrVariable(DetailAST identToFind) {
+            return containsFieldOrVariableDef(instanceMembers, identToFind)
+                    || containsFieldOrVariableDef(staticMembers, identToFind);
+        }
+
+        @Override
+        public boolean isProperDefinition(DetailAST ident, DetailAST ast) {
+            final String identToFind = ident.getText();
+            return identToFind.equals(ast.getText());
+        }
+
+        /**
+         * Check whether the frame contains a given name.
+         *
+         * @param identToFind IDENT ast of the name we're looking for.
+         * @param lookMode mode defining whether we are looking for a method name.
+         * @return whether it was found.
+         */
+        @Override
+        public AbstractFrame getIfContains(DetailAST identToFind, LookMode lookMode) {
+            AbstractFrame frame = null;
+
+            if (containsMethod(identToFind)
+                || containsFieldOrVariable(identToFind)) {
+                frame = this;
+            }
+            else if (getParent() != null) {
+                frame = getParent().getIfContains(identToFind, lookMode);
+            }
+            return frame;
+        }
+
+        /**
+         * Check whether the frame contains a given method.
+         *
+         * @param methodToFind the AST of the method to find.
+         * @return true, if a method with the same name and number of parameters is found.
+         */
+        private boolean containsMethod(DetailAST methodToFind) {
+            return containsMethodDef(instanceMethods, methodToFind)
+                || containsMethodDef(staticMethods, methodToFind);
+        }
+
+        /**
+         * Whether the set contains a method definition with the same name and number of parameters.
+         *
+         * @param set the set of definitions.
+         * @param ident the specified method call IDENT ast.
+         * @return true if the set contains a definition with the
+         *     same name and number of parameters.
+         */
+        private static boolean containsMethodDef(Set<DetailAST> set, DetailAST ident) {
+            boolean result = false;
+            for (DetailAST ast: set) {
+                if (isSimilarSignature(ident, ast)) {
+                    result = true;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        /**
+         * Whether the method definition has the same name and number of parameters.
+         *
+         * @param ident the specified method call IDENT ast.
+         * @param ast the ast of a method definition to compare with.
+         * @return true if a method definition has the same name and number of parameters
+         *     as the method call.
+         */
+        private static boolean isSimilarSignature(DetailAST ident, DetailAST ast) {
+            boolean result = false;
+            final DetailAST elistToken = ident.getParent().findFirstToken(TokenTypes.ELIST);
+            if (elistToken != null && ident.getText().equals(ast.getText())) {
+                final int paramsNumber =
+                    ast.getParent().findFirstToken(TokenTypes.PARAMETERS).getChildCount();
+                final int argsNumber = elistToken.getChildCount();
+                result = paramsNumber == argsNumber;
+            }
+            return result;
+        }
+
+    }
+
+    /**
+     * An anonymous class frame; holds instance variable names.
+     */
+    private static class AnonymousClassFrame extends ClassFrame {
+
+        /** The name of the frame. */
+        private final String frameName;
+
+        /** The {@code LITERAL_NEW} token that creates this anonymous class. */
+        private final DetailAST literalNew;
+
+        /**
+         * Creates anonymous class frame.
+         *
+         * @param parent parent frame.
+         * @param literalNew {@code LITERAL_NEW} token that creates the anonymous class.
+         */
+        /* package */ AnonymousClassFrame(AbstractFrame parent, DetailAST literalNew) {
+            super(parent, null);
+            frameName = literalNew.toString();
+            this.literalNew = literalNew;
+        }
+
+        @Override
+        public String getFrameName() {
+            return frameName;
+        }
+
+        /**
+         * Returns the {@code LITERAL_NEW} token that creates this anonymous class.
+         *
+         * @return the {@code LITERAL_NEW} token.
+         */
+        /* package */ DetailAST getLiteralNew() {
+            return literalNew;
+        }
+
+    }
+
+    /**
+     * A frame for the implicit class of a compact source file (JEP 512).
+     * The class is unnamed in source code, so a reference to one of its members
+     * from a nested class cannot be qualified with {@code <ClassName>.this} and is
+     * not flagged, the same way references to anonymous class members are skipped.
+     */
+    private static class CompactCompilationUnitFrame extends ClassFrame {
+
+        /**
+         * Creates compact compilation unit frame.
+         *
+         * @param parent parent frame.
+         * @param ident frame name ident.
+         */
+        /* package */ CompactCompilationUnitFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+        }
+
+    }
+
+    /**
+     * A frame initiated on entering a statement list; holds local variable names.
+     */
+    private static class BlockFrame extends AbstractFrame {
+
+        /**
+         * Creates block frame.
+         *
+         * @param parent parent frame.
+         * @param ident ident frame name ident.
+         */
+        /* package */ BlockFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+        }
+
+        @Override
+        public FrameType getType() {
+            return FrameType.BLOCK_FRAME;
+        }
+
+    }
+
+    /**
+     * A frame initiated on entering a catch block; holds local catch variable names.
+     */
+    private static class CatchFrame extends AbstractFrame {
+
+        /**
+         * Creates catch frame.
+         *
+         * @param parent parent frame.
+         * @param ident ident frame name ident.
+         */
+        /* package */ CatchFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+        }
+
+        @Override
+        public FrameType getType() {
+            return FrameType.CATCH_FRAME;
+        }
+
+        /**
+         * Check whether the frame contains a given name.
+         *
+         * @param identToFind IDENT ast of the name we're looking for.
+         * @param lookMode mode defining whether we are looking for a method name.
+         * @return whether it was found.
+         */
+        @Override
+        public AbstractFrame getIfContains(DetailAST identToFind, LookMode lookMode) {
+            final AbstractFrame frame;
+
+            if (lookMode == LookMode.NO_LOOK_FOR_METHOD
+                    && containsFieldOrVariable(identToFind)) {
+                frame = this;
+            }
+            else if (getParent().getType() == FrameType.TRY_WITH_RESOURCES_FRAME) {
+                // Skip try-with-resources frame because resources cannot be accessed from catch
+                frame = getParent().getParent().getIfContains(identToFind, lookMode);
+            }
+            else {
+                frame = getParent().getIfContains(identToFind, lookMode);
+            }
+            return frame;
+        }
+
+    }
+
+    /**
+     * A frame initiated on entering a for block; holds local for variable names.
+     */
+    private static class ForFrame extends AbstractFrame {
+
+        /**
+         * Creates for frame.
+         *
+         * @param parent parent frame.
+         * @param ident ident frame name ident.
+         */
+        /* package */ ForFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+        }
+
+        @Override
+        public FrameType getType() {
+            return FrameType.FOR_FRAME;
+        }
+
+    }
+
+    /**
+     * A frame initiated on entering a try-with-resources construct;
+     * holds local resources for the try block.
+     */
+    private static class TryWithResourcesFrame extends AbstractFrame {
+
+        /**
+         * Creates try-with-resources frame.
+         *
+         * @param parent parent frame.
+         * @param ident ident frame name ident.
+         */
+        /* package */ TryWithResourcesFrame(AbstractFrame parent, DetailAST ident) {
+            super(parent, ident);
+        }
+
+        @Override
+        public FrameType getType() {
+            return FrameType.TRY_WITH_RESOURCES_FRAME;
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/ReturnCountCheck.java SHA256 310727d5ef98d34a1086a019d7d28c053dcfc7da9064f763e81e8540b632f4b2
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Restricts the number of return statements in methods, constructors and lambda expressions.
+ * Ignores specified methods ({@code equals} by default).
+ * </div>
+ *
+ * <p>
+ * <b>max</b> property will only check returns in methods and lambdas that
+ * return a specific value (Ex: 'return 1;').
+ * </p>
+ *
+ * <p>
+ * <b>maxForVoid</b> property will only check returns in methods, constructors,
+ * and lambdas that have no return type (IE 'return;'). It will only count
+ * visible return statements. Return statements not normally written, but
+ * implied, at the end of the method/constructor definition will not be taken
+ * into account. To disallow "return;" in void return type methods, use a value of 0.
+ * </p>
+ *
+ * <p>
+ * Rationale: Too many return points can mean that code is
+ * attempting to do too much or may be difficult to understand.
+ * </p>
+ *
+ * @since 3.2
+ */
+@FileStatefulCheck
+public final class ReturnCountCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "return.count";
+    /**
+     * A key pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY_VOID = "return.countVoid";
+
+    /** Stack of method contexts. */
+    private final Deque<Context> contextStack = new ArrayDeque<>();
+
+    /** Specify method names to ignore. */
+    private Pattern format = Pattern.compile("^equals$");
+
+    /** Specify maximum allowed number of return statements in non-void methods/lambdas. */
+    private int max = 2;
+    /** Specify maximum allowed number of return statements in void methods/constructors/lambdas. */
+    private int maxForVoid = 1;
+    /** Current method context. */
+    private Context context;
+
+    /**
+     * Creates a new {@code ReturnCountCheck} instance.
+     */
+    public ReturnCountCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.CTOR_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.LAMBDA,
+            TokenTypes.LITERAL_RETURN,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.LITERAL_RETURN};
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.CTOR_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.LAMBDA,
+            TokenTypes.LITERAL_RETURN,
+        };
+    }
+
+    /**
+     * Setter to specify method names to ignore.
+     *
+     * @param pattern a pattern.
+     * @since 3.4
+     */
+    public void setFormat(Pattern pattern) {
+        format = pattern;
+    }
+
+    /**
+     * Setter to specify maximum allowed number of return statements in non-void methods/lambdas.
+     *
+     * @param max maximum allowed number of return statements.
+     * @since 3.2
+     */
+    public void setMax(int max) {
+        this.max = max;
+    }
+
+    /**
+     * Setter to specify maximum allowed number of return statements
+     * in void methods/constructors/lambdas.
+     *
+     * @param maxForVoid maximum allowed number of return statements for void methods.
+     * @since 6.19
+     */
+    public void setMaxForVoid(int maxForVoid) {
+        this.maxForVoid = maxForVoid;
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        context = new Context(false);
+        contextStack.clear();
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.CTOR_DEF,
+                 TokenTypes.METHOD_DEF -> visitMethodDef(ast);
+            case TokenTypes.LAMBDA -> visitLambda();
+            case TokenTypes.LITERAL_RETURN -> visitReturn(ast);
+            default -> throw new IllegalStateException(ast.toString());
+        }
+    }
+
+    @Override
+    public void leaveToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.CTOR_DEF,
+                 TokenTypes.METHOD_DEF,
+                 TokenTypes.LAMBDA -> leave(ast);
+            case TokenTypes.LITERAL_RETURN -> {
+                // Do nothing
+            }
+            default -> throw new IllegalStateException(ast.toString());
+        }
+    }
+
+    /**
+     * Creates new method context and places old one on the stack.
+     *
+     * @param ast method definition for check.
+     */
+    private void visitMethodDef(DetailAST ast) {
+        contextStack.push(context);
+        final DetailAST methodNameAST = ast.findFirstToken(TokenTypes.IDENT);
+        final boolean check = !format.matcher(methodNameAST.getText()).find();
+        context = new Context(check);
+    }
+
+    /**
+     * Checks number of return statements and restore previous context.
+     *
+     * @param ast node to leave.
+     */
+    private void leave(DetailAST ast) {
+        context.checkCount(ast);
+        context = contextStack.pop();
+    }
+
+    /**
+     * Creates new lambda context and places old one on the stack.
+     */
+    private void visitLambda() {
+        contextStack.push(context);
+        context = new Context(true);
+    }
+
+    /**
+     * Examines the return statement and tells context about it.
+     *
+     * @param ast return statement to check.
+     */
+    private void visitReturn(DetailAST ast) {
+        // we can't identify which max to use for lambdas, so we can only assign
+        // after the first return statement is seen
+        if (ast.getFirstChild().getType() == TokenTypes.SEMI) {
+            context.visitLiteralReturn(maxForVoid, Boolean.TRUE);
+        }
+        else {
+            context.visitLiteralReturn(max, Boolean.FALSE);
+        }
+    }
+
+    /**
+     * Class to encapsulate information about one method.
+     */
+    private final class Context {
+
+        /** Whether we should check this method or not. */
+        private final boolean checking;
+        /** Counter for return statements. */
+        private int count;
+        /** Maximum allowed number of return statements. */
+        private Integer maxAllowed;
+        /** Identifies if context is void. */
+        private boolean isVoidContext;
+
+        /**
+         * Creates new method context.
+         *
+         * @param checking should we check this method or not
+         */
+        private Context(boolean checking) {
+            this.checking = checking;
+        }
+
+        /**
+         * Increase the number of return statements and set context return type.
+         *
+         * @param maxAssigned Maximum allowed number of return statements.
+         * @param voidReturn Identifies if context is void.
+         */
+        /* package */ void visitLiteralReturn(int maxAssigned, Boolean voidReturn) {
+            isVoidContext = voidReturn;
+            maxAllowed = maxAssigned;
+
+            ++count;
+        }
+
+        /**
+         * Checks if number of return statements in the method are more than allowed.
+         *
+         * @param ast method def associated with this context.
+         */
+        /* package */ void checkCount(DetailAST ast) {
+            if (checking && maxAllowed != null && count > maxAllowed) {
+                if (isVoidContext) {
+                    log(ast, MSG_KEY_VOID, count, maxAllowed);
+                }
+                else {
+                    log(ast, MSG_KEY, count, maxAllowed);
+                }
+            }
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/SimplifyBooleanExpressionCheck.java SHA256 1a7a3c04c8247550cd9d1e98697986fa04f8cd460089118ea4f55713d20c701a
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks for over-complicated boolean expressions. Currently, it finds code like
+ * {@code if (b == true)}, {@code b || true}, {@code !false},
+ * {@code boolean a = q > 12 ? true : false},
+ * etc.
+ * </div>
+ *
+ * <p>
+ * Rationale: Complex boolean logic makes code hard to understand and maintain.
+ * </p>
+ *
+ * @since 3.0
+ */
+@StatelessCheck
+public class SimplifyBooleanExpressionCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "simplify.expression";
+
+    /**
+     * Creates a new {@code SimplifyBooleanExpressionCheck} instance.
+     */
+    public SimplifyBooleanExpressionCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.LITERAL_TRUE, TokenTypes.LITERAL_FALSE};
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST parent = ast.getParent();
+        switch (parent.getType()) {
+            case TokenTypes.NOT_EQUAL,
+                 TokenTypes.EQUAL,
+                 TokenTypes.LNOT,
+                 TokenTypes.LOR,
+                 TokenTypes.LAND -> log(parent, MSG_KEY);
+
+            case TokenTypes.QUESTION -> {
+                final DetailAST firstChild = skipParentheses(parent.getFirstChild());
+                final DetailAST nextSibling = skipParentheses(ast.getNextSibling());
+                if (TokenUtil.isBooleanLiteralType(firstChild.getType())
+                        || nextSibling != null
+                        && TokenUtil.isBooleanLiteralType(
+                                skipParentheses(nextSibling.getNextSibling()).getType())) {
+                    log(parent, MSG_KEY);
+                }
+            }
+
+            default -> {
+                // do nothing
+            }
+        }
+    }
+
+    /**
+     * Iterates sibling nodes, skipping parentheses.
+     *
+     * @param node The starting node.
+     * @return The first sibling not of type {@code TokenTypes.LPAREN} or
+     *     {@code TokenTypes.RPAREN}, or {@code null} if no such node exists.
+     */
+    private static DetailAST skipParentheses(DetailAST node) {
+        DetailAST result = node;
+        while (TokenUtil.isOfType(result, TokenTypes.LPAREN, TokenTypes.RPAREN)) {
+            result = result.getNextSibling();
+        }
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/SimplifyBooleanReturnCheck.java SHA256 2a5425af1d5f7cf1194f1c2938a20ffe7ed412c1294996dce2571efaf6e52977
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks for over-complicated boolean return or yield statements.
+ * For example the following code
+ * </div>
+ * {@snippet lang="text" :
+ * if (valid())
+ *   return false;
+ * else
+ *   return true;
+ * }
+ *
+ * <p>
+ * could be written as
+ * </p>
+ * {@snippet lang="text" :
+ * return !valid();
+ * }
+ *
+ * <p>
+ * The idea for this Check has been shamelessly stolen from the equivalent
+ * <a href="https://pmd.github.io/pmd/pmd_rules_java_design.html#simplifybooleanreturns">
+ *     PMD</a> rule.
+ * </p>
+ *
+ * @since 3.0
+ */
+@StatelessCheck
+public class SimplifyBooleanReturnCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "simplify.boolReturn";
+
+    /**
+     * Creates a new {@code SimplifyBooleanReturnCheck} instance.
+     */
+    public SimplifyBooleanReturnCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.LITERAL_IF};
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        // LITERAL_IF has the following four or five children:
+        // '('
+        // condition
+        // ')'
+        // thenStatement
+        // [ LITERAL_ELSE (with the elseStatement as a child) ]
+
+        // don't bother if this is not if then else
+        final DetailAST elseLiteral =
+            ast.findFirstToken(TokenTypes.LITERAL_ELSE);
+        if (elseLiteral != null) {
+            final DetailAST elseStatement = elseLiteral.getFirstChild();
+
+            // skip '(' and ')'
+            final DetailAST condition = ast.getFirstChild().getNextSibling();
+            final DetailAST thenStatement = condition.getNextSibling().getNextSibling();
+
+            if (canReturnOrYieldOnlyBooleanLiteral(thenStatement)
+                && canReturnOrYieldOnlyBooleanLiteral(elseStatement)) {
+                log(ast, MSG_KEY);
+            }
+        }
+    }
+
+    /**
+     * Returns if an AST is a return or a yield statement with a boolean literal
+     * or a compound statement that contains only such a return or a yield statement.
+     *
+     * <p>Returns {@code true} iff ast represents
+     * {@snippet lang="text" :
+     * return/yield true/false;
+     * }
+     * or
+     * {@snippet lang="text" :
+     * {
+     *   return/yield true/false;
+     * }
+     * }
+     *
+     * @param ast the syntax tree to check
+     * @return if ast is a return or a yield statement with a boolean literal.
+     */
+    private static boolean canReturnOrYieldOnlyBooleanLiteral(DetailAST ast) {
+        boolean result = true;
+        if (!isBooleanLiteralReturnOrYieldStatement(ast)) {
+            final DetailAST firstStatement = ast.getFirstChild();
+            result = isBooleanLiteralReturnOrYieldStatement(firstStatement);
+        }
+        return result;
+    }
+
+    /**
+     * Returns if an AST is a return or a yield statement with a boolean literal.
+     *
+     * <p>Returns {@code true} iff ast represents
+     * {@snippet lang="text" :
+     * return/yield true/false;
+     * }
+     *
+     * @param ast the syntax tree to check
+     * @return if ast is a return or a yield statement with a boolean literal.
+     */
+    private static boolean isBooleanLiteralReturnOrYieldStatement(DetailAST ast) {
+        boolean booleanReturnStatement = false;
+
+        if (ast != null && (ast.getType() == TokenTypes.LITERAL_RETURN
+                                || ast.getType() == TokenTypes.LITERAL_YIELD)) {
+            final DetailAST expr = ast.getFirstChild();
+
+            if (expr.getType() != TokenTypes.SEMI) {
+                final DetailAST value = expr.getFirstChild();
+                booleanReturnStatement = TokenUtil.isBooleanLiteralType(value.getType());
+            }
+        }
+        return booleanReturnStatement;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/StringLiteralEqualityCheck.java SHA256 a9c454e23951743af6603e544d57eefb56099788fb859d3ab982731c1f53fa1e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Checks that string literals are not used with {@code ==} or {@code !=}.
+ * Since {@code ==} will compare the object references, not the actual value of the strings,
+ * {@code String.equals()} should be used.
+ * More information can be found
+ * <a href="https://stackoverflow.com/questions/513832/how-do-i-compare-strings-in-java/">
+ * in this article</a>.
+ * </div>
+ *
+ * <p>
+ * Rationale: Novice Java programmers often use code like:
+ * </p>
+ * {@snippet lang="text" :
+ * if (x == "something")
+ * }
+ *
+ * <p>
+ * when they mean
+ * </p>
+ * {@snippet lang="text" :
+ * if ("something".equals(x))
+ * }
+ *
+ * @since 3.2
+ */
+@StatelessCheck
+public class StringLiteralEqualityCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "string.literal.equality";
+
+    /**
+     * Creates a new {@code StringLiteralEqualityCheck} instance.
+     */
+    public StringLiteralEqualityCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.EQUAL, TokenTypes.NOT_EQUAL};
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final boolean hasStringLiteralChild = hasStringLiteralChild(ast);
+
+        if (hasStringLiteralChild) {
+            log(ast, MSG_KEY, ast.getText());
+        }
+    }
+
+    /**
+     * Checks whether string literal or text block literals are concatenated.
+     *
+     * @param ast ast
+     * @return {@code true} if string literal or text block literals are concatenated
+     */
+    private static boolean hasStringLiteralChild(DetailAST ast) {
+        DetailAST currentAst = ast;
+        boolean result = false;
+        while (currentAst != null) {
+            if (currentAst.findFirstToken(TokenTypes.STRING_LITERAL) == null
+                    && currentAst.findFirstToken(TokenTypes.TEXT_BLOCK_LITERAL_BEGIN) == null) {
+                currentAst = currentAst.findFirstToken(TokenTypes.PLUS);
+            }
+            else {
+                result = true;
+                break;
+            }
+        }
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/SuperCloneCheck.java SHA256 823f8e58a5cc5177ac1cfff3b5b1f746c3495832bbcd5f08d967b8e833dad1be
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+
+/**
+ * <div>
+ * Checks that an overriding {@code clone()} method invokes {@code super.clone()}.
+ * Does not check native methods, as they have no possible java defined implementation.
+ * </div>
+ *
+ * <p>
+ * Reference:
+ * <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#clone%28%29">
+ * Object.clone()</a>.
+ * </p>
+ *
+ * @since 3.2
+ */
+@StatelessCheck
+public class SuperCloneCheck extends AbstractSuperCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "missing.super.call";
+
+    /**
+     * Creates a new {@code SuperCloneCheck} instance.
+     */
+    public SuperCloneCheck() {
+        super(MSG_KEY);
+    }
+
+    @Override
+    protected String getMethodName() {
+        return "clone";
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/SuperFinalizeCheck.java SHA256 0d962e5c88be78d01b2991fbc7c8405cff89f925ce0c71a7f88dac0947df1a48
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+
+/**
+ * <div>
+ * Checks that an overriding {@code finalize()} method invokes {@code super.finalize()}.
+ * Does not check native methods, as they have no possible java defined implementation.
+ * </div>
+ *
+ * <p>
+ * References:
+ * <a href="https://www.oracle.com/technical-resources/articles/javase/finalization.html">
+ * How to Handle Java Finalization's Memory-Retention Issues</a>;
+ * <a href="https://javarevisited.blogspot.com/2012/03/finalize-method-in-java-tutorial.html">
+ * 10 points on finalize method in Java</a>.
+ * </p>
+ *
+ * @since 3.2
+ */
+@StatelessCheck
+public class SuperFinalizeCheck extends AbstractSuperCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "missing.super.call";
+
+    /**
+     * Creates a new {@code SuperFinalizeCheck} instance.
+     */
+    public SuperFinalizeCheck() {
+        super(MSG_KEY);
+    }
+
+    @Override
+    protected String getMethodName() {
+        return "finalize";
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/TextBlockGoogleStyleFormattingCheck.java SHA256 baf8aa1bd3e05483472ad0797482a19d2de210e66c2e21471eeeb226da493c5e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks correct format of
+ * <a href="https://docs.oracle.com/en/java/javase/17/text-blocks/index.html">Java Text Blocks</a>
+ * as specified in
+ * <a href="https://google.github.io/styleguide/javaguide.html#s4.8.9-text-blocks">
+ * Google Java Style Guide</a>.
+ * </div>
+ * This Check performs two validations:
+ * <ol>
+ *   <li>
+ *    It ensures that the opening and closing text-block quotes ({@code """}) each appear on their
+ *    own line, with no other item preceding them.
+ *   </li>
+ *   <li>
+ *    Opening and closing quotes are vertically aligned.
+ *   </li>
+ *   <li>
+ *    Each line of text in the text block must be indented at
+ *    least as much as the opening and closing quotes.
+ *   </li>
+ * </ol>
+ * Note: Closing quotes can be followed by additional code on the same line.
+ *
+ * @since 12.3.0
+ */
+@StatelessCheck
+public class TextBlockGoogleStyleFormattingCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_OPEN_QUOTES_ERROR = "textblock.format.open";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_CLOSE_QUOTES_ERROR = "textblock.format.close";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_VERTICALLY_UNALIGNED = "textblock.vertically.unaligned";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_TEXT_BLOCK_CONTENT = "textblock.indentation";
+
+    /**
+     * Creates a new {@code TextBlockGoogleStyleFormattingCheck} instance.
+     */
+    public TextBlockGoogleStyleFormattingCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.TEXT_BLOCK_LITERAL_BEGIN,
+        };
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (!openingQuotesAreAloneOnTheLine(ast)) {
+            log(ast, MSG_OPEN_QUOTES_ERROR);
+        }
+
+        final DetailAST closingQuotes = getClosingQuotes(ast);
+        if (!closingQuotesAreAloneOnTheLine(closingQuotes)) {
+            log(closingQuotes, MSG_CLOSE_QUOTES_ERROR);
+        }
+
+        if (!quotesAreVerticallyAligned(ast, closingQuotes)) {
+            log(closingQuotes, MSG_VERTICALLY_UNALIGNED);
+        }
+
+        if (!isContentIndentedProperly(ast)) {
+            log(ast.getFirstChild(), MSG_TEXT_BLOCK_CONTENT);
+        }
+
+    }
+
+    /**
+     * Checks if opening and closing quotes are vertically aligned.
+     *
+     * @param openQuotes the ast to check.
+     * @param closeQuotes the ast to check.
+     * @return true if both quotes have same indentation else false.
+     */
+    private static boolean quotesAreVerticallyAligned(DetailAST openQuotes, DetailAST closeQuotes) {
+        return openQuotes.getColumnNo() == closeQuotes.getColumnNo();
+    }
+
+    /**
+     * Gets the {@code TEXT_BLOCK_LITERAL_END} of a {@code TEXT_BLOCK_LITERAL_BEGIN}.
+     *
+     * @param ast the ast to check
+     * @return DetailAST {@code TEXT_BLOCK_LITERAL_END}
+     */
+    private static DetailAST getClosingQuotes(DetailAST ast) {
+        return ast.getFirstChild().getNextSibling();
+    }
+
+    /**
+     * Determines if the Opening quotes of text block are not preceded by any code.
+     *
+     * @param openingQuotes opening quotes
+     * @return true if the opening quotes are on the new line.
+     */
+    private static boolean openingQuotesAreAloneOnTheLine(DetailAST openingQuotes) {
+        final DetailAST previousSibling = openingQuotes.getPreviousSibling();
+        boolean quotesAreNotPreceded = previousSibling == null
+                || !TokenUtil.areOnSameLine(openingQuotes, previousSibling);
+        for (DetailAST parent = openingQuotes.getParent(); parent != null;
+             parent = parent.getParent()) {
+            if (!quotesAreNotPreceded || parent.getType() == TokenTypes.ELIST
+                    || parent.getType() == TokenTypes.EXPR) {
+                continue;
+            }
+            if (parent.getType() == TokenTypes.METHOD_DEF) {
+                quotesAreNotPreceded = !quotesArePrecededWithComma(openingQuotes);
+            }
+            else {
+                quotesAreNotPreceded = !TokenUtil.areOnSameLine(openingQuotes, parent);
+            }
+        }
+        return quotesAreNotPreceded;
+    }
+
+    /**
+     * Determines if opening quotes are preceded by {@code ,}.
+     *
+     * @param openingQuotes the quotes
+     * @return true if {@code ,} is present before opening quotes.
+     */
+    private static boolean quotesArePrecededWithComma(DetailAST openingQuotes) {
+        final DetailAST expression = openingQuotes.getParent();
+        return expression.getPreviousSibling() != null
+                && TokenUtil.areOnSameLine(openingQuotes, expression.getPreviousSibling());
+    }
+
+    /**
+     * Determines if the Closing quotes of text block are not preceded by any code.
+     *
+     * @param closingQuotes closing quotes
+     * @return true if the closing quotes are on the new line.
+     */
+    private static boolean closingQuotesAreAloneOnTheLine(DetailAST closingQuotes) {
+        final DetailAST content = closingQuotes.getPreviousSibling();
+        final String text = content.getText();
+        int index = text.length() - 1;
+        while (text.charAt(index) == ' ') {
+            index--;
+        }
+        return Character.isWhitespace(text.charAt(index));
+    }
+
+    /**
+     * Determine if the Text Block content indentation is equal or less than
+     * opening quotes indentation.
+     *
+     * @param openingQuotes openingQuotes
+     * @return true if text-block content is properly indented.
+     */
+    private static boolean isContentIndentedProperly(DetailAST openingQuotes) {
+        final int quoteIndent = openingQuotes.getColumnNo();
+        final DetailAST textAst = openingQuotes.getFirstChild();
+        boolean result = true;
+
+        final String[] lines = textAst.getText().split("\n", -1);
+
+        for (String line : lines) {
+
+            int indentation = 0;
+            while (indentation < line.length()
+                    && Character.isWhitespace(line.charAt(indentation))) {
+                indentation++;
+            }
+
+            if (indentation < quoteIndent && indentation < line.length()) {
+                result = false;
+            }
+        }
+
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessaryNullCheckWithInstanceOfCheck.java SHA256 ddaf964156457c18bfea8c3c3820429d6514833819d83591775bbc2e3919a338
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.Optional;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Checks for redundant null checks with the instanceof operator.
+ * </div>
+ *
+ * <p>
+ * The instanceof operator inherently returns false when the left operand is null,
+ * making explicit null checks redundant in boolean expressions with instanceof.
+ * </p>
+ *
+ * @since 10.25.0
+ */
+@StatelessCheck
+public class UnnecessaryNullCheckWithInstanceOfCheck extends AbstractCheck {
+
+    /**
+     * The error message key for reporting unnecessary null checks.
+     */
+    public static final String MSG_UNNECESSARY_NULLCHECK = "unnecessary.nullcheck.with.instanceof";
+
+    /**
+     * Creates a new {@code UnnecessaryNullCheckWithInstanceOfCheck} instance.
+     */
+    public UnnecessaryNullCheckWithInstanceOfCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.LITERAL_INSTANCEOF};
+    }
+
+    @Override
+    public void visitToken(DetailAST instanceofNode) {
+        findUnnecessaryNullCheck(instanceofNode)
+                .ifPresent(violationNode -> log(violationNode, MSG_UNNECESSARY_NULLCHECK));
+    }
+
+    /**
+     * Checks for an unnecessary null check within a logical AND expression.
+     *
+     * @param instanceOfNode the AST node representing the instanceof expression
+     * @return the identifier if the check is redundant, otherwise {@code null}
+     */
+    private static Optional<DetailAST> findUnnecessaryNullCheck(DetailAST instanceOfNode) {
+        final DetailAST topLevelExpr = findTopLevelLogicalExpression(instanceOfNode);
+
+        Optional<DetailAST> result = Optional.empty();
+        if (topLevelExpr.getType() == TokenTypes.LAND) {
+            result = findRedundantNullCheck(topLevelExpr, instanceOfNode)
+                    .map(DetailAST::getFirstChild);
+        }
+        return result;
+    }
+
+    /**
+     * Traverses up through LAND and LOR operators to find the top-level logical expression.
+     *
+     * @param node the starting node
+     * @return the top-level logical expression node
+     */
+    private static DetailAST findTopLevelLogicalExpression(DetailAST node) {
+        DetailAST currentParent = node;
+        while (currentParent.getParent().getType() == TokenTypes.LAND
+                || currentParent.getParent().getType() == TokenTypes.LOR) {
+            currentParent = currentParent.getParent();
+        }
+        return currentParent;
+    }
+
+    /**
+     * Finds a redundant null check in a logical AND expression combined with an instanceof check.
+     *
+     * @param logicalAndNode the root node of the logical AND expression
+     * @param instanceOfNode the instanceof expression node
+     * @return the AST node representing the redundant null check, or null if not found
+     */
+    private static Optional<DetailAST> findRedundantNullCheck(DetailAST logicalAndNode,
+        DetailAST instanceOfNode) {
+
+        Optional<DetailAST> nullCheckNode = Optional.empty();
+        final DetailAST instanceOfIdent = instanceOfNode.findFirstToken(TokenTypes.IDENT);
+
+        if (instanceOfIdent != null
+                && !containsVariableDereference(logicalAndNode, instanceOfIdent)) {
+
+            nullCheckNode = searchForNullCheck(logicalAndNode, instanceOfNode, instanceOfIdent);
+        }
+        return nullCheckNode;
+    }
+
+    /**
+     * Searches for a redundant null check in the children of a logical AND node.
+     *
+     * @param logicalAndNode the LAND node to search
+     * @param instanceOfNode the instanceof expression node
+     * @param instanceOfIdent the identifier from the instanceof expression
+     * @return the null check node if found, null otherwise
+     */
+    private static Optional<DetailAST> searchForNullCheck(DetailAST logicalAndNode,
+        DetailAST instanceOfNode, DetailAST instanceOfIdent) {
+
+        Optional<DetailAST> nullCheckNode = Optional.empty();
+
+        final Optional<DetailAST> instanceOfSubtree =
+                findDirectChildContaining(logicalAndNode, instanceOfNode);
+
+        final DetailAST instanceOfSubtreeNode =
+                instanceOfSubtree.orElse(null);
+
+        final boolean instanceOfInLor =
+                instanceOfSubtreeNode != null
+                        && instanceOfSubtreeNode.getType() == TokenTypes.LOR;
+
+        DetailAST currentChild = logicalAndNode.getFirstChild();
+        while (currentChild != null) {
+            if (instanceOfInLor && currentChild.equals(instanceOfSubtreeNode)) {
+                break;
+            }
+
+            if (nullCheckNode.isEmpty()) {
+                nullCheckNode = checkChildForNullCheck(
+                        currentChild, instanceOfNode, instanceOfIdent);
+            }
+
+            currentChild = currentChild.getNextSibling();
+        }
+
+        return nullCheckNode;
+    }
+
+    /**
+     * Checks a child node for a redundant null check.
+     *
+     * @param currentChild the child node to check
+     * @param instanceOfNode the instanceof expression node
+     * @param instanceOfIdent the identifier from the instanceof expression
+     * @return the null check node if found, otherwise empty
+     */
+    private static Optional<DetailAST> checkChildForNullCheck(DetailAST currentChild,
+        DetailAST instanceOfNode, DetailAST instanceOfIdent) {
+
+        Optional<DetailAST> result = Optional.empty();
+
+        if (isNotEqual(currentChild)
+                && isNullCheckRedundant(instanceOfIdent, currentChild)) {
+            result = Optional.of(currentChild);
+        }
+        else if (currentChild.getType() == TokenTypes.LAND) {
+            result = findRedundantNullCheck(currentChild, instanceOfNode);
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds the direct child of parent that contains the target node.
+     *
+     * @param parent the parent node
+     * @param target the target node to find
+     * @return the direct child containing target, or null if not found
+     */
+    private static Optional<DetailAST> findDirectChildContaining(DetailAST parent,
+        DetailAST target) {
+
+        DetailAST result = null;
+        DetailAST child = parent.getFirstChild();
+        while (child != null) {
+            if (isAncestorOf(child, target)) {
+                result = child;
+                break;
+            }
+            child = child.getNextSibling();
+        }
+        return Optional.ofNullable(result);
+    }
+
+    /**
+     * Checks if the given node is an ancestor of (or the same as) the target node.
+     *
+     * @param node the potential ancestor node
+     * @param target the target node to check
+     * @return true if node is an ancestor of target, false otherwise
+     */
+    private static boolean isAncestorOf(DetailAST node, DetailAST target) {
+        boolean found = false;
+        DetailAST current = target;
+        while (current != null) {
+            if (current.equals(node)) {
+                found = true;
+                break;
+            }
+            current = current.getParent();
+        }
+        return found;
+    }
+
+    /**
+     * Checks if the given AST node contains a field access or method call on the
+     * variable of the instanceof operand, evaluated before that operand.
+     *
+     * @param node the AST node to check
+     * @param instanceOfIdent the identifier from the instanceof expression
+     * @return true if the variable is dereferenced before the instanceof, false otherwise
+     */
+    private static boolean containsVariableDereference(DetailAST node,
+        DetailAST instanceOfIdent) {
+
+        boolean found = false;
+        DetailAST child = node.getFirstChild();
+
+        while (child != null && !found) {
+            found = node.getType() == TokenTypes.DOT
+                    && instanceOfIdent.getText().equals(child.getText())
+                    && child.getNextSibling() != null
+                    && isBefore(child, instanceOfIdent)
+                || containsVariableDereference(child, instanceOfIdent);
+            child = child.getNextSibling();
+        }
+        return found;
+    }
+
+    /**
+     * Checks if the first node appears earlier in the source than the second node.
+     *
+     * @param first the node expected to appear first
+     * @param second the node expected to appear second
+     * @return true if first is located before second, false otherwise
+     */
+    private static boolean isBefore(DetailAST first, DetailAST second) {
+        int result = Integer.compare(first.getLineNo(), second.getLineNo());
+        if (result == 0) {
+            result = Integer.compare(first.getColumnNo(), second.getColumnNo());
+        }
+        return result == -1;
+    }
+
+    /**
+     * Checks if the given AST node represents a {@code !=} (not equal) operator.
+     *
+     * @param node the AST node to check
+     * @return {@code true} if the node is a not equal operator, otherwise {@code false}
+     */
+    private static boolean isNotEqual(DetailAST node) {
+        return node.getType() == TokenTypes.NOT_EQUAL;
+    }
+
+    /**
+     * Checks if the given AST node is a null literal.
+     *
+     * @param node AST node to check
+     * @return true if the node is a null literal, false otherwise
+     */
+    private static boolean isNullLiteral(DetailAST node) {
+        return node.getType() == TokenTypes.LITERAL_NULL;
+    }
+
+    /**
+     * Determines if the null check is redundant with the instanceof check.
+     *
+     * @param instanceOfIdent the identifier from the instanceof check
+     * @param nullCheckNode the node representing the null check
+     * @return true if the null check is unnecessary, false otherwise
+     */
+    private static boolean isNullCheckRedundant(DetailAST instanceOfIdent,
+        final DetailAST nullCheckNode) {
+
+        final DetailAST nullCheckIdent = nullCheckNode.findFirstToken(TokenTypes.IDENT);
+        return nullCheckIdent != null
+                && (isNullLiteral(nullCheckNode.getFirstChild().getNextSibling())
+                    || isNullLiteral(nullCheckNode.getFirstChild()))
+                && instanceOfIdent.getText().equals(nullCheckIdent.getText());
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessaryParenthesesCheck.java SHA256 42592291627cd356722d08153650a6bd858c11551174cf5732e3dbcb35aeac89
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks if unnecessary parentheses are used in a statement or expression.
+ * The check will flag the following with warnings:
+ * </div>
+ * <div class="wrapper"><pre class="prettyprint"><code class="language-java">
+ * return (x);          // parens around identifier
+ * return (x + 1);      // parens around return value
+ * int x = (y / 2 + 1); // parens around assignment rhs
+ * for (int i = (0); i &lt; 10; i++) {  // parens around literal
+ * t -= (z + 1);                     // parens around assignment rhs
+ * boolean a = (x &gt; 7 &amp;&amp; y &gt; 5)      // parens around expression
+ *             || z &lt; 9;
+ * boolean b = (~a) &gt; -27            // parens around ~a
+ *             &amp;&amp; (a-- &lt; 30);        // parens around expression
+ * </code></pre></div>
+ *
+ * <p>
+ * Notes:
+ * The check is not "type aware", that is to say, it can't tell if parentheses
+ * are unnecessary based on the types in an expression. The check is partially aware about
+ * operator precedence but unaware about operator associativity.
+ * It won't catch cases such as:
+ * </p>
+ * {@snippet lang="text" :
+ * int x = (a + b) + c; // 1st Case
+ * boolean p = true; // 2nd Case
+ * int q = 4;
+ * int r = 3;
+ * if (p == (q <= r)) {}
+ * }
+ *
+ * <p>
+ * In the first case, given that <em>a</em>, <em>b</em>, and <em>c</em> are
+ * all {@code int} variables, the parentheses around {@code a + b} are not needed.
+ * In the second case, parentheses are required as <em>q</em>, <em>r</em> are
+ * of type {@code int} and <em>p</em> is of type {@code boolean}
+ * and removing parentheses will give a compile-time error. Even if <em>q</em>
+ * and <em>r</em> were {@code boolean} still there will be no violation
+ * raised as check is not "type aware".
+ * </p>
+ *
+ * <p>
+ * The partial support for operator precedence includes cases of the following type:
+ * </p>
+ * {@snippet lang="text" :
+ * boolean a = true, b = true;
+ * boolean c = false, d = false;
+ * if ((a && b) || c) { // violation, unnecessary paren
+ * }
+ * if (a && (b || c)) { // ok
+ * }
+ * if ((a == b) && c) { // violation, unnecessary paren
+ * }
+ * String e = "e";
+ * if ((e instanceof String) && a || b) { // violation, unnecessary paren
+ * }
+ * int f = 0;
+ * int g = 0;
+ * if (!(f >= g) // ok
+ *         && (g > f)) { // violation, unnecessary paren
+ * }
+ * if ((++f) > g && a) { // violation, unnecessary paren
+ * }
+ * }
+ *
+ * @since 3.4
+ */
+@FileStatefulCheck
+public class UnnecessaryParenthesesCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_IDENT = "unnecessary.paren.ident";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_ASSIGN = "unnecessary.paren.assign";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_EXPR = "unnecessary.paren.expr";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_LITERAL = "unnecessary.paren.literal";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_STRING = "unnecessary.paren.string";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_RETURN = "unnecessary.paren.return";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_LAMBDA = "unnecessary.paren.lambda";
+
+    /**
+     * Compiled pattern used to match newline control characters, for replacement.
+     */
+    private static final Pattern NEWLINE = Pattern.compile("\\R");
+
+    /**
+     * String used to amend TEXT_BLOCK_CONTENT so that it matches STRING_LITERAL.
+     */
+    private static final String QUOTE = "\"";
+
+    /** The maximum string length before we chop the string. */
+    private static final int MAX_QUOTED_LENGTH = 25;
+
+    /** Token types for literals. */
+    private static final int[] LITERALS = {
+        TokenTypes.NUM_DOUBLE,
+        TokenTypes.NUM_FLOAT,
+        TokenTypes.NUM_INT,
+        TokenTypes.NUM_LONG,
+        TokenTypes.STRING_LITERAL,
+        TokenTypes.LITERAL_NULL,
+        TokenTypes.LITERAL_FALSE,
+        TokenTypes.LITERAL_TRUE,
+        TokenTypes.TEXT_BLOCK_LITERAL_BEGIN,
+    };
+
+    /** Token types for assignment operations. */
+    private static final int[] ASSIGNMENTS = {
+        TokenTypes.ASSIGN,
+        TokenTypes.BAND_ASSIGN,
+        TokenTypes.BOR_ASSIGN,
+        TokenTypes.BSR_ASSIGN,
+        TokenTypes.BXOR_ASSIGN,
+        TokenTypes.DIV_ASSIGN,
+        TokenTypes.MINUS_ASSIGN,
+        TokenTypes.MOD_ASSIGN,
+        TokenTypes.PLUS_ASSIGN,
+        TokenTypes.SL_ASSIGN,
+        TokenTypes.SR_ASSIGN,
+        TokenTypes.STAR_ASSIGN,
+    };
+
+    /** Token types for conditional operators. */
+    private static final int[] CONDITIONAL_OPERATOR = {
+        TokenTypes.LOR,
+        TokenTypes.LAND,
+    };
+
+    /** Token types for relation operator. */
+    private static final int[] RELATIONAL_OPERATOR = {
+        TokenTypes.LITERAL_INSTANCEOF,
+        TokenTypes.GT,
+        TokenTypes.LT,
+        TokenTypes.GE,
+        TokenTypes.LE,
+        TokenTypes.EQUAL,
+        TokenTypes.NOT_EQUAL,
+    };
+
+    /** Token types for unary and postfix operators. */
+    private static final int[] UNARY_AND_POSTFIX = {
+        TokenTypes.UNARY_MINUS,
+        TokenTypes.UNARY_PLUS,
+        TokenTypes.INC,
+        TokenTypes.DEC,
+        TokenTypes.LNOT,
+        TokenTypes.BNOT,
+        TokenTypes.POST_INC,
+        TokenTypes.POST_DEC,
+    };
+
+    /** Types of tokens with higher priority than unary operators. */
+    private static final int[] ARRAY_AND_FIELD_ACCESS = {
+        TokenTypes.INDEX_OP,
+        TokenTypes.DOT,
+        TokenTypes.LITERAL_NEW,
+    };
+
+    /** Token types for bitwise binary operator. */
+    private static final int[] BITWISE_BINARY_OPERATORS = {
+        TokenTypes.BXOR,
+        TokenTypes.BOR,
+        TokenTypes.BAND,
+    };
+
+    /**
+     * Used to test if logging a warning in a parent node may be skipped
+     * because a warning was already logged on an immediate child node.
+     */
+    private DetailAST parentToSkip;
+    /** Depth of nested assignments.  Normally this will be 0 or 1. */
+    private int assignDepth;
+
+    /**
+     * Creates a new {@code UnnecessaryParenthesesCheck} instance.
+     */
+    public UnnecessaryParenthesesCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.EXPR,
+            TokenTypes.IDENT,
+            TokenTypes.NUM_DOUBLE,
+            TokenTypes.NUM_FLOAT,
+            TokenTypes.NUM_INT,
+            TokenTypes.NUM_LONG,
+            TokenTypes.STRING_LITERAL,
+            TokenTypes.LITERAL_NULL,
+            TokenTypes.LITERAL_FALSE,
+            TokenTypes.LITERAL_TRUE,
+            TokenTypes.ASSIGN,
+            TokenTypes.BAND_ASSIGN,
+            TokenTypes.BOR_ASSIGN,
+            TokenTypes.BSR_ASSIGN,
+            TokenTypes.BXOR_ASSIGN,
+            TokenTypes.DIV_ASSIGN,
+            TokenTypes.MINUS_ASSIGN,
+            TokenTypes.MOD_ASSIGN,
+            TokenTypes.PLUS_ASSIGN,
+            TokenTypes.SL_ASSIGN,
+            TokenTypes.SR_ASSIGN,
+            TokenTypes.STAR_ASSIGN,
+            TokenTypes.LAMBDA,
+            TokenTypes.TEXT_BLOCK_LITERAL_BEGIN,
+            TokenTypes.LAND,
+            TokenTypes.LOR,
+            TokenTypes.LITERAL_INSTANCEOF,
+            TokenTypes.GT,
+            TokenTypes.LT,
+            TokenTypes.GE,
+            TokenTypes.LE,
+            TokenTypes.EQUAL,
+            TokenTypes.NOT_EQUAL,
+            TokenTypes.UNARY_MINUS,
+            TokenTypes.UNARY_PLUS,
+            TokenTypes.INC,
+            TokenTypes.DEC,
+            TokenTypes.LNOT,
+            TokenTypes.BNOT,
+            TokenTypes.POST_INC,
+            TokenTypes.POST_DEC,
+            TokenTypes.INDEX_OP,
+            TokenTypes.DOT,
+            TokenTypes.TYPECAST,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.EXPR,
+            TokenTypes.IDENT,
+            TokenTypes.NUM_DOUBLE,
+            TokenTypes.NUM_FLOAT,
+            TokenTypes.NUM_INT,
+            TokenTypes.NUM_LONG,
+            TokenTypes.STRING_LITERAL,
+            TokenTypes.LITERAL_NULL,
+            TokenTypes.LITERAL_FALSE,
+            TokenTypes.LITERAL_TRUE,
+            TokenTypes.ASSIGN,
+            TokenTypes.BAND_ASSIGN,
+            TokenTypes.BOR_ASSIGN,
+            TokenTypes.BSR_ASSIGN,
+            TokenTypes.BXOR_ASSIGN,
+            TokenTypes.DIV_ASSIGN,
+            TokenTypes.MINUS_ASSIGN,
+            TokenTypes.MOD_ASSIGN,
+            TokenTypes.PLUS_ASSIGN,
+            TokenTypes.SL_ASSIGN,
+            TokenTypes.SR_ASSIGN,
+            TokenTypes.STAR_ASSIGN,
+            TokenTypes.LAMBDA,
+            TokenTypes.TEXT_BLOCK_LITERAL_BEGIN,
+            TokenTypes.LAND,
+            TokenTypes.LOR,
+            TokenTypes.LITERAL_INSTANCEOF,
+            TokenTypes.GT,
+            TokenTypes.LT,
+            TokenTypes.GE,
+            TokenTypes.LE,
+            TokenTypes.EQUAL,
+            TokenTypes.NOT_EQUAL,
+            TokenTypes.UNARY_MINUS,
+            TokenTypes.UNARY_PLUS,
+            TokenTypes.INC,
+            TokenTypes.DEC,
+            TokenTypes.LNOT,
+            TokenTypes.BNOT,
+            TokenTypes.POST_INC,
+            TokenTypes.POST_DEC,
+            TokenTypes.BXOR,
+            TokenTypes.BOR,
+            TokenTypes.BAND,
+            TokenTypes.QUESTION,
+            TokenTypes.INDEX_OP,
+            TokenTypes.DOT,
+            TokenTypes.LITERAL_NEW,
+            TokenTypes.TYPECAST,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        // Check can work with any of acceptable tokens
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        parentToSkip = null;
+        assignDepth = 0;
+    }
+
+    // -@cs[CyclomaticComplexity] All logs should be in visit token.
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST parent = ast.getParent();
+
+        if (isLambdaSingleParameterSurrounded(ast)) {
+            log(ast, MSG_LAMBDA);
+        }
+        else if (ast.getType() == TokenTypes.QUESTION) {
+            getParenthesesChildrenAroundQuestion(ast)
+                .forEach(unnecessaryChild -> log(unnecessaryChild, MSG_EXPR));
+        }
+        else if (parent.getType() != TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) {
+            final int type = ast.getType();
+            final boolean surrounded = isSurrounded(getSelfOrParentMethodCall(ast));
+            // An identifier surrounded by parentheses.
+            if (surrounded && type == TokenTypes.IDENT) {
+                parentToSkip = ast.getParent();
+                log(ast, MSG_IDENT, ast.getText());
+            }
+            // A literal (numeric or string) surrounded by parentheses.
+            else if (surrounded && TokenUtil.isOfType(type, LITERALS)) {
+                parentToSkip = ast.getParent();
+                logLiteral(ast, type);
+            }
+            // The rhs of an assignment surrounded by parentheses.
+            else if (TokenUtil.isOfType(type, ASSIGNMENTS)) {
+                assignDepth++;
+                final DetailAST last = ast.getLastChild();
+                if (last.getType() == TokenTypes.RPAREN) {
+                    log(ast, MSG_ASSIGN);
+                }
+            }
+            // A type cast surrounded by parentheses.
+            else if (surrounded && type == TokenTypes.TYPECAST) {
+                logUnnecessaryTypeCast(ast);
+            }
+        }
+    }
+
+    /**
+     * Logs the appropriate message for a parenthesized literal.
+     *
+     * @param ast the literal token
+     * @param type the token type
+     */
+    private void logLiteral(DetailAST ast, int type) {
+        if (type == TokenTypes.STRING_LITERAL) {
+            log(ast, MSG_STRING,
+                chopString(ast.getText()));
+        }
+        else if (type == TokenTypes.TEXT_BLOCK_LITERAL_BEGIN) {
+            // Strip newline control characters to keep message as single-line, add
+            // quotes to make string consistent with STRING_LITERAL
+            final String logString = QUOTE
+                + NEWLINE.matcher(
+                    ast.getFirstChild().getText()).replaceAll("\\\\n")
+                + QUOTE;
+            log(ast, MSG_STRING, chopString(logString));
+        }
+        else {
+            log(ast, MSG_LITERAL, ast.getText());
+        }
+    }
+
+    /**
+     * Logs a warning for a surrounded TYPECAST when the outer parentheses are
+     * not required by member access, method reference, or another rule's report.
+     *
+     * @param ast the TYPECAST node
+     */
+    private void logUnnecessaryTypeCast(DetailAST ast) {
+        final DetailAST parent = ast.getParent();
+        final int parentType = parent.getType();
+        final boolean isWrappedByOtherRule =
+                parentType == TokenTypes.EXPR
+                || TokenUtil.isOfType(parentType, ASSIGNMENTS);
+        final boolean isReceiverOfMemberAccess =
+                parentType == TokenTypes.DOT
+                || parentType == TokenTypes.INDEX_OP
+                || parentType == TokenTypes.METHOD_REF;
+        if (!isWrappedByOtherRule && !isReceiverOfMemberAccess) {
+            log(ast.getPreviousSibling(), MSG_EXPR);
+        }
+    }
+
+    @Override
+    public void leaveToken(DetailAST ast) {
+        final int type = ast.getType();
+        final DetailAST parent = ast.getParent();
+
+        // shouldn't process assign in annotation pairs
+        if (type != TokenTypes.ASSIGN
+            || parent.getType() != TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) {
+            final DetailAST selfOrParentMethodCall = getSelfOrParentMethodCall(ast);
+            if (type == TokenTypes.EXPR) {
+                checkExpression(ast);
+            }
+            else if (TokenUtil.isOfType(type, ASSIGNMENTS)) {
+                assignDepth--;
+            }
+            else if (isSurrounded(selfOrParentMethodCall) && unnecessaryParenAroundOperators(ast)) {
+                log(selfOrParentMethodCall.getPreviousSibling(), MSG_EXPR);
+            }
+        }
+    }
+
+    /**
+     * Get the node itself ot its parent, if it's a method call.
+     *
+     * @param ast AST node
+     * @return node or its parent
+     */
+    private static DetailAST getSelfOrParentMethodCall(DetailAST ast) {
+        DetailAST selfOrParent = ast;
+        if (ast.getParent().getType() == TokenTypes.METHOD_CALL) {
+            selfOrParent = ast.getParent();
+        }
+        return selfOrParent;
+    }
+
+    /**
+     * Tests if the given {@code DetailAST} is surrounded by parentheses.
+     *
+     * @param ast the {@code DetailAST} to check if it is surrounded by parentheses.
+     * @return {@code true} if {@code ast} is surrounded by parentheses.
+     */
+    private static boolean isSurrounded(DetailAST ast) {
+        final DetailAST prev = ast.getPreviousSibling();
+        return prev != null && prev.getType() == TokenTypes.LPAREN;
+    }
+
+    /**
+     * Tests if the given expression node is surrounded by parentheses.
+     *
+     * @param ast a {@code DetailAST} whose type is
+     *        {@code TokenTypes.EXPR}.
+     * @return {@code true} if the expression is surrounded by parentheses.
+     */
+    private static boolean isExprSurrounded(DetailAST ast) {
+        return ast.getFirstChild().getType() == TokenTypes.LPAREN;
+    }
+
+    /**
+     * Checks whether an expression is surrounded by parentheses.
+     *
+     * @param ast the {@code DetailAST} to check if it is surrounded by parentheses.
+     */
+    private void checkExpression(DetailAST ast) {
+        // If 'parentToSkip' == 'ast', then we've already logged a
+        // warning about an immediate child node in visitToken, so we don't
+        // need to log another one here.
+        if (parentToSkip != ast && isExprSurrounded(ast)) {
+            if (ast.getParent().getType() == TokenTypes.LITERAL_RETURN) {
+                log(ast, MSG_RETURN);
+            }
+            else if (assignDepth >= 1) {
+                log(ast, MSG_ASSIGN);
+            }
+            else {
+                log(ast, MSG_EXPR);
+            }
+        }
+    }
+
+    /**
+     * Checks if conditional, relational, bitwise binary operator, unary and postfix operators
+     * in expressions are surrounded by unnecessary parentheses.
+     *
+     * @param ast the {@code DetailAST} to check if it is surrounded by unnecessary parentheses.
+     * @return {@code true} if the expression is surrounded by unnecessary parentheses.
+     */
+    private static boolean unnecessaryParenAroundOperators(DetailAST ast) {
+        final int type = ast.getType();
+        final boolean isConditionalOrRelational = TokenUtil.isOfType(type, CONDITIONAL_OPERATOR)
+                        || TokenUtil.isOfType(type, RELATIONAL_OPERATOR);
+        final boolean isBitwise = TokenUtil.isOfType(type, BITWISE_BINARY_OPERATORS);
+        final boolean hasUnnecessaryParentheses;
+        if (isConditionalOrRelational) {
+            hasUnnecessaryParentheses = checkConditionalOrRelationalOperator(ast);
+        }
+        else if (isBitwise) {
+            hasUnnecessaryParentheses = checkBitwiseBinaryOperator(ast);
+        }
+        else if (TokenUtil.isOfType(type, ARRAY_AND_FIELD_ACCESS)) {
+            hasUnnecessaryParentheses = isNotFirstArgOfTernary(getSelfOrParentMethodCall(ast));
+        }
+        else {
+            hasUnnecessaryParentheses = TokenUtil.isOfType(type, UNARY_AND_POSTFIX)
+                    && isBitWiseBinaryOrConditionalOrRelationalOperator(ast.getParent().getType());
+        }
+        return hasUnnecessaryParentheses;
+    }
+
+    /**
+     * Check that an expression is not the first argument of a conditional ternary operator.
+     *
+     * @param ast expression
+     * @return whether the expression is not the first argument of a ternary operator
+     */
+    private static boolean isNotFirstArgOfTernary(DetailAST ast) {
+        return ast.getParent().getType() != TokenTypes.QUESTION
+                || !ast.equals(ast.getParent().getFirstChild().getNextSibling());
+    }
+
+    /**
+     * Check if conditional or relational operator has unnecessary parentheses.
+     *
+     * @param ast to check if surrounded by unnecessary parentheses
+     * @return true if unnecessary parenthesis
+     */
+    private static boolean checkConditionalOrRelationalOperator(DetailAST ast) {
+        final int type = ast.getType();
+        final int parentType = ast.getParent().getType();
+        final boolean isParentEqualityOperator =
+                TokenUtil.isOfType(parentType, TokenTypes.EQUAL, TokenTypes.NOT_EQUAL);
+        final boolean result;
+        if (type == TokenTypes.LOR) {
+            result = !TokenUtil.isOfType(parentType, TokenTypes.LAND)
+                    && !TokenUtil.isOfType(parentType, BITWISE_BINARY_OPERATORS);
+        }
+        else if (type == TokenTypes.LAND) {
+            result = !TokenUtil.isOfType(parentType, BITWISE_BINARY_OPERATORS);
+        }
+        else {
+            result = true;
+        }
+        return result && !isParentEqualityOperator
+                && isBitWiseBinaryOrConditionalOrRelationalOperator(parentType);
+    }
+
+    /**
+     * Check if bitwise binary operator has unnecessary parentheses.
+     *
+     * @param ast to check if surrounded by unnecessary parentheses
+     * @return true if unnecessary parenthesis
+     */
+    private static boolean checkBitwiseBinaryOperator(DetailAST ast) {
+        final int type = ast.getType();
+        final int parentType = ast.getParent().getType();
+        final boolean result;
+        if (type == TokenTypes.BOR) {
+            result = !TokenUtil.isOfType(parentType, TokenTypes.BAND, TokenTypes.BXOR)
+                    && !TokenUtil.isOfType(parentType, RELATIONAL_OPERATOR);
+        }
+        else if (type == TokenTypes.BXOR) {
+            result = !TokenUtil.isOfType(parentType, TokenTypes.BAND)
+                    && !TokenUtil.isOfType(parentType, RELATIONAL_OPERATOR);
+        }
+        // we deal with bitwise AND here.
+        else {
+            result = !TokenUtil.isOfType(parentType, RELATIONAL_OPERATOR);
+        }
+        return result && isBitWiseBinaryOrConditionalOrRelationalOperator(parentType);
+    }
+
+    /**
+     * Check if token type is bitwise binary or conditional or relational operator.
+     *
+     * @param type Token type to check
+     * @return true if it is bitwise binary or conditional operator
+     */
+    private static boolean isBitWiseBinaryOrConditionalOrRelationalOperator(int type) {
+        return TokenUtil.isOfType(type, CONDITIONAL_OPERATOR)
+                || TokenUtil.isOfType(type, RELATIONAL_OPERATOR)
+                || TokenUtil.isOfType(type, BITWISE_BINARY_OPERATORS);
+    }
+
+    /**
+     * Tests if the given node has a single parameter, no defined type, and is surrounded
+     * by parentheses. This condition can only be true for lambdas.
+     *
+     * @param ast a {@code DetailAST} node
+     * @return {@code true} if the lambda has a single parameter, no defined type, and is
+     *         surrounded by parentheses.
+     */
+    private static boolean isLambdaSingleParameterSurrounded(DetailAST ast) {
+        final DetailAST firstChild = ast.getFirstChild();
+        boolean result = false;
+        if (TokenUtil.isOfType(firstChild, TokenTypes.LPAREN)) {
+            final DetailAST parameters = firstChild.getNextSibling();
+            if (parameters.getChildCount(TokenTypes.PARAMETER_DEF) == 1
+                    && !parameters.getFirstChild().findFirstToken(TokenTypes.TYPE).hasChildren()) {
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    /**
+     *  Returns the direct LPAREN tokens children to a given QUESTION token which
+     *  contain an expression not a literal variable.
+     *
+     *  @param questionToken {@code DetailAST} question token to be checked
+     *  @return the direct children to the given question token which their types are LPAREN
+     *          tokens and not contain a literal inside the parentheses
+     */
+    private static List<DetailAST> getParenthesesChildrenAroundQuestion(DetailAST questionToken) {
+        final List<DetailAST> surroundedChildren = new ArrayList<>();
+        DetailAST directChild = questionToken.getFirstChild();
+        while (directChild != null) {
+            if (directChild.getType() == TokenTypes.LPAREN
+                    && !TokenUtil.isOfType(directChild.getNextSibling(), LITERALS)) {
+                surroundedChildren.add(directChild);
+            }
+            directChild = directChild.getNextSibling();
+        }
+        return Collections.unmodifiableList(surroundedChildren);
+    }
+
+    /**
+     * Returns the specified string chopped to {@code MAX_QUOTED_LENGTH}
+     * plus an ellipsis (...) if the length of the string exceeds {@code MAX_QUOTED_LENGTH}.
+     *
+     * @param value the string to potentially chop.
+     * @return the chopped string if {@code string} is longer than
+     *         {@code MAX_QUOTED_LENGTH}; otherwise {@code string}.
+     */
+    private static String chopString(String value) {
+        String result = value;
+        if (value.length() > MAX_QUOTED_LENGTH) {
+            result = value.substring(0, MAX_QUOTED_LENGTH) + "...\"";
+        }
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessaryPermitsClauseCheck.java SHA256 7cc5b88039147b02f501f57bd8fa2a647cd416ad38f1fa2af4528bea2695dc8f
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks that a {@code permits} clause of a sealed class or interface is not
+ * unnecessary, i.e. that it is not possible to omit the clause and have the
+ * compiler infer the exact same set of permitted subtypes.
+ * </div>
+ *
+ * <p>
+ * See the <a href="https://docs.oracle.com/javase/specs/jls/se22/html/jls-13.html#jls-13.4.2">
+ * Java Language Specification</a> for more information about sealed classes.
+ * </p>
+ *
+ * <p>
+ * This Check does not perform full type resolution. It determines whether a
+ * permitted type is local to the file by comparing simple names against every
+ * type declaration (class, interface, enum, or record) found
+ * anywhere in the compilation unit, including nested and sibling top-level
+ * types. As a result, a permitted type whose simple name coincidentally
+ * matches an unrelated local type declaration could, in theory, be
+ * misidentified as local. In practice this situation cannot occur in code
+ * that compiles, since the Java compiler would not be able to resolve such an
+ * ambiguous reference in the {@code permits} clause.
+ * </p>
+ *
+ * @since 14.2.0
+ */
+@FileStatefulCheck
+public class UnnecessaryPermitsClauseCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "unnecessary.permits.clause";
+
+    /**
+     * A set of simple names of every type declared in the current compilation
+     * unit, including nested types.
+     */
+    private final Set<String> localTypeNames = new HashSet<>();
+
+    /**
+     * A list of {@link TokenTypes#PERMITS_CLAUSE} nodes found in the current compilation unit.
+     */
+    private final List<DetailAST> permitsClauseAstList = new ArrayList<>();
+
+    /**
+     * Creates a new {@code UnnecessaryPermitsClauseCheck} instance.
+     */
+    public UnnecessaryPermitsClauseCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.PERMITS_CLAUSE,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        localTypeNames.clear();
+        permitsClauseAstList.clear();
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.CLASS_DEF,
+                    TokenTypes.INTERFACE_DEF,
+                    TokenTypes.ENUM_DEF,
+                    TokenTypes.RECORD_DEF -> {
+                final DetailAST nameAst = ast.findFirstToken(TokenTypes.IDENT);
+                localTypeNames.add(nameAst.getText());
+            }
+            default -> permitsClauseAstList.add(ast);
+        }
+    }
+
+    @Override
+    public void finishTree(DetailAST rootAST) {
+        for (DetailAST permitsClause : permitsClauseAstList) {
+            if (isUnnecessary(permitsClause)) {
+                log(permitsClause, MSG_KEY);
+            }
+        }
+    }
+
+    /**
+     * Determines whether every type named in the given {@code permits} clause
+     * is declared somewhere within the same compilation unit, and is therefore redundant.
+     *
+     * @param permitsClause the {@link TokenTypes#PERMITS_CLAUSE} node to inspect
+     * @return {@code true} if the clause is unnecessary
+     */
+    private boolean isUnnecessary(DetailAST permitsClause) {
+        boolean result = true;
+        DetailAST permittedType = permitsClause.getFirstChild();
+        while (permittedType != null) {
+            if (isTypeName(permittedType)) {
+                final String simpleName = getSimpleName(permittedType);
+                if (!localTypeNames.contains(simpleName)) {
+                    result = false;
+                    break;
+                }
+            }
+            permittedType = permittedType.getNextSibling();
+        }
+        return result;
+    }
+
+    /**
+     * Checks whether the given direct child of a {@code permits} clause
+     * represents a permitted type name, as opposed to a separating comma.
+     *
+     * @param ast the node to check
+     * @return {@code true} if the node is a (possibly qualified) type name
+     */
+    private static boolean isTypeName(DetailAST ast) {
+        return TokenUtil.isOfType(ast, TokenTypes.IDENT, TokenTypes.DOT);
+    }
+
+    /**
+     * Extracts the simple (unqualified) name from a type name node, which is
+     * either a single {@link TokenTypes#IDENT} or a {@link TokenTypes#DOT}
+     * chain representing a qualified name.
+     *
+     * @param typeName the type name node
+     * @return the simple name of the type
+     */
+    private static String getSimpleName(DetailAST typeName) {
+        final String simpleName;
+        if (typeName.getType() == TokenTypes.DOT) {
+            simpleName = typeName.getLastChild().getText();
+        }
+        else {
+            simpleName = typeName.getText();
+        }
+        return simpleName;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessarySemicolonAfterOuterTypeDeclarationCheck.java SHA256 1742982f93c6932349ca96aff1fbada8f4e1fb40fe82bb20e91ded7e6ec6bee1
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
+
+/**
+ * <div>
+ * Checks if unnecessary semicolon is used after type declaration.
+ * </div>
+ *
+ * <p>
+ * Notes:
+ * This check is not applicable to nested type declarations,
+ * <a
+ * href="https://checkstyle.org/checks/coding/unnecessarysemicolonaftertypememberdeclaration.html">
+ * UnnecessarySemicolonAfterTypeMemberDeclaration</a> is responsible for it.
+ * </p>
+ *
+ * @since 8.31
+ */
+@StatelessCheck
+public final class UnnecessarySemicolonAfterOuterTypeDeclarationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_SEMI = "unnecessary.semicolon";
+
+    /**
+     * Creates a new {@code UnnecessarySemicolonAfterOuterTypeDeclarationCheck} instance.
+     */
+    public UnnecessarySemicolonAfterOuterTypeDeclarationCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.RECORD_DEF,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST nextSibling = ast.getNextSibling();
+        if (nextSibling != null
+                && nextSibling.getType() == TokenTypes.SEMI
+                && ScopeUtil.isOuterMostType(ast)) {
+            log(nextSibling, MSG_SEMI);
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessarySemicolonAfterTypeMemberDeclarationCheck.java SHA256 934720e07fce5a230d61ad6e6fc2c2132119bfefa6c6c8e01d275faf5661fdfb
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
+
+/**
+ * <div>
+ * Checks if unnecessary semicolon is used after type member declaration.
+ * </div>
+ *
+ * <p>
+ * Notes:
+ * This check is not applicable to empty statements (unnecessary semicolons inside methods or
+ * init blocks),
+ * <a href="https://checkstyle.org/checks/coding/emptystatement.html">EmptyStatement</a>
+ * is responsible for it.
+ * </p>
+ *
+ * @since 8.24
+ */
+@StatelessCheck
+public final class UnnecessarySemicolonAfterTypeMemberDeclarationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_SEMI = "unnecessary.semicolon";
+
+    /**
+     * Creates a new {@code UnnecessarySemicolonAfterTypeMemberDeclarationCheck} instance.
+     */
+    public UnnecessarySemicolonAfterTypeMemberDeclarationCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.ANNOTATION_FIELD_DEF,
+            TokenTypes.STATIC_INIT,
+            TokenTypes.INSTANCE_INIT,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.COMPACT_CTOR_DEF,
+            TokenTypes.RECORD_DEF,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.CLASS_DEF,
+                 TokenTypes.INTERFACE_DEF,
+                 TokenTypes.ENUM_DEF,
+                 TokenTypes.ANNOTATION_DEF,
+                 TokenTypes.RECORD_DEF -> checkTypeDefinition(ast);
+            case TokenTypes.VARIABLE_DEF -> checkVariableDefinition(ast);
+            case TokenTypes.ENUM_CONSTANT_DEF -> checkEnumConstant(ast);
+            default -> checkTypeMember(ast);
+        }
+    }
+
+    /**
+     * Checks if type member has unnecessary semicolon.
+     *
+     * @param ast type member
+     */
+    private void checkTypeMember(DetailAST ast) {
+        if (isSemicolon(ast.getNextSibling())) {
+            log(ast.getNextSibling(), MSG_SEMI);
+        }
+    }
+
+    /**
+     * Checks if type definition has unnecessary semicolon.
+     *
+     * @param ast type definition
+     */
+    private void checkTypeDefinition(DetailAST ast) {
+        if (!ScopeUtil.isOuterMostType(ast) && isSemicolon(ast.getNextSibling())) {
+            log(ast.getNextSibling(), MSG_SEMI);
+        }
+        final DetailAST firstMember =
+            ast.findFirstToken(TokenTypes.OBJBLOCK).getFirstChild().getNextSibling();
+        if (isSemicolon(firstMember) && !ScopeUtil.isInEnumBlock(firstMember)) {
+            log(firstMember, MSG_SEMI);
+        }
+    }
+
+    /**
+     * Checks if variable definition has unnecessary semicolon.
+     *
+     * @param variableDef variable definition
+     */
+    private void checkVariableDefinition(DetailAST variableDef) {
+        if (isSemicolon(variableDef.getLastChild()) && isSemicolon(variableDef.getNextSibling())) {
+            log(variableDef.getNextSibling(), MSG_SEMI);
+        }
+    }
+
+    /**
+     * Checks if enum constant has unnecessary semicolon.
+     *
+     * @param ast enum constant
+     */
+    private void checkEnumConstant(DetailAST ast) {
+        final DetailAST next = ast.getNextSibling();
+        if (isSemicolon(next) && isSemicolon(next.getNextSibling())) {
+            log(next.getNextSibling(), MSG_SEMI);
+        }
+    }
+
+    /**
+     * Checks that {@code ast} is a semicolon.
+     *
+     * @param ast token to check
+     * @return true if ast is semicolon, false otherwise
+     */
+    private static boolean isSemicolon(DetailAST ast) {
+        return ast != null && ast.getType() == TokenTypes.SEMI;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessarySemicolonInEnumerationCheck.java SHA256 de29fcb9502c6ca24b4961bd89b123ff36e3b1b7f95e25ad93714f5ac32dcedc
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Checks if unnecessary semicolon is in enum definitions.
+ * Semicolon is not needed if enum body contains only enum constants.
+ * </div>
+ *
+ * @since 8.22
+ */
+@StatelessCheck
+public final class UnnecessarySemicolonInEnumerationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_SEMI = "unnecessary.semicolon";
+
+    /**
+     * Creates a new {@code UnnecessarySemicolonInEnumerationCheck} instance.
+     */
+    public UnnecessarySemicolonInEnumerationCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.ENUM_DEF,
+        };
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST enumBlock = ast.findFirstToken(TokenTypes.OBJBLOCK);
+        final boolean hasMembers = hasMembersAfterConstants(enumBlock);
+        DetailAST sibling = enumBlock.getFirstChild();
+        while (sibling != null) {
+            if (sibling.getType() == TokenTypes.SEMI
+                    && (!hasMembers || isPrecededBySemi(sibling))) {
+                log(sibling, MSG_SEMI);
+            }
+            sibling = sibling.getNextSibling();
+        }
+    }
+
+    /**
+     * Checks if enum body contains any member (method, constructor, field, etc.)
+     * in addition to enum constants and semicolons.
+     *
+     * @param enumBlock the enum body to check
+     * @return true if enum body has members, false if it only has constants and semicolons.
+     */
+    private static boolean hasMembersAfterConstants(DetailAST enumBlock) {
+        boolean result = false;
+        DetailAST sibling = enumBlock.getFirstChild();
+        while (sibling != null) {
+            final int type = sibling.getType();
+            if (type != TokenTypes.LCURLY
+                    && type != TokenTypes.RCURLY
+                    && type != TokenTypes.ENUM_CONSTANT_DEF
+                    && type != TokenTypes.SEMI
+                    && type != TokenTypes.COMMA) {
+                result = true;
+                break;
+            }
+            sibling = sibling.getNextSibling();
+        }
+        return result;
+    }
+
+    /**
+     * Checks if semicolon is immediately preceded by another semicolon,
+     * making it a redundant duplicate.
+     *
+     * @param ast semicolon to check
+     * @return true if previous sibling is also a semicolon, false otherwise.
+     */
+    private static boolean isPrecededBySemi(DetailAST ast) {
+        final DetailAST prev = ast.getPreviousSibling();
+        return prev.getType() == TokenTypes.SEMI;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessarySemicolonInTryWithResourcesCheck.java SHA256 36be9b64bfee4980f577363377b22c3199d721325446471be7b51744ddb26b16
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks if unnecessary semicolon is used in last resource declaration.
+ * </div>
+ *
+ * @since 8.22
+ */
+@StatelessCheck
+public final class UnnecessarySemicolonInTryWithResourcesCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_SEMI = "unnecessary.semicolon";
+
+    /** Allow unnecessary semicolon if closing parenthesis is not on the same line. */
+    private boolean allowWhenNoBraceAfterSemicolon = true;
+
+    /**
+     * Creates a new {@code UnnecessarySemicolonInTryWithResourcesCheck} instance.
+     */
+    public UnnecessarySemicolonInTryWithResourcesCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.RESOURCE_SPECIFICATION,
+        };
+    }
+
+    /**
+     * Setter to allow unnecessary semicolon if closing parenthesis is not on the same line.
+     *
+     * @param allowWhenNoBraceAfterSemicolon a value to set.
+     * @since 8.22
+     */
+    public void setAllowWhenNoBraceAfterSemicolon(boolean allowWhenNoBraceAfterSemicolon) {
+        this.allowWhenNoBraceAfterSemicolon = allowWhenNoBraceAfterSemicolon;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST closingParen = ast.getLastChild();
+        final DetailAST tokenBeforeCloseParen = closingParen.getPreviousSibling();
+        if (tokenBeforeCloseParen.getType() == TokenTypes.SEMI
+            && (!allowWhenNoBraceAfterSemicolon
+                || TokenUtil.areOnSameLine(closingParen, tokenBeforeCloseParen))) {
+            log(tokenBeforeCloseParen, MSG_SEMI);
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnnecessaryTypeArgumentsWithRecordPatternCheck.java SHA256 cbd7d85c23afb23fb986ce761f559d6936e5ee6016d823a4208aa9d4c2dca61e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.NullUtil;
+
+/**
+ * <div>
+ * Checks for unnecessary explicit type arguments in record patterns.
+ * </div>
+ *
+ * <p>
+ * When a record pattern declares explicit type arguments that can be inferred
+ * by the compiler, those type arguments are redundant and reduce readability.
+ * </p>
+ *
+ * @since 13.9.0
+ */
+@StatelessCheck
+public class UnnecessaryTypeArgumentsWithRecordPatternCheck extends AbstractCheck {
+
+    /**
+     * The error message key.
+     */
+    public static final String MSG_KEY = "unnecessary.type.arguments.record.pattern";
+
+    /**
+     * Creates a new {@code UnnecessaryTypeArgumentsWithRecordPatternCheck} instance.
+     */
+    public UnnecessaryTypeArgumentsWithRecordPatternCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.RECORD_PATTERN_DEF,
+        };
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST typeAst =
+            NullUtil.notNull(ast.findFirstToken(TokenTypes.TYPE));
+        final DetailAST typeArgs = typeAst.findFirstToken(TokenTypes.TYPE_ARGUMENTS);
+        if (typeArgs != null && isUnnecessary(typeArgs)) {
+            log(typeArgs, MSG_KEY);
+        }
+    }
+
+    /**
+     * Determines whether explicit type arguments in a record pattern are unnecessary.
+     *
+     * @param typeArgs TYPE_ARGUMENTS ast node
+     * @return true if the type arguments are necessary, false otherwise
+     */
+    private static boolean isUnnecessary(DetailAST typeArgs) {
+        boolean violation = false;
+        DetailAST typeArgument = typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT);
+        while (typeArgument != null) {
+            final DetailAST firstChild = typeArgument.getFirstChild();
+            if (firstChild.getType() != TokenTypes.WILDCARD_TYPE) {
+                violation = true;
+            }
+            do {
+                typeArgument = typeArgument.getNextSibling();
+            } while (typeArgument != null
+                    && typeArgument.getType() != TokenTypes.TYPE_ARGUMENT);
+        }
+        return violation;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnusedCatchParameterShouldBeUnnamedCheck.java SHA256 2e61f9d9ee03504642d4abc092ecb4458701ad78eb7a51e0fa52217782a44b46
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Optional;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Ensures that catch parameters that are not used are declared as an unnamed variable.
+ * </div>
+ *
+ * <p>
+ * Rationale:
+ * </p>
+ * <ul>
+ *     <li>
+ *         Improves code readability by clearly indicating which parameters are unused.
+ *     </li>
+ *     <li>
+ *         Follows Java conventions for denoting unused parameters with an underscore ({@code _}).
+ *     </li>
+ * </ul>
+ *
+ * <p>
+ * See the <a href="https://docs.oracle.com/en/java/javase/21/docs/specs/unnamed-jls.html">
+ * Java Language Specification</a> for more information about unnamed variables.
+ * </p>
+ *
+ * <p>
+ * <b>Attention</b>: This check should be activated only on source code
+ * that is compiled by jdk21 or higher;
+ * unnamed catch parameters came out as the first preview in Java 21.
+ * </p>
+ *
+ * @since 10.18.0
+ */
+
+@FileStatefulCheck
+public class UnusedCatchParameterShouldBeUnnamedCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_UNUSED_CATCH_PARAMETER = "unused.catch.parameter";
+
+    /**
+     * Invalid parents of the catch parameter identifier.
+     */
+    private static final int[] INVALID_CATCH_PARAM_IDENT_PARENTS = {
+        TokenTypes.DOT,
+        TokenTypes.LITERAL_NEW,
+        TokenTypes.METHOD_CALL,
+        TokenTypes.TYPE,
+    };
+
+    /**
+     * Keeps track of the catch parameters in a block.
+     */
+    private final Deque<CatchParameterDetails> catchParameters = new ArrayDeque<>();
+
+    /**
+     * Creates a new {@code UnusedCatchParameterShouldBeUnnamedCheck} instance.
+     */
+    public UnusedCatchParameterShouldBeUnnamedCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.LITERAL_CATCH,
+            TokenTypes.IDENT,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        catchParameters.clear();
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (ast.getType() == TokenTypes.LITERAL_CATCH) {
+            final CatchParameterDetails catchParameter = new CatchParameterDetails(ast);
+            catchParameters.push(catchParameter);
+        }
+        else if (isCatchParameterIdentifierCandidate(ast) && !isLeftHandOfAssignment(ast)) {
+            // we do not count reassignment as usage
+            catchParameters.stream()
+                    .filter(parameter -> parameter.getName().equals(ast.getText()))
+                    .findFirst()
+                    .ifPresent(CatchParameterDetails::registerAsUsed);
+        }
+    }
+
+    @Override
+    public void leaveToken(DetailAST ast) {
+        if (ast.getType() == TokenTypes.LITERAL_CATCH) {
+            final Optional<CatchParameterDetails> unusedCatchParameter =
+                    Optional.ofNullable(catchParameters.peek())
+                            .filter(parameter -> !parameter.isUsed())
+                            .filter(parameter -> !"_".equals(parameter.getName()));
+
+            unusedCatchParameter.ifPresent(parameter -> {
+                log(parameter.getParameterDefinition(),
+                        MSG_UNUSED_CATCH_PARAMETER,
+                        parameter.getName());
+            });
+            catchParameters.pop();
+        }
+    }
+
+    /**
+     * Visit ast of type {@link TokenTypes#IDENT}
+     * and check if it is a candidate for a catch parameter identifier.
+     *
+     * @param identifierAst token representing {@code TokenTypes#IDENT}
+     * @return true if the given {@code TokenTypes#IDENT} could be a catch parameter identifier
+     */
+    private static boolean isCatchParameterIdentifierCandidate(DetailAST identifierAst) {
+        // we should ignore the ident if it is in the exception declaration
+        return identifierAst.getParent().getParent().getType() != TokenTypes.LITERAL_CATCH
+            && (!TokenUtil.isOfType(identifierAst.getParent(), INVALID_CATCH_PARAM_IDENT_PARENTS)
+                 || isMethodInvocation(identifierAst));
+    }
+
+    /**
+     * Check if the given {@link TokenTypes#IDENT} is a child of a dot operator
+     * and is a candidate for catch parameter.
+     *
+     * @param identAst token representing {@code TokenTypes#IDENT}
+     * @return true if the given {@code TokenTypes#IDENT} is a child of a dot operator
+     *     and a candidate for catch parameter.
+     */
+    private static boolean isMethodInvocation(DetailAST identAst) {
+        final DetailAST parent = identAst.getParent();
+        return parent.getType() == TokenTypes.DOT
+                && identAst.equals(parent.getFirstChild());
+    }
+
+    /**
+     * Check if the given {@link TokenTypes#IDENT} is a left hand side value.
+     *
+     * @param identAst token representing {@code TokenTypes#IDENT}
+     * @return true if the given {@code TokenTypes#IDENT} is a left hand side value.
+     */
+    private static boolean isLeftHandOfAssignment(DetailAST identAst) {
+        final DetailAST parent = identAst.getParent();
+        return parent.getType() == TokenTypes.ASSIGN
+                && !identAst.equals(parent.getLastChild());
+    }
+
+    /**
+     * Maintains information about the catch parameter.
+     */
+    private static final class CatchParameterDetails {
+
+        /**
+         * The name of the catch parameter.
+         */
+        private final String name;
+
+        /**
+         * Ast of type {@link TokenTypes#PARAMETER_DEF} to use it when logging.
+         */
+        private final DetailAST parameterDefinition;
+
+        /**
+         * Is the variable used.
+         */
+        private boolean used;
+
+        /**
+         * Create a new catch parameter instance.
+         *
+         * @param enclosingCatchClause ast of type {@link TokenTypes#LITERAL_CATCH}
+         */
+        private CatchParameterDetails(DetailAST enclosingCatchClause) {
+            parameterDefinition =
+                    enclosingCatchClause.findFirstToken(TokenTypes.PARAMETER_DEF);
+            name = parameterDefinition.findFirstToken(TokenTypes.IDENT).getText();
+        }
+
+        /**
+         * Register the catch parameter as used.
+         */
+        private void registerAsUsed() {
+            used = true;
+        }
+
+        /**
+         * Get the name of the catch parameter.
+         *
+         * @return the name of the catch parameter
+         */
+        private String getName() {
+            return name;
+        }
+
+        /**
+         * Check if the catch parameter is used.
+         *
+         * @return true if the catch parameter is used
+         */
+        private boolean isUsed() {
+            return used;
+        }
+
+        /**
+         * Get the parameter definition token of the catch parameter
+         * represented by ast of type {@link TokenTypes#PARAMETER_DEF}.
+         *
+         * @return the ast of type {@code TokenTypes#PARAMETER_DEF}
+         */
+        private DetailAST getParameterDefinition() {
+            return parameterDefinition;
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnusedLambdaParameterShouldBeUnnamedCheck.java SHA256 096c7e8e5d05329da1102377fa2bd384f0f4321e5d29dc0408af7c520e781f1a
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Optional;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Ensures that lambda parameters that are not used are declared as an unnamed variable.
+ * </div>
+ *
+ * <p>
+ * Rationale:
+ * </p>
+ * <ul>
+ *     <li>
+ *         Improves code readability by clearly indicating which parameters are unused.
+ *     </li>
+ *     <li>
+ *         Follows Java conventions for denoting unused parameters with an underscore ({@code _}).
+ *     </li>
+ * </ul>
+ *
+ * <p>
+ * See the <a href="https://docs.oracle.com/en/java/javase/21/docs/specs/unnamed-jls.html">
+ * Java Language Specification</a> for more information about unnamed variables.
+ * </p>
+ *
+ * <p>
+ * <b>Attention</b>: Unnamed variables are available as a preview feature in Java 21,
+ * and became an official part of the language in Java 22.
+ * This check should be activated only on source code which meets those requirements.
+ * </p>
+ *
+ * @since 10.18.0
+ */
+@FileStatefulCheck
+public class UnusedLambdaParameterShouldBeUnnamedCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_UNUSED_LAMBDA_PARAMETER = "unused.lambda.parameter";
+
+    /**
+     * Invalid parents of the lambda parameter identifier.
+     * These are tokens that can not be parents for a lambda parameter identifier.
+     */
+    private static final int[] INVALID_LAMBDA_PARAM_IDENT_PARENTS = {
+        TokenTypes.DOT,
+        TokenTypes.LITERAL_NEW,
+        TokenTypes.METHOD_CALL,
+        TokenTypes.TYPE,
+    };
+
+    /**
+     * Keeps track of the lambda parameters in a block.
+     */
+    private final Deque<LambdaParameterDetails> lambdaParameters = new ArrayDeque<>();
+
+    /**
+     * Creates a new {@code UnusedLambdaParameterShouldBeUnnamedCheck} instance.
+     */
+    public UnusedLambdaParameterShouldBeUnnamedCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.LAMBDA,
+            TokenTypes.IDENT,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        lambdaParameters.clear();
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (ast.getType() == TokenTypes.LAMBDA) {
+            final DetailAST parameters = ast.findFirstToken(TokenTypes.PARAMETERS);
+            if (parameters != null) {
+                // we have multiple lambda parameters
+                TokenUtil.forEachChild(parameters, TokenTypes.PARAMETER_DEF, parameter -> {
+                    final DetailAST identifierAst = parameter.findFirstToken(TokenTypes.IDENT);
+                    final LambdaParameterDetails lambdaParameter =
+                            new LambdaParameterDetails(ast, identifierAst);
+                    lambdaParameters.push(lambdaParameter);
+                });
+            }
+            else if (ast.getChildCount() != 0) {
+                // we are not switch rule and have a single parameter
+                final LambdaParameterDetails lambdaParameter =
+                            new LambdaParameterDetails(ast, ast.findFirstToken(TokenTypes.IDENT));
+                lambdaParameters.push(lambdaParameter);
+            }
+        }
+        else if (isLambdaParameterIdentifierCandidate(ast) && !isLeftHandOfAssignment(ast)) {
+            // we do not count reassignment as usage
+            lambdaParameters.stream()
+                    .filter(parameter -> parameter.getName().equals(ast.getText()))
+                    .findFirst()
+                    .ifPresent(LambdaParameterDetails::registerAsUsed);
+        }
+    }
+
+    @Override
+    public void leaveToken(DetailAST ast) {
+        while (lambdaParameters.peek() != null
+                    && ast.equals(lambdaParameters.peek().enclosingLambda)) {
+
+            final Optional<LambdaParameterDetails> unusedLambdaParameter =
+                    Optional.ofNullable(lambdaParameters.peek())
+                            .filter(parameter -> !parameter.isUsed())
+                            .filter(parameter -> !"_".equals(parameter.getName()));
+
+            unusedLambdaParameter.ifPresent(parameter -> {
+                log(parameter.getIdentifierAst(),
+                        MSG_UNUSED_LAMBDA_PARAMETER,
+                        parameter.getName());
+            });
+            lambdaParameters.pop();
+        }
+    }
+
+    /**
+     * Visit ast of type {@link TokenTypes#IDENT}
+     * and check if it is a candidate for a lambda parameter identifier.
+     *
+     * @param identifierAst token representing {@code TokenTypes#IDENT}
+     * @return true if the given {@code TokenTypes#IDENT} could be a lambda parameter identifier
+     */
+    private static boolean isLambdaParameterIdentifierCandidate(DetailAST identifierAst) {
+        // we should ignore the ident if it is in the lambda parameters declaration
+        final boolean isLambdaParameterDeclaration =
+                identifierAst.getParent().getType() == TokenTypes.LAMBDA
+                    || identifierAst.getParent().getType() == TokenTypes.PARAMETER_DEF;
+
+        return !isLambdaParameterDeclaration
+                 && (hasValidParentToken(identifierAst) || isMethodInvocation(identifierAst));
+    }
+
+    /**
+     * Check if the given {@link TokenTypes#IDENT} has a valid parent token.
+     * A valid parent token is a token that can be a parent for a lambda parameter identifier.
+     *
+     * @param identifierAst token representing {@code TokenTypes#IDENT}
+     * @return true if the given {@code TokenTypes#IDENT} has a valid parent token
+     */
+    private static boolean hasValidParentToken(DetailAST identifierAst) {
+        return !TokenUtil.isOfType(identifierAst.getParent(), INVALID_LAMBDA_PARAM_IDENT_PARENTS);
+    }
+
+    /**
+     * Check if the given {@link TokenTypes#IDENT} is a child of a dot operator
+     * and is a candidate for lambda parameter.
+     *
+     * @param identAst token representing {@code TokenTypes#IDENT}
+     * @return true if the given {@code TokenTypes#IDENT} is a child of a dot operator
+     *     and a candidate for lambda parameter.
+     */
+    private static boolean isMethodInvocation(DetailAST identAst) {
+        final DetailAST parent = identAst.getParent();
+        return parent.getType() == TokenTypes.DOT
+                && identAst.equals(parent.getFirstChild());
+    }
+
+    /**
+     * Check if the given {@link TokenTypes#IDENT} is a left hand side value.
+     *
+     * @param identAst token representing {@code TokenTypes#IDENT}
+     * @return true if the given {@code TokenTypes#IDENT} is a left hand side value.
+     */
+    private static boolean isLeftHandOfAssignment(DetailAST identAst) {
+        final DetailAST parent = identAst.getParent();
+        return parent.getType() == TokenTypes.ASSIGN
+                && !identAst.equals(parent.getLastChild());
+    }
+
+    /**
+     * Maintains information about the lambda parameter.
+     */
+    private static final class LambdaParameterDetails {
+
+        /**
+         * Ast of type {@link TokenTypes#LAMBDA} enclosing the lambda parameter.
+         */
+        private final DetailAST enclosingLambda;
+
+        /**
+         * Ast of type {@link TokenTypes#IDENT} of the given lambda parameter.
+         */
+        private final DetailAST identifierAst;
+
+        /**
+         * Is the variable used.
+         */
+        private boolean used;
+
+        /**
+         * Create a new lambda parameter instance.
+         *
+         * @param enclosingLambda ast of type {@link TokenTypes#LAMBDA}
+         * @param identifierAst ast of type {@link TokenTypes#IDENT}
+         */
+        private LambdaParameterDetails(DetailAST enclosingLambda, DetailAST identifierAst) {
+            this.enclosingLambda = enclosingLambda;
+            this.identifierAst = identifierAst;
+        }
+
+        /**
+         * Register the lambda parameter as used.
+         */
+        private void registerAsUsed() {
+            used = true;
+        }
+
+        /**
+         * Get the name of the lambda parameter.
+         *
+         * @return the name of the lambda parameter
+         */
+        private String getName() {
+            return identifierAst.getText();
+        }
+
+        /**
+         * Get ast of type {@link TokenTypes#IDENT} of the given lambda parameter.
+         *
+         * @return ast of type {@code TokenTypes#IDENT} of the given lambda parameter
+         */
+        private DetailAST getIdentifierAst() {
+            return identifierAst;
+        }
+
+        /**
+         * Check if the lambda parameter is used.
+         *
+         * @return true if the lambda parameter is used
+         */
+        private boolean isUsed() {
+            return used;
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/UnusedLocalVariableCheck.java SHA256 908657514f1e4d6f620930a39597bc2764056c7dbb9d771b5b7770f381eda428
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.checks.naming.AccessModifierOption;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks that a local variable is declared and/or assigned, but not used.
+ * Supports
+ * <a href="https://docs.oracle.com/javase/specs/jls/se17/html/jls-14.html#jls-14.30">
+ * pattern variables</a>.
+ * Doesn't check
+ * <a href="https://docs.oracle.com/javase/specs/jls/se17/html/jls-4.html#jls-4.12.3">
+ * array components</a> as array components are classified as different kind of variables by
+ * <a href="https://docs.oracle.com/javase/specs/jls/se17/html/index.html">JLS</a>.
+ * </div>
+ *
+ * @since 9.3
+ */
+@FileStatefulCheck
+public class UnusedLocalVariableCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_UNUSED_LOCAL_VARIABLE = "unused.local.var";
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_UNUSED_NAMED_LOCAL_VARIABLE = "unused.named.local.var";
+
+    /**
+     * An array of increment and decrement tokens.
+     */
+    private static final int[] INCREMENT_AND_DECREMENT_TOKENS = {
+        TokenTypes.POST_INC,
+        TokenTypes.POST_DEC,
+        TokenTypes.INC,
+        TokenTypes.DEC,
+    };
+
+    /**
+     * An array of scope tokens.
+     */
+    private static final int[] SCOPES = {
+        TokenTypes.SLIST,
+        TokenTypes.LITERAL_FOR,
+        TokenTypes.OBJBLOCK,
+    };
+
+    /**
+     * An array of unacceptable children of ast of type {@link TokenTypes#DOT}.
+     */
+    private static final int[] UNACCEPTABLE_CHILD_OF_DOT = {
+        TokenTypes.DOT,
+        TokenTypes.METHOD_CALL,
+        TokenTypes.LITERAL_NEW,
+        TokenTypes.LITERAL_SUPER,
+        TokenTypes.LITERAL_CLASS,
+        TokenTypes.LITERAL_THIS,
+    };
+
+    /**
+     * An array of unacceptable parent of ast of type {@link TokenTypes#IDENT}.
+     */
+    private static final int[] UNACCEPTABLE_PARENT_OF_IDENT = {
+        TokenTypes.VARIABLE_DEF,
+        TokenTypes.DOT,
+        TokenTypes.LITERAL_NEW,
+        TokenTypes.PATTERN_VARIABLE_DEF,
+        TokenTypes.METHOD_CALL,
+        TokenTypes.TYPE,
+    };
+
+    /**
+     * An array of blocks in which local anon inner classes can exist.
+     */
+    private static final int[] ANONYMOUS_CLASS_PARENT_TOKENS = {
+        TokenTypes.METHOD_DEF,
+        TokenTypes.CTOR_DEF,
+        TokenTypes.STATIC_INIT,
+        TokenTypes.INSTANCE_INIT,
+        TokenTypes.COMPACT_CTOR_DEF,
+    };
+
+    /**
+     * An array of token types that indicate a variable is being used within
+     * an expression involving increment or decrement operators, or within a switch statement.
+     * When a token of one of these types is the parent of an expression, it indicates that the
+     * variable associated with the increment or decrement operation is being used.
+     * Ex:- TokenTypes.LITERAL_SWITCH: Indicates a switch statement. Variables used within the
+     * switch expression are considered to be used
+     */
+    private static final int[] INCREMENT_DECREMENT_VARIABLE_USAGE_TYPES = {
+        TokenTypes.ELIST,
+        TokenTypes.INDEX_OP,
+        TokenTypes.ASSIGN,
+        TokenTypes.LITERAL_SWITCH,
+    };
+
+    /** Package separator. */
+    private static final String PACKAGE_SEPARATOR = ".";
+
+    /**
+     *  Symbol used to represent unnamed variables in Java pattern matching.
+     */
+    private static final String UNNAMED_VAR = "_";
+
+    /**
+     * Constant for JDK 22 version number.
+     */
+    private static final int JDK_22 = 22;
+
+    /**
+     * Keeps tracks of the variables declared in file.
+     */
+    private final Deque<VariableDesc> variables = new ArrayDeque<>();
+
+    /**
+     * Keeps track of all the type declarations present in the file.
+     * Pops the type out of the stack while leaving the type in visitor pattern.
+     */
+    private final Deque<TypeDeclDesc> typeDeclarations = new ArrayDeque<>();
+
+    /**
+     * Maps type declaration ast to their respective TypeDeclDesc objects.
+     */
+    private final Map<DetailAST, TypeDeclDesc> typeDeclAstToTypeDeclDesc = new LinkedHashMap<>();
+
+    /**
+     * Maps local anonymous inner class to the TypeDeclDesc object containing it.
+     */
+    private final Map<DetailAST, TypeDeclDesc> anonInnerAstToTypeDeclDesc = new HashMap<>();
+
+    /**
+     * Set of tokens of type {@link UnusedLocalVariableCheck#ANONYMOUS_CLASS_PARENT_TOKENS}
+     * and {@link TokenTypes#LAMBDA} in some cases.
+     */
+    private final Set<DetailAST> anonInnerClassHolders = new HashSet<>();
+
+    /**
+     * Allow variables named with a single underscore
+     * (known as  <a href="https://docs.oracle.com/en/java/javase/21/docs/specs/unnamed-jls.html">
+     *  unnamed variables</a> in Java 21+).
+     */
+    private boolean allowUnnamedVariables = true;
+
+    /**
+     * Set the JDK version that you are using.
+     * Old JDK version numbering is supported (e.g. 1.8 for Java 8)
+     * as well as just the major JDK version alone (e.g. 8) is supported.
+     * This property only considers features from officially released
+     * Java versions as supported. Features introduced in preview releases
+     * are not considered supported until they are included in a non-preview release.
+     * Before JDK 22, named pattern variables in switch labels and instanceof
+     * record Destructuring cannot be replaced with {@code _}, so violations
+     * on them are suppressed when jdkVersion is set below 22.
+     */
+    private int jdkVersion = JDK_22;
+
+    /**
+     * Name of the package.
+     */
+    private String packageName;
+
+    /**
+     * Depth at which a type declaration is nested, 0 for top level type declarations.
+     */
+    private int depth;
+
+    /**
+     * Creates a new {@code UnusedLocalVariableCheck} instance.
+     */
+    public UnusedLocalVariableCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to allow variables named with a single underscore
+     * (known as <a href="https://docs.oracle.com/en/java/javase/21/docs/specs/unnamed-jls.html">
+     * unnamed variables</a> in Java 21+).
+     *
+     * @param allowUnnamedVariables true or false.
+     * @since 10.18.0
+     */
+    public void setAllowUnnamedVariables(boolean allowUnnamedVariables) {
+        this.allowUnnamedVariables = allowUnnamedVariables;
+    }
+
+    /**
+     * Setter to set the JDK version that you are using.
+     * Old JDK version numbering is supported (e.g. 1.8 for Java 8)
+     * as well as just the major JDK version alone (e.g. 8) is supported.
+     * This property only considers features from officially released
+     * Java versions as supported. Features introduced in preview releases
+     * are not considered supported until they are included in a non-preview release.
+     * Before JDK 22, named pattern variables in switch labels and instanceof
+     * record Destructuring cannot be replaced with {@code _}, so violations
+     * on them are suppressed when jdkVersion is set below 22.
+     *
+     * @param jdkVersion the Java version.
+     * @since 13.7.0
+     */
+    public void setJdkVersion(String jdkVersion) {
+        final String singleVersionNumber;
+        if (jdkVersion.startsWith("1.")) {
+            singleVersionNumber = jdkVersion.substring(2);
+        }
+        else {
+            singleVersionNumber = jdkVersion;
+        }
+        this.jdkVersion = Integer.parseInt(singleVersionNumber);
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.DOT,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.IDENT,
+            TokenTypes.SLIST,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.OBJBLOCK,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.ANNOTATION_DEF,
+            TokenTypes.PACKAGE_DEF,
+            TokenTypes.LITERAL_NEW,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.STATIC_INIT,
+            TokenTypes.INSTANCE_INIT,
+            TokenTypes.COMPILATION_UNIT,
+            TokenTypes.LAMBDA,
+        

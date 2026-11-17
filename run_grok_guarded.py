@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -65,7 +66,12 @@ def main():
     parser.add_argument('--resume', help='Resume an existing Grok conversation under a new GuardianAI scope')
     parser.add_argument('--history-root', help='Trusted evidence root containing this and earlier launcher evidence; never an agent mount')
     parser.add_argument('--require-binding', action='store_true', help='Verify resumed CLI identity before approving MCP commands')
+    parser.add_argument('--task-file', help='Trusted task/permissions, separate from a large prompt containing reference data')
+    parser.add_argument('--max-turns', type=int, default=12, help='Trusted model-round limit, from 1 to 100')
+    parser.add_argument('--deadline-seconds', type=float, default=600, help='Trusted invocation deadline, at most 7200 seconds')
     args = parser.parse_args()
+    if not 1 <= args.max_turns <= 100 or not math.isfinite(args.deadline_seconds) or not 0 < args.deadline_seconds <= 7200:
+        parser.error('Use bounded positive turn and invocation limits')
     if args.require_binding and not args.resume:
         parser.error('--require-binding requires --resume')
     evidence = Path(args.evidence)
@@ -113,7 +119,7 @@ def main():
                                  for call in state['calls'][-4:]],
                 'earlier_calls_omitted': max(0, len(state['calls']) - 4)}
 
-    observer = AgentObserver(Path(args.prompt).read_text(), evidence / 'agent-content',
+    observer = AgentObserver(Path(args.task_file or args.prompt).read_text(), evidence / 'agent-content',
                              context=execution_context, stop=stop_scope, memory_root=args.history_root)
     if not observer.observe('host_supplied_prompt', Path(args.prompt).read_text()):
         (evidence / 'launcher.json').write_text(json.dumps({'launched': False, 'reason': 'prompt_observer_stop'}) + '\n')
@@ -121,7 +127,7 @@ def main():
     command = [args.grok, '--cwd', args.client, '--model', 'grok-4.7', '--reasoning-effort', 'low',
                '--tools', 'search_tool,use_tool', '--no-subagents', '--disable-web-search',
                '--permission-mode', 'dontAsk', '--allow', 'MCPTool(guardianai__run)',
-               '--max-turns', '12', '--output-format', 'streaming-messages-json',
+               '--max-turns', str(args.max_turns), '--output-format', 'streaming-messages-json',
                '--prompt-file', args.prompt]
     if args.resume:
         command += ['--resume', args.resume]
@@ -207,7 +213,7 @@ def main():
                     stop_scope()
                     process.terminate()
                     break
-                if time.monotonic() - started > 600:
+                if time.monotonic() - started > args.deadline_seconds:
                     stop_scope()
                     process.terminate()
                     raise TimeoutError('Coding-agent workflow deadline')
@@ -222,6 +228,7 @@ def main():
                 process.kill()
                 process.wait()
     result = {'returncode': process.returncode, 'terminated_on_scope_stop': stopped,
+              'max_turns': args.max_turns, 'deadline_seconds': args.deadline_seconds,
               'stop_control': stop_result,
               'binding_required': args.require_binding, 'binding_approval_written': binding_written,
               'client_result_subtype': terminal_result.get('subtype') if terminal_result else None,

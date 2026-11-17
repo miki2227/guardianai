@@ -1,0 +1,159 @@
+-- 420-480
+420:        TestUtil.setInternalState(root, "branchTokenTypes", bitSet);
+421:        assertWithMessage("Branch tokens has changed")
+422:                .that(root.branchContains(999))
+423:                .isTrue();
+424:    }
+425:
+426:    @Test
+427:    public void testClearChildCountCache() {
+428:        final DetailAstImpl parent = new DetailAstImpl();
+429:        final DetailAstImpl child = new DetailAstImpl();
+430:        parent.setFirstChild(child);
+431:
+432:        final List<Consumer<DetailAstImpl>> clearChildCountCacheMethods = Arrays.asList(
+433:                child::setNextSibling,
+434:                child::addPreviousSibling,
+435:                child::addNextSibling
+436:        );
+437:
+438:        for (Consumer<DetailAstImpl> method : clearChildCountCacheMethods) {
+439:            final int startCount = parent.getChildCount();
+440:            method.accept(null);
+441:            final int intermediateCount = TestUtil.getInternalState(parent, "childCount",
+442:                    Integer.class);
+443:            final int finishCount = parent.getChildCount();
+444:            assertWithMessage("Child count has changed")
+445:                .that(finishCount)
+446:                .isEqualTo(startCount);
+447:            assertWithMessage("Invalid child count")
+448:                .that(intermediateCount)
+449:                .isEqualTo(Integer.MIN_VALUE);
+450:        }
+451:
+452:        final int startCount = child.getChildCount();
+453:        child.addChild(null);
+454:        final int intermediateCount = TestUtil.getInternalState(child, "childCount", Integer.class);
+455:        final int finishCount = child.getChildCount();
+456:        assertWithMessage("Child count has changed")
+457:            .that(finishCount)
+458:            .isEqualTo(startCount);
+459:        assertWithMessage("Invalid child count")
+460:            .that(intermediateCount)
+461:            .isEqualTo(Integer.MIN_VALUE);
+462:    }
+463:
+464:    @Test
+465:    public void testCacheGetChildCount() {
+466:        final DetailAST root = new DetailAstImpl();
+467:
+468:        TestUtil.setInternalState(root, "childCount", 999);
+469:        assertWithMessage("Child count has changed")
+470:            .that(root.getChildCount())
+471:            .isEqualTo(999);
+472:    }
+473:
+474:    @Test
+475:    public void testAddNextSibling() {
+476:        final DetailAstImpl parent = new DetailAstImpl();
+477:        final DetailAstImpl child = new DetailAstImpl();
+478:        final DetailAstImpl sibling = new DetailAstImpl();
+479:        final DetailAstImpl newSibling = new DetailAstImpl();
+480:        final DetailAST newNextSibling = new DetailAstImpl();
+-- 700-770
+700:            bw.write("}\n");
+701:        }
+702:
+703:        final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
+704:        verifyWithInlineConfigParser(file.getAbsolutePath(), expected);
+705:    }
+706:
+707:    @Test
+708:    public void testTreeStructure() throws Exception {
+709:        final List<File> files = getAllFiles(
+710:                new File("src/test/resources/com/puppycrawl/tools/checkstyle"));
+711:
+712:        for (File file : files) {
+713:            final String fileName = file.getCanonicalPath();
+714:            final DetailAST rootAST = JavaParser.parseFile(new File(fileName),
+715:                    JavaParser.Options.WITHOUT_COMMENTS);
+716:
+717:            assertWithMessage("file must return a root node: %s", fileName)
+718:                .that(rootAST)
+719:                .isNotNull();
+720:
+721:            assertWithMessage("tree is valid")
+722:                    .that(checkTree(fileName, rootAST))
+723:                    .isTrue();
+724:        }
+725:    }
+726:
+727:    @Test
+728:    public void testToString() {
+729:        final DetailAstImpl ast = new DetailAstImpl();
+730:        ast.setText("text");
+731:        ast.setColumnNo(1);
+732:        ast.setLineNo(1);
+733:        assertWithMessage("Invalid text")
+734:            .that(ast.toString())
+735:            .isEqualTo("text[1x1]");
+736:    }
+737:
+738:    @Test
+739:    public void testRemoveChildren() {
+740:        final DetailAstImpl parent = new DetailAstImpl();
+741:        final DetailAstImpl child1 = new DetailAstImpl();
+742:        parent.setFirstChild(child1);
+743:        final DetailAstImpl child2 = new DetailAstImpl();
+744:        child1.setNextSibling(child2);
+745:
+746:        parent.removeChildren();
+747:
+748:        assertWithMessage("")
+749:                .that(parent.getChildCount())
+750:                .isEqualTo(0);
+751:    }
+752:
+753:    @Test
+754:    public void testAddChild() {
+755:        final DetailAstImpl grandParent = new DetailAstImpl();
+756:        grandParent.setText("grandparent");
+757:        final DetailAstImpl parent = new DetailAstImpl();
+758:        parent.setText("parent");
+759:        grandParent.setFirstChild(parent);
+760:
+761:        final DetailAstImpl child = new DetailAstImpl();
+762:        child.setText("child");
+763:        parent.setFirstChild(child);
+764:
+765:        final DetailAstImpl secondChild = new DetailAstImpl();
+766:        secondChild.setText("SecondChild");
+767:        parent.addChild(secondChild);
+768:
+769:        assertWithMessage("Invalid previous sibling")
+770:                .that(secondChild.getPreviousSibling())
+-- getChildCount
+186:    @Override
+187:    public int getChildCount() {
+188:        // lazy init
+189:        if (childCount == NOT_INITIALIZED) {
+190:            childCount = 0;
+191:            DetailAST child = firstChild;
+192:
+193:            while (child != null) {
+194:                childCount += 1;
+195:                child = child.getNextSibling();
+196:            }
+197:        }
+198:        return childCount;
+199:    }
+200:
+201:    @Override
+202:    public int getChildCount(int tokenType) {
+203:        int count = 0;
+204:        for (DetailAST ast = firstChild; ast != null; ast = ast.getNextSibling()) {
+205:            if (ast.getType() == tokenType) {
+206:                count++;
+207:            }
+208:        }
+209:        return count;

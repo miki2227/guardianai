@@ -1,0 +1,4481 @@
+
+REFERENCE FILE docs/AuditListener.png.md SHA256 eb811a1af36013ea4a0dc2f6b2dcd2a7ddba4918b0b5213bdbbe21b219b5c9d9
+```mermaid
+classDiagram
+direction TB
+    class DefaultLogger {
+    }
+
+    class AuditListener {
+        +auditStarted(event: AuditEvent) : void
+        +auditFinished(event: AuditEvent) : void
+        +fileStarted(event: AuditEvent) : void
+        +fileFinished(event: AuditEvent) : void
+        +addError(event: AuditEvent) : void
+        +addException(event: AuditEvent, throwable: Throwable) : void
+    }
+
+    class AuditEvent {
+        +getFileName() : String
+        +getLine() : int
+        +getMessage() : String
+        +getColumn() : int
+        +getSeverityLevel() : SeverityLevel
+        +getSourceName() : String
+        +getLocalizedMessage() : LocalizedMessage
+    }
+
+    AuditListener <|-- DefaultLogger
+    DefaultLogger --> AuditEvent
+
+    class DefaultLogger:::Sky
+    class AuditListener:::Sky
+    class AuditEvent:::Sky
+```
+
+REFERENCE FILE docs/BEGINNING_DEVELOPMENT.md SHA256 d9eb89ca00eb23647c44307a40acb964b6a721a304b875954c1c5df680de367b
+# Beginning Development Guide
+
+![](https://raw.githubusercontent.com/checkstyle/resources/master/img/checkstyle-logos/checkstyle-logo-260x99.png)
+
+---------------------------------
+
+**This guide is for developers who want to contribute to Checkstyle. It will guide you through
+everything you need to do to complete your first pull request.**
+
+## Contents
+
+- [Before Development](#before-development)
+- [Starting Development](#starting-development)
+
+## Before Development
+
+- Ensure that Git and Java JDK >= 21 are installed.
+
+You can find information about development environment preparation here:
+[Prepare development environment in Ubuntu][ubuntu-dev-guide].
+
+- Fork Checkstyle upstream project. As it is described [here][fork-repo].
+
+- Clone your forked repository to your computer:
+
+```bash
+git clone git@github.com:your_user_name/checkstyle.git
+```
+
+- Before opening project in IDE, build the project in your terminal to download
+
+all needed artifacts. From the repository root folder, run:
+
+```bash
+./mvnw install
+```
+
+## Starting Development
+
+Here you can find instructions about importing and debugging the project for IDEs:
+[Eclipse IDE](https://checkstyle.sourceforge.io/eclipse.html),
+[NetBeans IDE](https://checkstyle.sourceforge.io/netbeans.html),
+[IntelliJ IDEA IDE](https://checkstyle.sourceforge.io/idea.html)
+
+Community video walk throughs of these instructions are available in SteLeo1602's
+[playlist on YouTube][youtube-playlist].
+
+Follow these instructions of Git usage and creating a Pull Request:
+1) Configure remotes by pointing to the official checkstyle repository,
+   naming it "upstream":
+
+```bash
+git remote add upstream https://github.com/checkstyle/checkstyle
+```
+
+2) Create a branch for a new check:
+
+```bash
+git checkout -b my-new-check
+```
+
+3) Commit changes to my-new-check branch:
+
+```bash
+git add .
+git commit -m "commit message"
+```
+
+4) Push branch to GitHub, to allow your mentor to review your code:
+
+```bash
+git push origin my-new-check
+```
+
+5) Repeat steps 3-4 till development is complete.
+All additional commits, please [squash to first][squash-commits].
+Please read all rules for PullRequest at our
+[wiki][pr-rules].
+
+```bash
+git rebase -i master
+git push --force origin my-new-check
+```
+
+6) Update current branch and local master by pulling changes that were done
+by other contributors:
+
+```bash
+git checkout master
+git pull upstream master
+git push origin master
+```
+
+7) Rebase your branch on your updated master:
+
+```bash
+git checkout my-new-check
+git rebase master
+```
+
+8) In the process of the rebase, it may discover conflicts.
+In that case it will stop and allow you to fix the conflicts.
+After fixing conflicts, use
+
+```bash
+git add .
+```
+
+to update the index with those contents, and then just run:
+
+```bash
+git rebase --continue
+```
+
+9) Push branch to GitHub (with all your final changes and actual code of Checkstyle):
+
+```bash
+git push --force origin my-new-check
+```
+
+10) Only after all content is finished and testing is done - send a
+[Pull Request][pr]
+
+## Prerequisites
+
+This guide assumes that you have some basic knowledge of
+the command line for your operating system.
+
+You must have the following installed on your local machine:
+
+- [Java 21](https://docs.oracle.com/en/java/javase/21/install/overview-jdk-installation.html)
+- [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+
+## Forking the repository
+
+You must fork the repository to your own GitHub account. This will allow you to make
+changes to the code and submit a pull request to the main repository.
+
+Navigate to [Checkstyle fork page][checkstyle-fork] and click the "Create fork" button. It is
+recommended to NOT rename the forked repository, and the rest of this guide assumes that
+you have not renamed the forked repository.
+
+## Setting up your local repository
+
+Clone the repository to your local machine using the following command. You must
+Replace `MY_USERNAME` with your GitHub username.
+
+```bash
+git@github.com:MY_USERNAME/checkstyle.git
+```
+
+Navigate to the root directory of the project and run the following command:
+
+```bash
+git remote add upstream https://github.com/checkstyle/checkstyle
+````
+
+This allows you to pull changes from the main repository into your local repository.
+
+## Building the project
+
+To build the project, navigate to the root directory of the project and run the following command:
+
+```bash
+mvn clean verify
+```
+
+This will build the project and run all the tests. Congratulations, you have
+successfully built the project!
+
+## Setting up your IDE
+
+You can use any IDE to work on the project, here are some guides to help you set up your IDE:
+
+- [IntelliJ](https://checkstyle.org/idea.html)
+- [Eclipse](https://checkstyle.org/eclipse.html)
+- [Netbeans](https://checkstyle.org/netbeans.html)
+
+Using an IDE is not required, but it is recommended.
+
+## Selecting an issue
+
+- Browse through issues with the
+  [good first issue][good-first-issue] label.
+- Read the issue description and comments to understand the problem.
+- Look at some previous pull requests to help to understand what you will need to do.
+- Make a comment on the issue to let others know that you are working on it.
+
+## Working on the issue
+
+For this section of the guide, we will assume that you are working on an issue with the
+number `1234`.
+
+Create a new branch for your work using the following command:
+
+```bash
+git checkout -b issue-1234
+```
+
+Make your changes to the code as described in the issue.
+Commit your changes using the following command:
+
+```bash
+git add .
+git commit -m "Issue #1234: Fixing the issue"
+```
+
+Run `mvn clean verify` to ensure that your changes have not broken the build and that all tests
+are still passing. If the build does not succeed, carefully read the error messages and try to
+fix the issue. If you are unable to fix the issue, reach out in our
+[Contributors Chat][contributors-chat] or in the
+[Google Group Forum][google-group-forum] for help.
+
+Push your changes to your forked repository using the following command:
+
+```bash
+git push origin issue-1234
+```
+
+At this point, you have made your changes and pushed them to your forked repository. Now, you
+need to create a pull request.
+
+## Creating a pull request
+
+- Navigate to https://github.com/checkstyle/checkstyle/pulls
+- You will see a "Compare & pull request" button. Click it.
+- Please read the pull request template and fill in the details as requested.
+- Click the "Create pull request" button.
+- Check back in about an hour to check if your pull request has passed our automated checks
+  and builds. If it has not, you will need to make the necessary changes and push them to your
+  forked repository.
+
+DO NOT:
+
+- open a pull request without an attached issue
+- open and close pull requests to trigger checks
+- open and close pull requests due to struggles with `git`
+
+## Reviewing your pull request
+
+You should be the first person to review your pull request! Make sure to leave any comments on
+things you might not understand, need help with, or just want to call out. Your pull request
+will be reviewed by the maintainers of the project. They will look at your code
+and provide feedback. You may need to make changes to your code based on the feedback.
+
+## Making changes to your pull request
+
+This is an area that trips a lot of people up. There is a lot of ways to make changes to your pull
+request, but we will discuss what we believe is the easiest way.
+
+Make the changes to your code on your local machine.
+Commit your changes using the following command:
+
+```bash
+git add .
+git commit -m "Issue #1234: Fixing the issue"
+```
+
+We typically require a single commit for each pull request. This
+(and lots of other `git` operations) can be done via interactive rebase. You can read more about
+this concept at https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History. Here is an example
+of what you will need to do:
+
+```bash
+git rebase -i HEAD~3
+```
+
+`3` is the number of commits that you want to deal with in the interactive rebase. This will open
+up a text editor with a list of commits. You will need to change the word `pick` to `fixup` for all
+the commits that you want to squash into your first commit.
+
+Here is an example of what the file will look like when it opens:
+
+```bash
+pick 1a2b3c4d Issue #4242: Some other issue
+pick 5e6f7g8h Issue #1234: Fixing the issue
+pick 9i0j1k2l Issue #1234: Fixing the issue
+
+# Rebase a25806399..9i0j1k2l onto 9i0j1k2l (3 commands)
+#
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# e, edit <commit> = use commit, but stop for amending
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup [-C | -c] <commit> = like "squash" but keep only the previous
+#                    commit's log message, unless -C is used, in which case
+#                    keep only this commit's message; -c is same as -C but
+#                    opens the editor
+```
+
+You want to change the word `pick` to `fixup` for the commits that you want to squash into the
+first commit. Here is what the file will look like after you have made the changes:
+
+```bash
+pick 1a2b3c4d Issue #4242: Some other issue
+pick 5e6f7g8h Issue #1234: Fixing the issue
+fixup 9i0j1k2l Issue #1234: Fixing the issue
+
+# Rebase a25806399..9i0j1k2l onto 9i0j1k2l (3 commands)
+#
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# e, edit <commit> = use commit, but stop for amending
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup [-C | -c] <commit> = like "squash" but keep only the previous
+#                    commit's log message, unless -C is used, in which case
+#                    keep only this commit's message; -c is same as -C but
+#                    opens the editor
+```
+
+Now, save the file and close the text editor. This will squash the commits into one commit.
+
+Run `mvn clean verify` on your local before pushing to make sure that your changes have not
+broken the build and that all tests are still passing, as above.
+
+Push your changes to your forked repository using the following command:
+
+```bash
+git push origin issue-1234 --force
+```
+
+Note that you MUST force push your changes to your forked repository. This is because you have
+rewritten your commit history and you need to force push to overwrite the commit history on your
+forked repository.
+
+## Rebasing on the latest changes in the main repository
+
+If your pull request has been open for a while, you may need to rebase your changes on the latest
+changes in the main repository. This is to ensure that your changes can be merged into the main
+repository without any conflicts.
+
+Fetch the latest changes from the main repository using the following command:
+
+```bash
+git checkout master
+git pull upstream master
+```
+
+You can optionally push the latest changes to the master branch of your forked repository:
+
+```bash
+git push origin master
+```
+
+Rebase your changes on the latest changes in the main repository using the following command:
+
+```bash
+git checkout issue-1234
+git rebase master
+```
+
+Push your changes to your forked repository using the following command:
+
+```bash
+git push origin issue-1234 --force
+```
+
+## Dealing with merge conflicts
+
+If you have merge conflicts when you rebase your changes on the latest changes in the main
+repository, you will need to resolve the conflicts. This can be a bit tricky, but here is a
+guide to help you through it:
+
+- Run `git status` to see which files have conflicts.
+- Open the files with conflicts in your IDE or text editor.
+- Look for the `<<<<<<<`, `=======`, and `>>>>>>>` markers. These markers show you where the
+  conflicts are.
+- Resolve the conflicts by editing the files. You will need to remove the `<<<<<<<`, `=======`, and
+  `>>>>>>>` markers and make the necessary changes to the code.
+- Run `git add .` to stage the changes.
+- Run `git rebase --continue` to continue the rebase process.
+- Run `mvn clean verify` to ensure that your changes have not broken the build and that all tests
+  are still passing.
+- Run `git push origin issue-1234 --force` to push your changes to your forked repository.
+
+[squash-commits]:
+https://davidwalsh.name/squash-commits-git
+[pr-rules]:
+https://github.com/checkstyle/checkstyle/wiki/PR-rules
+[youtube-playlist]:
+https://www.youtube.com/playlist?list=PLHM9s_lN4X0hzOQ0sUmGdroxW0HfREAqj
+[checkstyle-fork]:
+https://github.com/checkstyle/checkstyle/fork
+[good-first-issue]:
+https://github.com/checkstyle/checkstyle/labels/good%20first%20issue
+[contributors-chat]:
+https://app.element.io/#/room/#checkstyle_checkstyle:gitter.im
+[google-group-forum]:
+https://groups.google.com/g/checkstyle-devel
+[ubuntu-dev-guide]:
+https://github.com/sevntu-checkstyle/sevntu.checkstyle/wiki/Prepare-Development-Environment-in-Ubuntu-12.04
+[fork-repo]:
+https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo
+[pr]:
+https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests
+
+REFERENCE FILE docs/Filter.png.md SHA256 d6fb3353ff4e4140945b3ea809d366fc7916cef01db54b9f926cbfce4b80aa18
+```mermaid
+classDiagram
+    direction TB
+
+    class Filter {
+        + accept(event: AuditEvent): boolean
+    }
+
+    class FilterSet {
+        + accept(event: AuditEvent): boolean
+
+        - filters: Set
+        + addFilter(filter: Filter): void
+        + removeFilter(filter: Filter): void
+        + clear(): void
+    }
+
+    <<interface>> Filter
+    Filter <|.. FilterSet
+
+    class Filter:::Sky
+    class FilterSet:::Sky
+
+classDef Sky fill:#E2EBFF,stroke:#374D7C,stroke-width:1px,color:#374D7C
+```
+
+REFERENCE FILE docs/GRAMMAR_UPDATES.md SHA256 5cd5ef56cebbf18bd4cc60442876026060dc68567f655ad01e11a7327924d162
+# Java Grammar Update Process
+
+This document outlines the procedures for updating the Java grammar and
+integrating new language features into Checkstyle.
+
+## Prerequisites
+
+There are some tools and concepts that you should be familiar with before
+updating the Java grammar:
+
+- [ANTLR4](https://www.antlr.org/)
+- Basic knowledge of lexers and parsers
+- [Java Language Specification (JLS)](https://docs.oracle.com/javase/specs/jls/se22/html/index.html)
+- [EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
+
+## Basics
+
+A few basics to understand:
+
+- **Lexer**: A lexer is a program that performs lexical analysis. It takes the
+  input text and converts it into tokens. Our lexer grammar is
+  defined [here][JavaLanguageLexer]
+- **Parser**: A parser is a program that performs syntax analysis. It takes the
+  tokens generated by the lexer and constructs a parse tree. Our parser grammar
+  is
+  defined [here][JavaLanguageParser]
+- **Parse Tree**: A parse tree is a tree representation of the syntactic structure
+  of the source code. It is generated by the parser. We do not use the parse tree
+  directly in Checkstyle, but we use the parser to generate the parse tree and
+  then visit the parse tree to build our Abstract Syntax Tree (AST).
+- **Abstract Syntax Tree (AST)**: An AST is a tree representation of the
+  syntactic structure of the source code. We build our AST by visiting the parse
+  tree generated by the parser. We use the AST to perform static analysis.
+- **Token**: A token is a single element of the source code. For example, a
+  keyword, an identifier, a literal, etc. We define tokens in our lexer grammar.
+- **Token Type**: A token type is a category of tokens. For example, `IDENT`
+  is a token type that includes all identifiers in the source code. We define
+  token types in our lexer grammar.
+- **Parser Rule**: A parser rule is a rule that defines the syntax of the
+  programming language. For example, a class declaration.
+- **Parser Rule Context**: A parser rule context is a context in which a parser
+  rule is applied, and contains information about the source code that matches
+  the parser rule. We use parser rule contexts to build our AST.
+- **Visitor**: A visitor is a design pattern that allows us to separate the
+  algorithm from the object structure. We use a visitor to traverse the parse
+  tree and build our AST.
+- **JavaAstVisitor**: A visitor that we use to traverse the parse tree and build
+  our AST. We define our
+  visitors [here][JavaAstVisitor]
+
+## Java Grammar Update Procedure
+
+Let's walk through an example of updating the Java grammar to support a new language feature. We
+will use the `when`
+expression as an example: [JEP 441][jep-441].
+
+### Review the JEP and JLS
+
+It is good to first take some time to read the JEP to understand the new language feature.
+The JEP provides detailed information about the goals and motivations behind the new feature,
+And help us to come up with good testing strategies.
+
+It is also important to review the Java Language Specification (JLS) to understand the syntax
+and semantics of the new language feature. The JLS provides the formal definition of the Java
+programming language and is the ultimate reference for language features.
+
+The JLS defines the `when` expression as follows (surrounding context provided for clarity):
+
+```txt
+SwitchBlock:
+  { SwitchRule {SwitchRule} }
+  { {SwitchBlockStatementGroup} {SwitchLabel :} }
+
+SwitchRule:
+  SwitchLabel -> Expression ;
+  SwitchLabel -> Block
+  SwitchLabel -> ThrowStatement
+
+SwitchBlockStatementGroup:
+  SwitchLabel : {SwitchLabel :} BlockStatements
+
+SwitchLabel:
+  case CaseConstant {, CaseConstant}
+  case null [, default]
+  case CasePattern {, CasePattern} [Guard]
+  default
+
+CaseConstant:
+  ConditionalExpression
+
+CasePattern:
+  Pattern
+
+Guard:
+  when Expression
+```
+
+### Identify New Tokens and Update Lexer Grammar
+
+Not every new language feature requires new tokens. But in the case of the `when` expression,
+we need to introduce a new token to represent the `when` keyword. This requires an update
+to the lexer grammar.
+
+```antlr
+LITERAL_WHEN : 'when' ;
+```
+
+Notes:
+
+- We preface literal tokens with `LITERAL_` to distinguish them from other tokens.
+- Lexer rules are written in uppercase by convention.
+
+We will also need to add a
+new [TokenType][tokenType]
+in this case. However, we may not need to always add a token type for every new lexer token, it
+depends on the use case. An example would be the `LCURLY` (left curly) token, which is used to
+represent the `{`. This token is also a `SLIST` (statement list) in certain contexts. This greatly
+eases static analysis, since we do not need to differentiate between the two tokens by checking
+their context in checks. Token "reuse" is a common pattern, and helps to avoid code duplication and
+having an unnecessarily large number of token types.
+
+### Update Parser Grammar
+
+Next, we need to update the parser grammar to understand in what contexts the new tokens should
+appear. We need to add a new parser rule for the `when` expression. The `when` expression is
+used in the context of a guard in a switch statement or switch expression. We need to update
+the `guard` rule to recognize the `when` expression.
+
+```antlr
+guardedPattern
+    : primaryPattern guard expression
+    ;
+
+guard: LITERAL_WHEN;
+```
+
+Notes:
+
+- Parser rules are written in lower camel case by convention.
+- It is important to consider how many subrules are needed to represent the new language feature.
+  Due to the recursive nature of parsing, Stackoverflow errors can occur if the grammar is too
+  complex with too many subrules.
+- It is good
+  to try to strike a balance between the number of subrules, the complexity of the grammar, and the
+  complexity of JavaAstVisitor to ease maintenance.
+
+### Update JavaAstVisitor
+
+Now, our lexer recognizes the `when` keyword, and our parser recognizes the `when` expression. We
+have updated
+TokenTypes to include `LITERAL_WHEN`. At this point, we are able to parse the new syntax, however,
+the new tokens
+will not appear in the AST unless we update the JavaAstVisitor. This is because our ANTLR grammar
+provides us with a parse tree, which we traverse using the JavaAstVisitor to build our AST.
+
+```java
+@Override
+public DetailAstImpl visitGuardedPattern(JavaLanguageParser.GuardedPatternContext ctx) {
+    // since the `guard` rule is a terminal rule, we need to create a new AST node for it
+    final DetailAstImpl guardAstNode = flattenedTree(ctx.guard());
+    // we add the children of the `primaryPattern` and `expression` rules to the AST node
+    guardAstNode.addChild(visit(ctx.primaryPattern()));
+    guardAstNode.addChild(visit(ctx.expression()));
+    return guardAstNode;
+}
+```
+
+Above is an example of the transformation of the `guardedPattern` rule in the JavaAstVisitor. We
+create a new AST node for the `guard` rule, and add the children of the `primaryPattern` and
+`expression` rules to the AST node. This is a simplified example, and the actual implementation
+may vary depending on the complexity of the rule.
+
+Notes:
+
+- When we visit a parser rule context, we have access to all the parse tree elements that
+  correspond to that rule. We can use this information to build our AST.
+- The structure of the AST should be carefully considered; we want to ease static analysis by
+  providing a clear and concise representation of the source code. We can review existing AST
+  nodes within other contexts to get an idea of how to structure the AST; however, there is no
+  strict rules regarding this topic. This part of the process relies heavily on heuristics and
+  experience.
+- In many cases, we can consider the ASTs yielded by visiting the subrule of a given rule to be
+  the children of the AST node for that rule. This is a common pattern in the JavaAstVisitor; if
+  we did not visit the subrule, the AST would not get built.
+
+### Update Tests
+
+Finally, we need to update our tests to ensure that the new language feature is correctly parsed and
+analyzed. You
+can find our AST
+tests [here][checkstyle-grammar]
+
+Notes:
+
+- We typically separate tests into directories based on the language level.
+- We test the content of the AST only, we generally do not test the actual parse tree.
+
+## Additional Considerations
+
+### DetailAstPair
+
+The `DetailAstPair` class is used to represent a pair of AST nodes. It is used in
+the `JavaAstVisitor` to
+represent the nested parent-child relationship between AST nodes, especially where there is
+recursive nesting of only two to three types of tokens. An example of this is the `qualifiedName`
+rule, where the parent node is a `DOT` token and the child nodes are `IDENT` tokens. We use
+`DetailAstPair` to represent this relationship in the JavaAstVisitor#visitQualifiedName method.
+
+### Imaginary Tokens
+
+We often create "Imaginary tokens" to represent the structure of the source code. These tokens are
+not directly generated by the lexer (or parser in most cases) but are used to represent the
+structure of the source code in the AST, and ease the process of static analysis. An example of this
+is the `EXPR` token; no such token is generated by the lexer, but it is used to represent
+expressions in the AST to make it easy for checks to find and analyze expressions.
+
+Notes:
+
+- Imaginary tokens are not always necessary, and should be used judiciously.
+- Imaginary tokens take on the column and line number of the first child token in the AST.
+
+### Why we don't use the parse tree directly
+
+ANTLR generates a parse tree that represents the syntactic structure of the source code. We could
+use this parse tree directly to perform static analysis. However, we use the parse tree to build our
+AST because it provides a more structured representation of the source code that is easier to
+analyze. The AST is designed specifically for static analysis and provides a more convenient
+interface for writing checks; it abstracts away the details of the parse tree and provides a
+simplified view of the source code.
+
+### Performance Regressions
+
+When updating the grammar, we should be mindful of the performance impact of our changes. For that,
+we have a CI job that compares the performance of the changes against a baseline. Make sure to
+check the results of the performance regression tests after making changes to the grammar. You can
+find the tests
+[here][performance-regression-script] and the CI job
+[here][check-performance-regression]
+
+### ANTLR Regression Report
+
+Whenever making changes to the grammar, you must also generate an ANTLR Regression Report using the
+tool described [here][antlr-regression-report]
+This report compares the behavior of the updated grammar against the current baseline (the `master`
+branch) and helps us detect unintended parsing regressions. Please include the generated report in
+your pull request description for review.
+
+[jep-441]:
+https://openjdk.org/jeps/441
+[performance-regression-script]:
+https://github.com/checkstyle/checkstyle/blob/master/.ci/check-performance-regression.sh
+
+[tokenType]:
+https://github.com/checkstyle/checkstyle/blob/master/src/main/java/com/puppycrawl/tools/checkstyle/api/TokenTypes.java
+[JavaLanguageLexer]:
+https://github.com/checkstyle/checkstyle/blob/master/src/main/resources/com/puppycrawl/tools/checkstyle/grammar/java/JavaLanguageLexer.g4
+[JavaLanguageParser]:
+https://github.com/checkstyle/checkstyle/blob/master/src/main/resources/com/puppycrawl/tools/checkstyle/grammar/java/JavaLanguageParser.g4
+[JavaAstVisitor]:
+https://github.com/checkstyle/checkstyle/blob/master/src/main/java/com/puppycrawl/tools/checkstyle/JavaAstVisitor.java
+[checkstyle-grammar]:
+https://github.com/checkstyle/checkstyle/tree/master/src/test/java/com/puppycrawl/tools/checkstyle/grammar
+[check-performance-regression]:
+https://github.com/checkstyle/checkstyle/blob/master/.github/workflows/check-performance-regression.yml
+[antlr-regression-report]:
+https://github.com/checkstyle/contribution/tree/master/checkstyle-tester#antlr-regression-report
+
+REFERENCE FILE docs/NEW_LANGUAGE_FEATURE_INTEGRATION_PROCESS.md SHA256 ee683574d5b7c8ccde1583102551b080ac886d0482a3077b5fee646a68737352
+# New Language Feature Check Integration Process
+
+The ability to parse new language features must be implemented and
+merged before following this document.
+
+Updating check modules and creating new checks to support new language features aligns Checkstyle
+with current best practices in the Java community and contributes to
+the project's ongoing evolution. This document outlines the procedures
+for integrating new language features into Checkstyle,
+by updating existing checks and creating new ones.
+
+---
+
+## 1. Analyze Current Check Support for This Java Version
+
+### 1.1 Review Java Enhancement Proposals (JEPS)
+
+Review Java Enhancement Proposals (JEPS) related to the new feature.
+JEPS provide detailed information about the goals
+and motivations behind new language features.
+This information can help us understand the feature better and figure out
+which checks are most likely to be impacted or what new checks might be needed.
+Key concepts to consider:
+
+- **Problem identification**: Understand what problem the new feature solves to build
+  insights about which checks are more likely to be impacted.
+
+- **Impact on Readability**: Assess whether the new feature enhances code readability.
+  Not all new features will necessarily improve readability, but if this one does,
+  Checkstyle can promote its use to enhance clarity and reduce verbosity.
+
+**Examples**:
+
+- **Check updates**:  For unnamed variables (`_`), the JEP guides us to recognize the new role of
+  the underscore for unnamed variables and avoid flagging the non-use of such variables.
+  Consequently, we updated `UnusedLocalVariableCheck` to ensure it does not
+  incorrectly violate unnamed variables.
+
+- **New checks**: Pattern Matching for `instanceof`, where the newer pattern matching feature
+  provides a more concise and type-safe alternative to traditional casting.
+  Ideally, we would consider creating a check
+  to suggest the use of this new feature if we see the typical `if X instanceof Y`
+  followed by a typecasting pattern.
+
+### 1.2 Consider Similar and Related Tokens
+
+Identify existing tokens that are similar to the new language feature tokens.
+This comparison helps to determine which existing checks may be relevant
+and require updates to support the new token. Additionally,
+we should consider the impact that a new child token may have
+on existing checks. By examining the acceptable tokens of existing checks and
+comparing them with the new tokens, you can determine which checks are likely to be impacted.
+
+**Examples**:
+
+- **Check updates**: When the `RECORD_DEF` token was introduced,
+ it was reasonable to look at all checks that had `CLASS_DEF` in their acceptable tokens.
+
+- **Check updates**: When the `TEXT_BLOCK_CONTENT` token was introduced,
+  it was reasonable to look at all checks that had `STRING_LITERAL` in their acceptable tokens.
+
+- **Check updates**: When switch expressions were introduced, it was reasonable to look at all
+  checks that deals with expressions because `LITERAL_SWITCH` may now fall under `EXPR` token.
+  This requires analyzing the impact of this new child token on existing checks,
+  such as `InnerAssignmentCheck`
+
+- **New checks**: When the `ENUM_DEF` token was introduced,
+  we examined checks that used `ARRAY_INIT` tokens and found that checks
+  like `NoArrayTrailingComma` were similar. However, it was determined that a new check,
+  `NoEnumTrailingComma`, was needed to handle enums.
+  We recommend creating separate checks because they handle different tokens
+  with distinct specifics, making configuration easier for users and allowing for
+  more tailored behavior.
+
+### 1.3 Frequently Impacted Checks
+
+Certain checks are most likely to be impacted by new language features.
+We should analyze the impact on the following frequently affected checks:
+
+- [IllegalToken](https://checkstyle.org/checks/coding/illegaltoken.html): This check violates the
+  usage of specified tokens. Since new language features often introduce new tokens,
+  it's important to review this check.
+
+- [IllegalTokenText](https://checkstyle.org/checks/coding/illegaltokentext.html):
+  This check identifies and restricts customizable text patterns in the code.
+  New language features can provide programmers new ways to add custom text to
+  the code which would need to be scanned.
+
+- [Indentation](https://checkstyle.org/checks/misc/indentation.html#Indentation):
+  As new language features are introduced, it's important to ensure that they
+  follow proper indentation rules and that this check works as expected when executed on them.
+
+- [Whitespace](https://checkstyle.org/checks/whitespace/index.html):
+  This check impacts almost all language constructs by ensuring proper
+  use of whitespace before, after, or around them. As new language features
+  introduce new constructs, it's important to review and update this check.
+
+### 1.4 Discover Similar Checks
+
+Look for existing checks that address concepts
+similar to those introduced by the new language feature.
+These checks serve as references for designing and implementing new checks.
+
+**Examples**:
+
+- **Identifiers and Naming Conventions**: If the new feature introduces
+  new tokens involving identifiers, explore existing checks related to naming conventions.
+  We can create a new similar check to enforce naming conventions for the new feature.
+
+- **Sizes**: If we have a check that enforces a limit on the number of parameters
+  a method can have, we created a similar check for the number of record components
+  to ensure that records do not have an excessive number of components.
+
+### 1.5 Review Other Static Analysis Tools
+
+Examining how other static analysis tools handle new language features
+can provide valuable insights into best practices and potential pitfalls.
+A list to a few of the popular ones:
+
+- [IntelliJ Inspections](https://www.jetbrains.com/help/idea/code-inspection.html)
+- [PMD](https://pmd.github.io/)
+- [SonarQube](https://www.sonarqube.org/)
+
+**Examples**:
+
+- **Check updates**: IntelliJ IDEA introduced an inspection rule for Java 21 or higher to detect
+  redundant `strictfp` modifiers. This resulted in the analysis of `RedundantModifierCheck`
+  to verify if we needed to update it.
+
+- **New check**: Sonar introduced a [new rule][new-rule]
+  to suggest the use of `when` instead of a single if statement inside
+  a pattern match body. This resulted in the creation
+  of a new check `WhenShouldBeUsed` to enforce the use of this new feature.
+
+### 1.6 Real Usage Examples in Large Projects
+
+Review real usage examples of the new language feature in large projects.
+This helps to identify potential issues and ensures that the checks
+are aligned with practical use cases.
+A list of representative projects can be found
+[here](https://github.com/checkstyle/contribution/tree/master/checkstyle-tester)
+in projects files.
+
+### 1.7 Good Source of Best Practices
+
+Identify a reliable source of best practices related to the new language feature.
+This could include official language documentation and community-driven style guides
+such as:
+
+- [Oracle Java Magazine](https://blogs.oracle.com/javamagazine/)
+- [JetBrains blogs](https://blog.jetbrains.com/)
+- [Stackoverflow](https://stackoverflow.com/)
+
+---
+
+## 2. How to Create Tracker Issue
+
+The tracker issue should document and share the results of the analysis
+conducted according to the outlined procedures in this document.
+It should include sections for each step of the analysis with the result
+of all the actions done. These tracker issues should be created for each
+new language feature, demonstrating the team's due diligence
+in integrating the feature into Checkstyle.
+See [#14961](https://github.com/checkstyle/checkstyle/issues/14961) and
+[#14942](https://github.com/checkstyle/checkstyle/issues/14942) for reference.
+
+---
+
+## 3. How to Open Child Issues
+
+Using the findings from the tracker issue, open child issues for each check that needs
+to be updated or for a new check related to the new language feature.
+This issue should be linked to the tracker issue of this feature.
+It is good to follow the bug report template to aid in demonstrating the need for check updates.
+See [#14963](https://github.com/checkstyle/checkstyle/issues/14963) and
+[#14985](https://github.com/checkstyle/checkstyle/issues/14985) for reference.
+
+[new-rule]:
+https://rules.sonarsource.com/java/tag/java21/RSPEC-6916/
+
+REFERENCE FILE docs/TestingTechniques.md SHA256 32e03e3c7e9585bf3f72fe8e5b912118b31745035f33a4486913bded329dfc5d
+# Checkstyle's testing techniques
+
+-----------
+[The video walkthrough of this page with an example][video-walkthrough]
+
+## Test Driven Development (TDD)
+
+**TDD** is one of the encouraged ways to efficiently make new implementations for Checkstyle.
+
+With **TDD**, you create the test prior to the implementation that it will test. The created test
+then serves as a door to the module's source code, which we can access by using the debug tool to
+reproduce its execution piece by piece.
+
+**TDD** in turn provides a precise experiment field for bringing a new implementation to the
+module, allowing you to develop with respect to that test's results.
+
+## Where Checkstyle's tests are located
+
+The directory with tests that we need is located in
+`src/test/java/com/puppycrawl/tools/checkstyle/,,,`. What follows after is the
+relative path of the module that the needed tests belong to.
+
+- Tests are organized into module data collection files. Each such collection file stores all
+  of the tests for a certain module
+- The Name format for such collection files is: `[ModuleClassName]Test` where `[...]` indicates
+  you paste your own option inside
+
+## Test structure
+
+Each method with a `test` prefix in module data collection files represents a distinct test. Such
+test methods come in the following common structure:
+
+```text
+@Test
+public void test[NameOfTest]() throws Exception {
+  final String[] expected = {
+          ...
+  }
+  verifyWithInlineConfigParser(
+          getPath("InputFile.java"), expected);
+}
+```
+
+### Let's go over each essential part of the test method structure
+
+### 1. Input file
+
+Input files are files that are being tested by the test.
+
+All input files are located in the same `src/test`
+directory, but in `resources` or `resources-noncompilable` folders.
+
+- At this moment, Checkstyle uses jdk 21 as its operating version, and all input files that can
+  be compiled with jdk 21 or older go to `resources`, while those input files that require newer
+  versions of jdk to compile go to `resources-noncompilable`.
+
+Input files are named in the following format: `Input[ModuleName][FileNickname].java`
+
+- **Ex.** The input file name with a nickname of "Class" for the AnnotationLocation check
+  would be: `InputAnnotationLocationClass.java`
+- Although you can put anything for `[FileNickname]`, it is encouraged
+  that the nickname is the same as, or at least has resemblance to the test's name it belongs
+  to.
+
+### 2. Expected violations
+
+- The String array, `String[] expected`, contains the violation messages that we *expect* to
+  receive from the test.
+- These are not always the violation messages that are guaranteed
+  to come out of the test, but rather the violation messages that the test *should* give if we
+  assume that all necessary implementation for that test's module is correctly in effect.
+- The format for an expected violation message element in the `expected` array is:\
+  `"lineNumber:columnNumber: " + <rest of violation message that can be generated using
+  getCheckMessage(messageCode)>`
+
+### 3. Verification
+
+Once the input file and expected violations are properly connected to the test, it's time for the
+verify method (usually `verifyWithInlineConfigParser()`) to attempt to use Checkstyle to analyze
+the input file, get the *actual* violations that it detects with the current implementation, and
+at the end compare actual results with the expected. If actual results differ from the expected,
+the test fails, and explains where exactly the inconsistency was.
+
+## Input file structure and Behavior Driven Development
+
+Checkstyle input files have the following abstract structure:
+
+```text
+/*
+...
+config
+...
+*/
+
+package [inputPathPackage]
+        ...
+
+public class InputFileName {
+  ...  
+  ...
+  ... // violation, '...'
+  ...
+}
+```
+
+This structure manifests the concept of **Behavior Driven Development (BDD)**. **BDD** simulates
+the results of **before**, **during**, and **after** states of execution in an illustrative way.
+This makes it easier for developers to access and be aware of the source's status at each phase of
+execution.
+
+### For input files, these states are implemented in 3 parts
+
+#### Config (Before)
+
+Enclosed in block comments `/* ... */` at the beginning of the file, the config represents the
+**before** state of the input file as it shows the settings used for the module to run on the
+code.
+
+There are various types/formats of configs such as `property`, `XML`, and `java`. However, in
+regular tests, the `property` format is required to be used at all times, unless there is an
+exception such as when a module has no properties (because the property config requires at least
+some property to be defined), then the `XML` format is used. The `Java` config format is the last
+resort if others don't help, being defined outside the input file in the test method and thus
+violating the BDD.
+
+The `property` config format has the following layout:
+
+```text
+/*
+ModuleName
+propertyName = propertyValue
+otherPropertyName = (default)otherPropertyDefaultValue
+...
+lastPropertyName = lastPropertyValue
+
+*/
+```
+
+**Note:** Although not shown here, it is encouraged to leave **2** blank lines at the end of
+the config before closing comment block to avoid having to change subsequent violation lines
+when new property is added.
+
+#### Tested Code (During)
+
+Next after the config comes the rest of the Java source code that serves as the **during** state
+of input file's BDD. This is the intended piece to be tested and to be covered by the running
+test's scope.
+
+#### Violation marking (After)
+
+The final part represents the **after** state of input file by showing the intended results of the
+test using specific `// violation` comment marking on the same lines of code that intend to cause
+the violation.
+
+The format of the violation comment is: `// violation, 'violation message'` where violation
+message has to belong to any of the module's existing violation message options, but not
+necessarily be entirely written out between the quotes but at least just some part.
+
+## Conclusion
+
+Once you have the test set up properly, you now have a handy tool for accurately analyzing
+the module by using the test to access the module's source in real time.
+
+- To do so, place a breakpoint anywhere in the module's source and run the test method with
+  debug. This will get you to that point of module's source in debug mode.
+
+This **Test Driven Development** technique with collaboration with the debug fits well for
+solving various module problems from corresponding issues that give you already prepared
+information for creating the input file and the test to solve that problem.
+
+To watch the live moment on applying TDD to solve module's problem, you can take a look at
+the [2nd part of video tutorial](https://youtu.be/VnenZbbh1WU?si=wjNjKpMm9WyqQX1C) mentioned
+at the beginning of this page.
+
+[video-walkthrough]: https://youtu.be/CoMKo1X5daU?si=N9dvNW_sE83gHXKS
+
+REFERENCE FILE docs/report-issue.md SHA256 17523cd1cc3f3a2c37c424c93901ea337245a420414a8ef79270ec4e7614acc7
+# How to report issue Guidelines
+
+![](https://raw.githubusercontent.com/checkstyle/resources/master/img/checkstyle-logos/checkstyle-logo-260x99.png)
+
+---------------------------------
+
+## Content
+
+- [Introduction](#introduction)
+- [How To Report A Bug](#how-to-report-a-bug)
+- [How to request new feature](#how-to-request-new-feature)
+- [How to request new Check/Module](#how-to-request-new-checkmodule)
+
+## Introduction
+
+Hey, good to see you on this page. It means that you are considering
+reporting an issue to the Checkstyle project. We welcome anything:
+bug reports, feature requests to existing functionality, new Check ideas, etc.
+
+Our issue tracker system is at GitHub - https://github.com/checkstyle/checkstyle/issues.
+
+## How To Report A Bug
+
+First and foremost, do not think that your issue is obvious and doesn't need details.
+Even a tiny issue needs all details (Check name, config with options,
+source file, Checkstyle version) and context to be shared with us.
+
+The best way to report an Issue is to reproduce it by our
+[Command Line Interface (CLI)](https://checkstyle.org/cmdline.html#Download_and_Run)
+It is the most minimalistic way to launch Checkstyle.
+PLEASE use our latest released version.
+
+Our project is NOT responsible for problems at any extension or plugins.
+Checkstyle is library that is used by number of IDEs and static analysis services.
+We fix problems that are only reproducible on latest release.
+
+We need minimized but compilable Java file and minimized
+config with one Check that cause problem.
+We do not need real source code. Any obfuscation of your super secret code is OK.
+Link to your source code would be awesome. Code has to be compilable,
+in other case behaviour could be strange.
+Always specify what is expected.
+
+Example of report that we expect
+(you can skip `-Duser.language=en -Duser.country=US`
+if your default locale is English):
+
+```bash
+
+Check documentation: https://checkstyle.org/checks/whitespace/whitespacearound.html#WhitespaceAround
+/var/tmp $ javac Test.java
+
+/var/tmp $ cat Test.java
+public class Test{ // Doesn't warn - incorrect
+private static final int SOMETHING = 1;
+}
+
+/var/tmp $ cat config.xml
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<module name="Checker">
+  <module name="TreeWalker">
+    <module name="WhitespaceAround">
+      <property name="allowEmptyTypes" value="true"/>
+    </module>
+  </module>
+</module>
+
+/var/tmp $ RUN_LOCALE="-Duser.language=en -Duser.country=US"
+/var/tmp $ java $RUN_LOCALE -jar checkstyle-X.XX-all.jar -c config.xml Test.java
+Starting audit...
+Audit done.
+
+Expected: violation on first line.
+/var/tmp/Test.java:1:28: error: '{' is not preceded with whitespace.
+
+```
+
+For Windows users, please use "type" command instead of "cat". Example of report that we expect:
+
+```bash
+
+Check documentation: https://checkstyle.org/checks/misc/indentation.html
+
+D:\>type config.xml
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+          "-//Puppy Crawl//DTD Check Configuration 1.3//EN"
+          "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<module name="Checker">
+    <module name="TreeWalker">
+        <module name="Indentation"/>
+    </module>
+</module>
+
+D:\>type Test.java
+class Test {
+    void method() {
+        try { return; // violation, but it is not expected
+        }
+        catch (Exception e) { return; // no violation, but expected
+        }
+    }
+}
+
+D:\>set RUN_LOCALE="-Duser.language=en -Duser.country=US"
+D:\>java %RUN_LOCALE% -jar checkstyle-X.XX-all.jar -c config.xml Test.java
+Starting audit...
+[ERROR] D:\Test.java:3: 'try' child has incorrect indentation level 8,
+expected level should be 12. [Indentation]
+Audit done.
+
+Expected: A violation on line 5 and nowhere else.
+D:\Test.java:5: 'catch' child has incorrect indentation level 8,
+expected level should be 12. [Indentation]
+
+```
+
+More Examples: [Example 1](https://github.com/checkstyle/checkstyle/issues/8856#issue-711050333) ,
+[Example 2](https://github.com/checkstyle/checkstyle/issues/8808#issue-695386080)
+
+## How to request new feature
+
+Please always specify exact name of the Check/Module.
+
+Please provide a clear and detailed description of the problem
+and describe what you would want to happen instead.
+Relevant chunks of code and config that you currently have will definitely
+facilitate understanding. Any other context or screenshots which
+elaborate further on the relevance and rationale behind the
+new feature may also be added.
+
+Imagine that everything is possible and propose name of the new
+option and its behaviour. Do not think that your issue is so obvious.
+
+Example of Feature Request/Enhancement that we expect:
+
+```bash
+
+Check documentation: https://checkstyle.org/checks/whitespace/whitespacearound.html#WhitespaceAround
+
+Describe the problem in detail:
+
+/var/tmp $ javac Test.java
+
+/var/tmp $ cat config.xml
+#[[PLACE YOUR OUTPUT HERE, IF NEW PROPERTY IS PROPOSED PUT IT INSIDE CONFIG AS IT ALREADY EXISTS]]
+
+/var/tmp $ cat Test.java
+public class Test { // Note
+  private static final int SOMETHING = 1;
+}
+
+/var/tmp $ java $RUN_LOCALE -jar checkstyle-X.XX-all.jar -c config.xml Test.java
+#[[PLACE YOUR IMAGINARY OUTPUT HERE]]
+
+Describe how the additional functionality will solve the problem:
+
+Additional context, screenshots or examples:
+
+```
+
+More Examples: [Example1](https://github.com/checkstyle/checkstyle/issues/3201#issue-155988267),
+[Example2](https://github.com/checkstyle/checkstyle/issues/6582#issue-421909457)
+
+## How to request new Check/Module
+
+Please provide detailed description of problem.
+
+You have to provide examples of code and expected violations on them.
+The more examples the better.
+
+Explain the rationale behind implementing the new check with relevant references (if possible).
+
+Feel free to propose a name for the new Check, along with
+all its attributes. Example of good new Check proposal is
+[#5899](https://github.com/checkstyle/checkstyle/issues/5899).
+
+If you have open source project, please give a link to the whole java file.
+
+Example of Check/Module Request that we expect:
+
+```bash
+
+Describe the problem in detail:
+
+/var/tmp $ cat config.xml
+<module name="YourNewModule">
+  <property name="yourPossibleProperty1" value="true"/>
+  <property name="yourPossibleProperty2" value="123"/>
+</module>
+
+/var/tmp $ javac Test.java
+
+/var/tmp $ cat Test.java
+public class Test { // To be checked
+  private static final int SOMETHING = 1;
+}
+
+/var/tmp $ java $RUN_LOCALE -jar checkstyle-X.XX-all.jar -c config.xml Test.java
+#[[PLACE YOUR IMAGINARY OUTPUT HERE]]
+
+Describe how the new check will solve the problem. Mention the required properties
+and their behaviour.
+
+Additional context, screenshots or examples:
+
+```
+
+REFERENCE FILE docs/specifying-violations.md SHA256 9a58e5391b9af56e7222c74d6f15d5556348e7d8f8ced89085c6991a0bfaa318
+# Specifying Violations in Input Files
+
+When writing tests for Checkstyle checks, it is crucial to accurately specify where violations
+are expected to occur in the input files. This guide details the various ways to mark expected
+violations using inline comments within your test input files (`Input*.java`).
+
+## Basic Violation Specifiers
+
+The most common way to specify a violation is by adding a comment on the same line where the
+violation is expected.
+
+### Same Line Violation
+
+To specify that a violation occurs on a specific line, append `// violation '<message>'` to the
+end of that line.
+
+**Example from**
+[`src/test/resources/com/puppycrawl/tools/checkstyle/checks/naming/
+typename/InputTypeName.java`][example-input-typename]
+
+```java
+public class InputTypeName {} // violation 'Name 'InputTypeName' must match pattern'
+```
+
+### Violation Above or Below
+
+Sometimes, placing the comment on the same line makes the line too long or unreadable.
+You can specify that the violation occurs on the line immediately above or below the comment.
+
+**Example from**
+[`src/test/resources/com/puppycrawl/tools/checkstyle/checks/blocks/leftcurly/
+InputLeftCurlyTestNewLineOptionWithLambda.java`][example-input-leftcurly-lambda]
+
+```java
+// violation below ''{' at column 32 should be on a new line'
+static Runnable r3 = () -> {String.valueOf("ok");};
+```
+
+**Example from**
+[`src/test/resources/com/puppycrawl/tools/checkstyle/checks/coding/
+coding/finallocalvariable/
+InputFinalLocalVariableConstructor.java`][example-finallocalvariable-constructor]
+
+```java
+InputFinalLocalVariableConstructor(String str) {
+    // violation above 'Variable 'str' should be declared final'
+}
+```
+
+### Violation N Lines Above or Below
+
+If the violation is further away, you can specify the exact number of lines above or below the
+comment.
+
+**Example from**
+[`src/xdocs-examples/resources/com/puppycrawl/tools/checkstyle/checks/coding/
+nestedfordepth/Example1.java`][example-nestedfordepth]
+
+```java
+// violation 3 lines below 'Nested for depth is 2 (max allowed is 1).'
+for(int i=0; i<10; i++) {
+  for(int j=0; j<i; j++) {
+    for(int k=0; k<j; k++) {
+    }
+  }
+}
+```
+
+**Example from**
+[`src/test/resources/com/puppycrawl/tools/checkstyle/checks/coding/
+unnecessarynullcheckwithinstanceof/InputUnnecessary
+NullCheckWithInstanceOfTernary.java`][example-unnecessarynullcheckwithinstanceof-ternary]
+
+```java
+return obj != null && obj instanceof Integer ? (Integer) obj * 2
+        : obj != null && obj instanceof Double ? (Double) obj / 2
+        : "Unknown";
+        // violation 2 lines above 'Unnecessary nullity check'
+```
+
+### Violation on First or Last Line of File
+
+Some checks report violations on the first or last line of the entire file
+(e.g. `NewlineAtEndOfFile` always reports at line 1 regardless of where
+in the file the comment appears). Using `violation N lines above` with a
+large `N` would be confusing to readers who only see the xdoc snippet.
+Use `violation first line` or `violation last line` instead — they can be
+placed at any visible line within the snippet.
+
+**Example using `violation first line`:**
+
+```java
+// xdoc section - start
+public class Example2 { // ⤶
+// ⤶
+} // violation first line 'File does not end with a newline.'
+// xdoc section - end
+```
+
+**Example using `violation last line`:**
+
+```java
+// xdoc section - start
+public class Example3 { // ⤶
+// ⤶
+} // violation last line 'File ends with extra blank lines.'
+// xdoc section - end
+```
+
+## Violation Message Content and Format
+
+### Content
+
+The simplest way to find the message content of a check is by running unit tests.
+Follow the steps below:
+
+1) Temporarily specify a dummy message, like this: `// violation 'xxx'`.
+
+2) Run unit test. The test class is located under `src/test/java/...` with the same folder
+structure as the input files.
+
+3) The test is expected to fail. Look for the actual violation message printed as part of the
+error content.
+
+4) Replace `'xxx'` with the actual message in step 3)
+
+Alternatively, you can also check Checkstyle's online documentation.
+Take `AvoidStaticImport` as an example:
+
+1) Go to its [doc page][avoidstaticimport-doc],
+
+2) Scroll all the way to ['Violation Messages'][violation-messages],
+and click on `import.avoidStatic`. You will see the actual message content in all languages.
+
+3) Use the English content from `messages.properties` and replace placeholders `{x}` with
+the actual values.
+
+### Format
+
+It is best to provide the exact violation message enclosed in single (`'`) or double (`"`) quotes.
+Single quotes are generally preferred for consistency.
+
+The violation message specified in the comment is treated as a regular expression (RegExp).
+This means that if your expected message contains special RegExp characters
+(like `*`, `[`, `]`, `(`, `)`), they must be properly escaped.
+
+**Example from**
+[`src/test/resources/com/puppycrawl/tools/checkstyle/checks/
+coding/illegaltype/InputIllegal
+TypeTestPlainAndArraysTypes.java`][example-input-illegaltype-plain-arrays]
+
+```java
+Boolean[][] value = matrix != null ? matrix : new Boolean[0][0];
+// violation above, 'Usage of type 'Boolean\[\]\[\]' is not allowed'
+```
+
+Note that single and double quotes inside messages do not need to be escaped.
+
+> [!Important]
+> Even message is RegExp based, it is highly discouraged to use RegExp syntax.
+>
+> If a message is excessively long, you can specify part of the message instead of using
+> `.*` to truncate it. For xdocs example files where the full message is required,
+> use the multiline `"""` format described below.
+>
+> **Bad example**
+>
+> ```java
+> final static int badConstant = 5; // violation '.*'badConstant' must match pattern.*'
+> ```
+>
+> **Good example**
+>
+> ```java
+> final static int badConstant = 5; // violation ''badConstant' must match pattern'
+> ```
+
+### Multiline Violation Messages
+
+When a violation message is too long to fit on a single line, you can use the triple-quote
+(`"""`) multiline format. This allows the message to span multiple `//` comment lines.
+
+**Syntax:**
+
+```java
+// violation N lines below """First part of the message
+//  continuation of the message."""
+```
+
+**Rules:**
+
+- The opening `"""` must appear immediately after the violation keyword on the same line.
+- Continuation lines must start with `//` and must not be violation comments themselves.
+- The closing `"""` must appear at the end of the last continuation line.
+- Use `violation N lines below` or `violation N lines above` where `N` accounts for
+  the number of continuation lines.
+
+**Example:**
+
+```java
+// violation 2 lines below """Must include both @java.lang.Deprecated annotation
+//  and @deprecated Javadoc tag with description."""
+@Deprecated
+public static final int COUNTER = 10;
+```
+
+**Example with `violation above`:**
+
+```java
+final int Bad = 0;
+// violation above, """Non-constant field name 'Bad' must start lowercase,
+//  be at least 2 chars, avoid single lowercase letter followed by uppercase,
+//  contain only letters, digits or underscores,
+//  with underscores allowed only between adjacent digits."""
+```
+
+> [!Important]
+> The multiline `"""` format is intended only for xdocs example files under
+> `src/xdocs-examples/resources/` where violation messages are too long to fit
+> on a single line. For regular test input files under `src/test/resources/`,
+> prefer specifying a unique fragment of the message instead.
+
+## Multiple Violations on Same Line
+
+When a single line triggers multiple violations, you can group them using a
+multi-line format.
+
+**Example from**
+[`src/test/resources/com/puppycrawl/tools/checkstyle/checks/
+javadoc/javadocparagraph/
+InputJavadocParagraphIncorrect.java`][example-input-javadocparagraph-incorrect]
+
+```java
+// 2 violations 4 lines below:
+//  'Redundant <p> tag.'
+//  'tag should be preceded with an empty line.'
+// violation 2 lines below 'tag should be preceded with an empty line.'
+/**<p>Some summary.<p>
+ * <p>
+ * <p><p>
+ * <p>   Some paragraph.<p>*/
+```
+
+The syntax `X violations` can be followed by
+`Y lines above:`, `Y lines below:`, `above:`, or `below:`.
+
+## Filtered Violations
+
+When testing filters (like `SuppressWithNearbyTextFilter`), you need to specify violations
+that are expected to be suppressed by the filter. These are marked as `filtered violation`.
+
+**Example from**
+[`src/test/resources/com/puppycrawl/tools/checkstyle/filters/
+suppresswithnearbytextfilter/InputSuppressWithNearby
+TextFilterDefaultConfig.java`][example-suppresswithnearbytextfilter-default]
+
+```java
+    // filtered violation below 'Line is longer than 90 characters (found 97).'
+    for (int longName = 0; longName < 5; longName++) { // SUPPRESS CHECKSTYLE LineLengthCheck
+```
+
+## Specifying Expected Valid Code
+
+Sometimes it is useful to explicitly mark a line of code as valid or expected to pass
+without violations, often to explain why a specific construct is acceptable. You can use
+`// ok, <explanation>` for this purpose.
+
+**Example from**
+[`src/test/resources-noncompilable/com/puppycrawl/tools/checkstyle/
+checks/whitespace/emptylineseparator/
+InputEmptyLineSeparatorWithComments.java`][example-input-emptylineseparator-comments]
+
+```java
+public static class Class1 { }
+
+
+public static class Class2 { } // violation ''CLASS_DEF' has more than 1 empty lines before.'
+
+// ok, because no more than 1 empty lines before
+public static class Class3 { }
+```
+
+## Good Practice
+
+Violation comments should not be placed arbitrarily. These rules apply:
+
+1) Do not place them inside Javadoc.
+
+**Bad example:**
+
+```java
+/** // violation 'Javadoc content should start from the next line after /\*\*.'
+ *
+ * Third line.
+ */
+void thirdLineViolation();
+```
+
+**Good example:**
+
+```java
+// violation below 'Javadoc content should start from the next line after /\*\*.'
+/**
+ *
+ * Third line.
+ */
+void thirdLineViolation();
+```
+
+2) Do not place them between method signature, annotation and Javadoc.
+
+**Bad example:**
+
+```java
+/**
+ * Description.
+ *
+ * @param BAD
+ *            This param doesn't exist.
+ */
+@MyAnnotation
+// violation 4 lines above 'Unused @param tag for 'BAD'.'
+public void test() {}
+```
+
+**Good example:**
+
+```java
+// violation 4 lines below 'Unused @param tag for 'BAD'.'
+/**
+ * Description.
+ *
+ * @param BAD
+ *            This param doesn't exist.
+ */
+@MyAnnotation
+public void test() {}
+```
+
+## Reference
+
+- Violation messages RegExp and parsing:
+  [`src/test/java/com/puppycrawl/tools/checkstyle/bdd/
+  InlineConfigParser.java`][example-inlineconfigparser]
+
+[example-input-typename]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources/com/puppycrawl/tools/checkstyle/checks/naming/typename/InputTypeName.java#L25
+[example-input-leftcurly-lambda]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources/com/puppycrawl/tools/checkstyle/checks/blocks/leftcurly/InputLeftCurlyTestNewLineOptionWithLambda.java#L23
+[example-finallocalvariable-constructor]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources/com/puppycrawl/tools/checkstyle/checks/coding/finallocalvariable/InputFinalLocalVariableConstructor.java#L23
+[example-nestedfordepth]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/xdocs-examples/resources/com/puppycrawl/tools/checkstyle/checks/coding/nestedfordepth/Example1.java#L18
+[example-unnecessarynullcheckwithinstanceof-ternary]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources/com/puppycrawl/tools/checkstyle/checks/coding/unnecessarynullcheckwithinstanceof/InputUnnecessaryNullCheckWithInstanceOfTernary.java#L36
+[example-input-illegaltype-plain-arrays]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources/com/puppycrawl/tools/checkstyle/checks/coding/illegaltype/InputIllegalTypeTestPlainAndArraysTypes.java#L38
+[example-input-javadocparagraph-incorrect]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources/com/puppycrawl/tools/checkstyle/checks/javadoc/javadocparagraph/InputJavadocParagraphIncorrect.java#L43
+[example-input-suppresswithnearbytextfilter-default]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources/com/puppycrawl/tools/checkstyle/filters/suppresswithnearbytextfilter/InputSuppressWithNearbyTextFilterDefaultConfig.java#L30
+[example-input-emptylineseparator-comments]:
+https://github.com/checkstyle/checkstyle/blob/e9e67c42120524ea613d960af4e443375e37e799/src/test/resources-noncompilable/com/puppycrawl/tools/checkstyle/checks/whitespace/emptylineseparator/InputEmptyLineSeparatorWithComments.java#L183
+[example-inlineconfigparser]:
+https://github.com/checkstyle/checkstyle/blob/master/src/test/java/com/puppycrawl/tools/checkstyle/bdd/InlineConfigParser.java
+[violation-messages]:
+https://checkstyle.org/checks/imports/avoidstaticimport.html#Violation_Messages
+[avoidstaticimport-doc]:
+https://checkstyle.org/checks/imports/avoidstaticimport.html#AvoidStaticImport
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/AbstractAutomaticBean.java SHA256 67cf3fa72dd682d62edaf0d3d1ce0b0ffbfef961c5e051fa8c34c3a2e90c4bd3
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import javax.annotation.Nullable;
+
+import org.apache.commons.beanutils.BeanUtilsBean;
+import org.apache.commons.beanutils.ConversionException;
+import org.apache.commons.beanutils.ConvertUtilsBean;
+import org.apache.commons.beanutils.Converter;
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.beanutils.PropertyUtilsBean;
+import org.apache.commons.beanutils.converters.ArrayConverter;
+import org.apache.commons.beanutils.converters.BooleanConverter;
+import org.apache.commons.beanutils.converters.ByteConverter;
+import org.apache.commons.beanutils.converters.CharacterConverter;
+import org.apache.commons.beanutils.converters.DoubleConverter;
+import org.apache.commons.beanutils.converters.FloatConverter;
+import org.apache.commons.beanutils.converters.IntegerConverter;
+import org.apache.commons.beanutils.converters.LongConverter;
+import org.apache.commons.beanutils.converters.ShortConverter;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configurable;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.api.Context;
+import com.puppycrawl.tools.checkstyle.api.Contextualizable;
+import com.puppycrawl.tools.checkstyle.api.Scope;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.checks.naming.AccessModifierOption;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * A Java Bean that implements the component lifecycle interfaces by
+ * calling the bean's setters for all configuration attributes.
+ */
+public abstract class AbstractAutomaticBean
+    implements Configurable, Contextualizable {
+
+    /**
+     * Enum to specify behaviour regarding ignored modules.
+     */
+    public enum OutputStreamOptions {
+
+        /**
+         * Close stream in the end.
+         */
+        CLOSE,
+
+        /**
+         * Do nothing in the end.
+         */
+        NONE,
+
+    }
+
+    /** Comma separator for StringTokenizer. */
+    private static final String COMMA_SEPARATOR = ",";
+
+    /** The configuration of this bean. */
+    private Configuration configuration;
+
+    /**
+     * Creates a new {@code AbstractAutomaticBean} instance.
+     */
+    protected AbstractAutomaticBean() {
+        // no code by default
+    }
+
+    /**
+     * Provides a hook to finish the part of this component's setup that
+     * was not handled by the bean introspection.
+     *
+     * <p>
+     * The default implementation does nothing.
+     * </p>
+     *
+     * @throws CheckstyleException if there is a configuration error.
+     */
+    protected abstract void finishLocalSetup() throws CheckstyleException;
+
+    /**
+     * Creates a BeanUtilsBean that is configured to use
+     * type converters that throw a ConversionException
+     * instead of using the default value when something goes wrong.
+     *
+     * @return a configured BeanUtilsBean
+     */
+    private static BeanUtilsBean createBeanUtilsBean() {
+        final ConvertUtilsBean cub = new ConvertUtilsBean();
+
+        registerIntegralTypes(cub);
+        registerCustomTypes(cub);
+
+        return new BeanUtilsBean(cub, new PropertyUtilsBean());
+    }
+
+    /**
+     * Register basic types of JDK like boolean, int, and String to use with BeanUtils. All these
+     * types are found in the {@code java.lang} package.
+     *
+     * @param cub
+     *            Instance of {@link ConvertUtilsBean} to register types with.
+     */
+    private static void registerIntegralTypes(ConvertUtilsBean cub) {
+        cub.register(new BooleanConverter(), Boolean.TYPE);
+        cub.register(new BooleanConverter(), Boolean.class);
+        cub.register(new ArrayConverter(
+            boolean[].class, new BooleanConverter()), boolean[].class);
+        cub.register(new ByteConverter(), Byte.TYPE);
+        cub.register(new ByteConverter(), Byte.class);
+        cub.register(new ArrayConverter(byte[].class, new ByteConverter()),
+            byte[].class);
+        cub.register(new CharacterConverter(), Character.TYPE);
+        cub.register(new CharacterConverter(), Character.class);
+        cub.register(new ArrayConverter(char[].class, new CharacterConverter()),
+            char[].class);
+        cub.register(new DoubleConverter(), Double.TYPE);
+        cub.register(new DoubleConverter(), Double.class);
+        cub.register(new ArrayConverter(double[].class, new DoubleConverter()),
+            double[].class);
+        cub.register(new FloatConverter(), Float.TYPE);
+        cub.register(new FloatConverter(), Float.class);
+        cub.register(new ArrayConverter(float[].class, new FloatConverter()),
+            float[].class);
+        cub.register(new IntegerConverter(), Integer.TYPE);
+        cub.register(new IntegerConverter(), Integer.class);
+        cub.register(new ArrayConverter(int[].class, new IntegerConverter()),
+            int[].class);
+        cub.register(new LongConverter(), Long.TYPE);
+        cub.register(new LongConverter(), Long.class);
+        cub.register(new ArrayConverter(long[].class, new LongConverter()),
+            long[].class);
+        cub.register(new ShortConverter(), Short.TYPE);
+        cub.register(new ShortConverter(), Short.class);
+        cub.register(new ArrayConverter(short[].class, new ShortConverter()),
+            short[].class);
+        cub.register(new RelaxedStringArrayConverter(), String[].class);
+
+        // BigDecimal, BigInteger, Class, Date, String, Time, TimeStamp
+        // do not use defaults in the default configuration of ConvertUtilsBean
+    }
+
+    /**
+     * Register custom types of JDK like URI and Checkstyle specific classes to use with BeanUtils.
+     * None of these types should be found in the {@code java.lang} package.
+     *
+     * @param cub
+     *            Instance of {@link ConvertUtilsBean} to register types with.
+     */
+    private static void registerCustomTypes(ConvertUtilsBean cub) {
+        cub.register(new PatternConverter(), Pattern.class);
+        cub.register(new PatternArrayConverter(), Pattern[].class);
+        cub.register(new SeverityLevelConverter(), SeverityLevel.class);
+        cub.register(new ScopeConverter(), Scope.class);
+        cub.register(new UriConverter(), URI.class);
+        cub.register(new RelaxedAccessModifierArrayConverter(), AccessModifierOption[].class);
+    }
+
+    /**
+     * Implements the Configurable interface using bean introspection.
+     *
+     * <p>Subclasses are allowed to add behaviour. After the bean
+     * based setup has completed first the method
+     * {@link #finishLocalSetup finishLocalSetup}
+     * is called to allow completion of the bean's local setup,
+     * after that the method {@link #setupChild setupChild}
+     * is called for each {@link Configuration#getChildren child Configuration}
+     * of {@code configuration}.
+     *
+     * @see Configurable
+     */
+    @Override
+    public final void configure(Configuration config)
+            throws CheckstyleException {
+        configuration = config;
+
+        final String[] attributes = config.getPropertyNames();
+
+        for (final String key : attributes) {
+            final String value = config.getProperty(key);
+
+            tryCopyProperty(key, value, true);
+        }
+
+        finishLocalSetup();
+
+        final Configuration[] childConfigs = config.getChildren();
+        for (final Configuration childConfig : childConfigs) {
+            setupChild(childConfig);
+        }
+    }
+
+    /**
+     * Recheck property and try to copy it.
+     *
+     * @param key key of value
+     * @param value value
+     * @param recheck whether to check for property existence before copy
+     * @throws CheckstyleException when property defined incorrectly
+     */
+    private void tryCopyProperty(String key, Object value, boolean recheck)
+            throws CheckstyleException {
+        final BeanUtilsBean beanUtils = createBeanUtilsBean();
+
+        try {
+            if (recheck) {
+                // BeanUtilsBean.copyProperties silently ignores missing setters
+                // for key, so we have to go through great lengths here to
+                // figure out if the bean property really exists.
+                final PropertyDescriptor descriptor =
+                        PropertyUtils.getPropertyDescriptor(this, key);
+                if (descriptor == null) {
+                    final String message = getLocalizedMessage(
+                        AbstractAutomaticBean.class,
+                        "AbstractAutomaticBean.doesNotExist", key);
+                    throw new CheckstyleException(message);
+                }
+            }
+            // finally we can set the bean property
+            beanUtils.copyProperty(this, key, value);
+        }
+        catch (final InvocationTargetException | IllegalAccessException
+                | NoSuchMethodException exc) {
+            // There is no way to catch IllegalAccessException | NoSuchMethodException
+            // as we do PropertyUtils.getPropertyDescriptor before beanUtils.copyProperty,
+            // so we have to join these exceptions with InvocationTargetException
+            // to satisfy UTs coverage
+            final String message = getLocalizedMessage(
+                AbstractAutomaticBean.class,
+                "AbstractAutomaticBean.cannotSet", key, value);
+            throw new CheckstyleException(message, exc);
+        }
+        catch (final IllegalArgumentException | ConversionException exc) {
+            final String message = getLocalizedMessage(
+                AbstractAutomaticBean.class,
+                "AbstractAutomaticBean.illegalValue", value, key);
+            throw new CheckstyleException(message, exc);
+        }
+    }
+
+    /**
+     * Implements the Contextualizable interface using bean introspection.
+     *
+     * @see Contextualizable
+     */
+    @Override
+    public final void contextualize(Context context)
+            throws CheckstyleException {
+        final Collection<String> attributes = context.getAttributeNames();
+
+        for (final String key : attributes) {
+            final Object value = context.get(key);
+
+            tryCopyProperty(key, value, false);
+        }
+    }
+
+    /**
+     * Returns the configuration that was used to configure this component.
+     *
+     * @return the configuration that was used to configure this component.
+     */
+    protected final Configuration getConfiguration() {
+        return configuration;
+    }
+
+    /**
+     * Called by configure() for every child of this component's Configuration.
+     *
+     * <p>
+     * The default implementation throws {@link CheckstyleException} if
+     * {@code childConf} is {@code null} because it doesn't support children. It
+     * must be overridden to validate and support children that are wanted.
+     * </p>
+     *
+     * @param childConf a child of this component's Configuration
+     * @throws CheckstyleException if there is a configuration error.
+     * @see Configuration#getChildren
+     */
+    protected void setupChild(Configuration childConf)
+            throws CheckstyleException {
+        if (childConf != null) {
+            final String message = getLocalizedMessage(
+                AbstractAutomaticBean.class,
+                "AbstractAutomaticBean.disallowedChild", childConf.getName(),
+                configuration.getName());
+            throw new CheckstyleException(message);
+        }
+    }
+    /**
+     * Extracts localized messages from properties files.
+     *
+     * @param caller the {@link Class} used to resolve the resource bundle
+     * @param messageKey the key pointing to localized message in respective properties file.
+     * @param args the arguments of message in respective properties file.
+     * @return a string containing extracted localized message
+     */
+
+    private static String getLocalizedMessage(Class<?> caller,
+                                              String messageKey, Object... args) {
+        final LocalizedMessage localizedMessage = new LocalizedMessage(
+            Definitions.CHECKSTYLE_BUNDLE, caller,
+                    messageKey, args);
+
+        return localizedMessage.getMessage();
+    }
+
+    /** A converter that converts a string to a pattern. */
+    private static final class PatternConverter implements Converter {
+
+        /**
+         * Creates a new {@code PatternConverter} instance.
+         */
+        private PatternConverter() {
+            // no code by default
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object convert(Class type, Object value) {
+            return CommonUtil.createPattern(value.toString());
+        }
+
+    }
+
+    /** A converter that converts a comma-separated string into an array of patterns. */
+    private static final class PatternArrayConverter implements Converter {
+
+        /**
+         * Creates a new {@code PatternArrayConverter} instance.
+         */
+        private PatternArrayConverter() {
+            // no code by default
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object convert(Class type, Object value) {
+            final String[] tokens = value.toString().split(COMMA_SEPARATOR, -1);
+            final List<Pattern> result = new ArrayList<>();
+
+            for (String token : tokens) {
+                if (token.isEmpty()) {
+                    continue;
+                }
+                result.add(CommonUtil.createPattern(token.trim()));
+            }
+
+            return result.toArray(new Pattern[0]);
+        }
+
+    }
+
+    /** A converter that converts strings to severity level. */
+    private static final class SeverityLevelConverter implements Converter {
+
+        /**
+         * Creates a new {@code SeverityLevelConverter} instance.
+         */
+        private SeverityLevelConverter() {
+            // no code by default
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object convert(Class type, Object value) {
+            return SeverityLevel.getInstance(value.toString());
+        }
+
+    }
+
+    /** A converter that converts strings to scope. */
+    private static final class ScopeConverter implements Converter {
+
+        /**
+         * Creates a new {@code ScopeConverter} instance.
+         */
+        private ScopeConverter() {
+            // no code by default
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object convert(Class type, Object value) {
+            return Scope.getInstance(value.toString());
+        }
+
+    }
+
+    /** A converter that converts strings to uri. */
+    private static final class UriConverter implements Converter {
+
+        /**
+         * Creates a new {@code UriConverter} instance.
+         */
+        private UriConverter() {
+            // no code by default
+        }
+
+        @Nullable
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object convert(Class type, Object value) {
+            final String url = value.toString();
+            URI result = null;
+
+            if (!CommonUtil.isBlank(url)) {
+                try {
+                    result = CommonUtil.getUriByFilename(url);
+                }
+                catch (CheckstyleException exc) {
+                    throw new IllegalArgumentException(url, exc);
+                }
+            }
+
+            return result;
+        }
+
+    }
+
+    /**
+     * A converter that does not care whether the array elements contain String
+     * characters like '*' or '_'. The normal ArrayConverter class has problems
+     * with these characters.
+     */
+    private static final class RelaxedStringArrayConverter implements Converter {
+
+        /**
+         * Creates a new {@code RelaxedStringArrayConverter} instance.
+         */
+        private RelaxedStringArrayConverter() {
+            // no code by default
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object convert(Class type, Object value) {
+            final String[] tokens = value.toString().trim().split(COMMA_SEPARATOR, -1);
+            final List<String> result = new ArrayList<>();
+
+            for (String token : tokens) {
+                if (token.isEmpty()) {
+                    continue;
+                }
+                result.add(token.trim());
+            }
+
+            return result.toArray(CommonUtil.EMPTY_STRING_ARRAY);
+        }
+
+    }
+
+    /**
+     * A converter that converts strings to {@link AccessModifierOption}.
+     * This implementation does not care whether the array elements contain characters like '_'.
+     * The normal {@link ArrayConverter} class has problems with this character.
+     */
+    private static final class RelaxedAccessModifierArrayConverter implements Converter {
+
+        /** Constant for optimization. */
+        private static final AccessModifierOption[] EMPTY_MODIFIER_ARRAY =
+                new AccessModifierOption[0];
+
+        /**
+         * Creates a new {@code RelaxedAccessModifierArrayConverter} instance.
+         */
+        private RelaxedAccessModifierArrayConverter() {
+            // no code by default
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object convert(Class type, Object value) {
+            final String[] tokens = value.toString().trim().split(COMMA_SEPARATOR, -1);
+            final List<AccessModifierOption> result = new ArrayList<>();
+
+            for (String token : tokens) {
+                if (token.isEmpty()) {
+                    continue;
+                }
+                result.add(AccessModifierOption.getInstance(token));
+            }
+
+            return result.toArray(EMPTY_MODIFIER_ARRAY);
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/AstTreeStringPrinter.java SHA256 50f9789ac6549816ec742b72889026b88a9d8267d782cecf2b312ac7cba4f7cf
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.DetailNode;
+import com.puppycrawl.tools.checkstyle.api.FileText;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * Class for printing AST to String.
+ */
+public final class AstTreeStringPrinter {
+
+    /** Newline pattern. */
+    private static final Pattern NEWLINE = Pattern.compile("\n");
+    /** Return pattern. */
+    private static final Pattern RETURN = Pattern.compile("\r");
+    /** Tab pattern. */
+    private static final Pattern TAB = Pattern.compile("\t");
+
+    /** OS specific line separator. */
+    private static final String LINE_SEPARATOR = System.lineSeparator();
+
+    /** Prevent instances. */
+    private AstTreeStringPrinter() {
+        // no code
+    }
+
+    /**
+     * Parse a file and print the parse tree.
+     *
+     * @param file the file to print.
+     * @param options {@link JavaParser.Options} to control the inclusion of comment nodes.
+     * @return the AST of the file in String form.
+     * @throws CheckstyleException if the file is not a Java source.
+     * @throws IOException if the file could not be read.
+     */
+    public static String printFileAst(File file, JavaParser.Options options)
+            throws IOException, CheckstyleException {
+        return printTree(JavaParser.parseFile(file, options));
+    }
+
+    /**
+     * Prints full AST (java + comments + javadoc) of the java file.
+     *
+     * @param file java file
+     * @return Full tree
+     * @throws CheckstyleException error while parsing the file
+     * @throws IOException Failed to open a file
+     */
+    public static String printJavaAndJavadocTree(File file)
+            throws IOException, CheckstyleException {
+        final DetailAST tree = JavaParser.parseFile(file, JavaParser.Options.WITH_COMMENTS);
+        return printJavaAndJavadocTree(tree);
+    }
+
+    /**
+     * Prints full tree (java + comments + javadoc) of the DetailAST.
+     *
+     * @param ast root DetailAST
+     * @return Full tree
+     */
+    private static String printJavaAndJavadocTree(DetailAST ast) {
+        final StringBuilder messageBuilder = new StringBuilder(1024);
+        DetailAST node = ast;
+        while (node != null) {
+            messageBuilder.append(getIndentation(node))
+                .append(getNodeInfo(node))
+                .append(LINE_SEPARATOR);
+            if (node.getType() == TokenTypes.COMMENT_CONTENT
+                    && JavadocUtil.isJavadocComment(node.getParent())) {
+                final String javadocTree = parseAndPrintJavadocTree(node);
+                messageBuilder.append(javadocTree);
+            }
+            else {
+                messageBuilder.append(printJavaAndJavadocTree(node.getFirstChild()));
+            }
+            node = node.getNextSibling();
+        }
+        return messageBuilder.toString();
+    }
+
+    /**
+     * Parses block comment as javadoc and prints its tree.
+     *
+     * @param node block comment begin
+     * @return string javadoc tree
+     */
+    private static String parseAndPrintJavadocTree(DetailAST node) {
+        final DetailAST javadocBlock = node.getParent();
+        final DetailNode tree = DetailNodeTreeStringPrinter.parseJavadocAsDetailNode(javadocBlock);
+
+        String baseIndentation = getIndentation(node);
+        baseIndentation = baseIndentation.substring(0, baseIndentation.length() - 2);
+        final String rootPrefix = baseIndentation + "   `--";
+        final String prefix = baseIndentation + "       ";
+        return DetailNodeTreeStringPrinter.printTree(tree, rootPrefix, prefix);
+    }
+
+    /**
+     * Parse a file and print the parse tree.
+     *
+     * @param text the text to parse.
+     * @param options {@link JavaParser.Options} to control the inclusion of comment nodes.
+     * @return the AST of the file in String form.
+     * @throws CheckstyleException if the file is not a Java source.
+     */
+    public static String printAst(FileText text, JavaParser.Options options)
+            throws CheckstyleException {
+        final DetailAST ast = JavaParser.parseFileText(text, options);
+        return printTree(ast);
+    }
+
+    /**
+     * Print branch info from root down to given {@code node}.
+     *
+     * @param node last item of the branch
+     * @return branch as string
+     */
+    public static String printBranch(DetailAST node) {
+        final String result;
+        if (node == null) {
+            result = "";
+        }
+        else {
+            result = printBranch(node.getParent())
+                + getIndentation(node)
+                + getNodeInfo(node)
+                + LINE_SEPARATOR;
+        }
+        return result;
+    }
+
+    /**
+     * Print AST.
+     *
+     * @param ast the root AST node.
+     * @return string AST.
+     */
+    private static String printTree(DetailAST ast) {
+        final StringBuilder messageBuilder = new StringBuilder(1024);
+        DetailAST node = ast;
+        while (node != null) {
+            messageBuilder.append(getIndentation(node))
+                    .append(getNodeInfo(node))
+                    .append(LINE_SEPARATOR)
+                    .append(printTree(node.getFirstChild()));
+            node = node.getNextSibling();
+        }
+        return messageBuilder.toString();
+    }
+
+    /**
+     * Get string representation of the node as token name,
+     * node text, line number and column number.
+     *
+     * @param node DetailAST
+     * @return node info
+     */
+    private static String getNodeInfo(DetailAST node) {
+        return TokenUtil.getTokenName(node.getType())
+                + " -> " + escapeAllControlChars(node.getText())
+                + " [" + node.getLineNo() + ':' + (node.getColumnNo() + 1) + ']';
+    }
+
+    /**
+     * Get indentation for an AST node.
+     *
+     * @param ast the AST to get the indentation for.
+     * @return the indentation in String format.
+     */
+    private static String getIndentation(DetailAST ast) {
+        final boolean isLastChild = ast.getNextSibling() == null;
+        DetailAST node = ast;
+        final StringBuilder indentation = new StringBuilder(1024);
+        while (node.getParent() != null) {
+            node = node.getParent();
+            if (node.getParent() == null) {
+                if (isLastChild) {
+                    // only ASCII symbols must be used due to
+                    // problems with running tests on Windows
+                    indentation.append("`--");
+                }
+                else {
+                    indentation.append("|--");
+                }
+            }
+            else {
+                if (node.getNextSibling() == null) {
+                    indentation.insert(0, "    ");
+                }
+                else {
+                    indentation.insert(0, "|   ");
+                }
+            }
+        }
+        return indentation.toString();
+    }
+
+    /**
+     * Replace all control chars with escaped symbols.
+     *
+     * @param text the String to process.
+     * @return the processed String with all control chars escaped.
+     */
+    private static String escapeAllControlChars(String text) {
+        final String textWithoutNewlines = NEWLINE.matcher(text).replaceAll("\\\\n");
+        final String textWithoutReturns = RETURN.matcher(textWithoutNewlines).replaceAll("\\\\r");
+        return TAB.matcher(textWithoutReturns).replaceAll("\\\\t");
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/AuditEventDefaultFormatter.java SHA256 cab66e4e6299fa4c3c56d1ded1f89278e2d1003daae26d880514d6f7fd9202b3
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.Locale;
+
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
+/**
+ * Represents the default formatter for log message.
+ * Default log message format is:
+ * [SEVERITY LEVEL] filePath:lineNo:columnNo: message. [CheckName]
+ * When the module id of the message has been set, the format is:
+ * [SEVERITY LEVEL] filePath:lineNo:columnNo: message. [ModuleId]
+ */
+public class AuditEventDefaultFormatter implements AuditEventFormatter {
+
+    /** Length of all separators. */
+    private static final int LENGTH_OF_ALL_SEPARATORS = 10;
+
+    /** Suffix of module names like FooCheck. */
+    private static final String SUFFIX = "Check";
+
+    /**
+     * Creates a new {@code AuditEventDefaultFormatter} instance.
+     */
+    public AuditEventDefaultFormatter() {
+        // no code by default
+    }
+
+    @Override
+    public String format(AuditEvent event) {
+        final String fileName = event.getFileName();
+        final String message = event.getMessage();
+
+        final SeverityLevel severityLevel = event.getSeverityLevel();
+        final String severityLevelName;
+        if (severityLevel == SeverityLevel.WARNING) {
+            // We change the name of severity level intentionally
+            // to shorten the length of the log message.
+            severityLevelName = "WARN";
+        }
+        else {
+            severityLevelName = severityLevel.getName().toUpperCase(Locale.US);
+        }
+
+        final StringBuilder sb = initStringBuilderWithOptimalBuffer(event, severityLevelName);
+
+        sb.append('[').append(severityLevelName).append("] ")
+            .append(fileName).append(':').append(event.getLine());
+        if (event.getColumn() > 0) {
+            sb.append(':').append(event.getColumn());
+        }
+        sb.append(": ").append(message).append(" [");
+        if (event.getModuleId() == null) {
+            final String checkShortName = getCheckShortName(event);
+            sb.append(checkShortName);
+        }
+        else {
+            sb.append(event.getModuleId());
+        }
+        sb.append(']');
+
+        return sb.toString();
+    }
+
+    /**
+     * Returns the StringBuilder that should avoid StringBuffer.expandCapacity.
+     * bufferLength = fileNameLength + messageLength + lengthOfAllSeparators +
+     * + severityNameLength + checkNameLength.
+     * Method is excluded from pitest validation.
+     *
+     * @param event audit event.
+     * @param severityLevelName severity level name.
+     * @return optimal StringBuilder.
+     */
+    private static StringBuilder initStringBuilderWithOptimalBuffer(AuditEvent event,
+            String severityLevelName) {
+        final int bufLen = LENGTH_OF_ALL_SEPARATORS + event.getFileName().length()
+            + event.getMessage().length() + severityLevelName.length()
+            + getCheckShortName(event).length();
+        return new StringBuilder(bufLen);
+    }
+
+    /**
+     * Returns check name without 'Check' suffix.
+     *
+     * @param event audit event.
+     * @return check name without 'Check' suffix.
+     */
+    private static String getCheckShortName(AuditEvent event) {
+        final String checkFullName = event.getSourceName();
+        String checkShortName = checkFullName.substring(checkFullName.lastIndexOf('.') + 1);
+        if (checkShortName.endsWith(SUFFIX)) {
+            final int endIndex = checkShortName.length() - SUFFIX.length();
+            checkShortName = checkShortName.substring(0, endIndex);
+        }
+        return checkShortName;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/AuditEventFormatter.java SHA256 ff05e133997bf3eaba358b1e1f5ffa5104549390216bfebc27eb0a99dc7c1992
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+
+/**
+ * Represents the formatter interface for log message.
+ */
+@FunctionalInterface
+public interface AuditEventFormatter {
+
+    /**
+     * Formats an event message.
+     *
+     * @param event audit event.
+     * @return string representation of event message.
+     */
+    String format(AuditEvent event);
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/Checker.java SHA256 228b6d9d40c0c0283faa339fe45e57b53a530a73f21dbfd14ff5ac022c483081
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.BeforeExecutionFileFilter;
+import com.puppycrawl.tools.checkstyle.api.BeforeExecutionFileFilterSet;
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.api.Context;
+import com.puppycrawl.tools.checkstyle.api.ExternalResourceHolder;
+import com.puppycrawl.tools.checkstyle.api.FileSetCheck;
+import com.puppycrawl.tools.checkstyle.api.FileText;
+import com.puppycrawl.tools.checkstyle.api.Filter;
+import com.puppycrawl.tools.checkstyle.api.FilterSet;
+import com.puppycrawl.tools.checkstyle.api.MessageDispatcher;
+import com.puppycrawl.tools.checkstyle.api.RootModule;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevelCounter;
+import com.puppycrawl.tools.checkstyle.api.Violation;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * This class provides the functionality to check a set of files.
+ */
+public class Checker extends AbstractAutomaticBean implements MessageDispatcher, RootModule {
+
+    /** Message to use when an exception occurs and should be printed as a violation. */
+    public static final String EXCEPTION_MSG = "general.exception";
+
+    /** The extension separator. */
+    private static final String EXTENSION_SEPARATOR = ".";
+
+    /** Logger for Checker. */
+    private final Log log;
+
+    /** Maintains error count. */
+    private final SeverityLevelCounter counter = new SeverityLevelCounter(
+            SeverityLevel.ERROR);
+
+    /** Vector of listeners. */
+    private final List<AuditListener> listeners = new ArrayList<>();
+
+    /** Vector of fileset checks. */
+    private final List<FileSetCheck> fileSetChecks = new ArrayList<>();
+
+    /** The audit event before execution file filters. */
+    private final BeforeExecutionFileFilterSet beforeExecutionFileFilters =
+            new BeforeExecutionFileFilterSet();
+
+    /** The audit event filters. */
+    private final FilterSet filters = new FilterSet();
+
+    /** The basedir to strip off in file names. */
+    private String basedir;
+
+    /** Locale country to report messages . */
+    @XdocsPropertyType(PropertyType.LOCALE_COUNTRY)
+    private String localeCountry = Locale.getDefault().getCountry();
+    /** Locale language to report messages . */
+    @XdocsPropertyType(PropertyType.LOCALE_LANGUAGE)
+    private String localeLanguage = Locale.getDefault().getLanguage();
+
+    /** The factory for instantiating submodules. */
+    private ModuleFactory moduleFactory;
+
+    /** The classloader used for loading Checkstyle module classes. */
+    private ClassLoader moduleClassLoader;
+
+    /** The context of all child components. */
+    private Context childContext;
+
+    /** The file extensions that are accepted. */
+    private String[] fileExtensions;
+
+    /**
+     * The severity level of any violations found by submodules.
+     * The value of this property is passed to submodules via contextualize().
+     *
+     * <p>Note: Since the Checker is merely a container for modules
+     * it does not make sense to implement logging functionality
+     * here. Consequently, Checker does not extend AbstractViolationReporter,
+     * leading to a bit of duplicated code for severity level setting.
+     */
+    private SeverityLevel severity = SeverityLevel.ERROR;
+
+    /** Name of a charset. */
+    private String charset = StandardCharsets.UTF_8.name();
+
+    /** Cache file. */
+    @XdocsPropertyType(PropertyType.FILE)
+    private PropertyCacheFile cacheFile;
+
+    /** Controls whether exceptions should halt execution or not. */
+    private boolean haltOnException = true;
+
+    /** The tab width for column reporting. */
+    private int tabWidth = CommonUtil.DEFAULT_TAB_WIDTH;
+
+    /**
+     * Creates a new {@code Checker} instance.
+     * The instance needs to be contextualized and configured.
+     */
+    public Checker() {
+        addListener(counter);
+        log = LogFactory.getLog(Checker.class);
+    }
+
+    /**
+     * Sets cache file.
+     *
+     * @param fileName the cache file.
+     * @throws IOException if there are some problems with file loading.
+     */
+    public void setCacheFile(String fileName) throws IOException {
+        final Configuration configuration = getConfiguration();
+        cacheFile = new PropertyCacheFile(configuration, fileName);
+        cacheFile.load();
+    }
+
+    /**
+     * Removes before execution file filter.
+     *
+     * @param filter before execution file filter to remove.
+     */
+    public void removeBeforeExecutionFileFilter(BeforeExecutionFileFilter filter) {
+        beforeExecutionFileFilters.removeBeforeExecutionFileFilter(filter);
+    }
+
+    /**
+     * Removes filter.
+     *
+     * @param filter filter to remove.
+     */
+    public void removeFilter(Filter filter) {
+        filters.removeFilter(filter);
+    }
+
+    @Override
+    public void destroy() {
+        listeners.clear();
+        fileSetChecks.clear();
+        beforeExecutionFileFilters.clear();
+        filters.clear();
+        if (cacheFile != null) {
+            try {
+                cacheFile.persist();
+            }
+            catch (IOException exc) {
+                throw new IllegalStateException(
+                        getLocalizedMessage("Checker.cacheFilesException") + ": "
+                                + cacheFile.getFileName(), exc);
+            }
+        }
+    }
+
+    /**
+     * Removes a given listener.
+     *
+     * @param listener a listener to remove
+     */
+    public void removeListener(AuditListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Sets base directory.
+     *
+     * @param basedir the base directory to strip off in file names
+     */
+    public void setBasedir(String basedir) {
+        this.basedir = basedir;
+    }
+
+    @Override
+    public int process(List<File> files) throws CheckstyleException {
+        if (cacheFile != null) {
+            cacheFile.putExternalResources(getExternalResourceLocations());
+        }
+
+        // Prepare to start
+        final int errorCount;
+        try (AuditCompletion auditCompletion = new AuditCompletion()) {
+            for (final FileSetCheck fsc : fileSetChecks) {
+                fsc.beginProcessing(charset);
+            }
+
+            final List<File> targetFiles = files.stream()
+                    .filter(file -> CommonUtil.matchesFileExtension(file, fileExtensions))
+                    .toList();
+            processFiles(targetFiles);
+
+            // Finish up
+            // It may also log!!!
+            fileSetChecks.forEach(FileSetCheck::finishProcessing);
+
+            // It may also log!!!
+            fileSetChecks.forEach(FileSetCheck::destroy);
+
+            errorCount = counter.getCount();
+        }
+        return errorCount;
+    }
+
+    /**
+     * Returns a set of external configuration resource locations which are used by all file set
+     * checks and filters.
+     *
+     * @return a set of external configuration resource locations which are used by all file set
+     *         checks and filters.
+     */
+    private Set<String> getExternalResourceLocations() {
+        return Stream.concat(fileSetChecks.stream(), filters.getFilters().stream())
+            .filter(ExternalResourceHolder.class::isInstance)
+            .flatMap(resource -> {
+                return ((ExternalResourceHolder) resource)
+                        .getExternalResourceLocations().stream();
+            })
+            .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Processes a list of files with all FileSetChecks.
+     *
+     * @param files a list of files to process.
+     * @throws CheckstyleException if error condition within Checkstyle occurs.
+     * @throws Error wraps any java.lang.Error happened during execution
+     * @noinspection NestedTryStatement, ProhibitedExceptionThrown
+     * @noinspectionreason NestedTryStatement - false positive: the inner try-with-resources
+     *      has no catch or finally to merge. Remove this suppression when the inspection is fixed.
+     *      See <a href="https://youtrack.jetbrains.com/issue/IDEA-393895">IDEA-393895</a>.
+     *      It completes file notifications before the outer handlers remove failed files from
+     *      the cache and wrap failures.
+     * @noinspectionreason ProhibitedExceptionThrown - preserve Error propagation while adding
+     *      the name of the file that was being processed.
+     */
+    // -@cs[CyclomaticComplexity] no easy way to split this logic of processing the file
+    private void processFiles(List<File> files) throws CheckstyleException {
+        for (final File file : files) {
+            String fileName = null;
+            final String filePath = file.getPath();
+            try {
+                fileName = file.getAbsolutePath();
+                final long timestamp = file.lastModified();
+                if (cacheFile != null && cacheFile.isInCache(fileName, timestamp)
+                        || !acceptFileStarted(fileName)) {
+                    continue;
+                }
+                if (cacheFile != null) {
+                    cacheFile.put(fileName, timestamp);
+                }
+                try (FileAuditCompletion completion = new FileAuditCompletion(fileName)) {
+                    final SortedSet<Violation> fileMessages = processFile(file);
+                    fireErrors(fileName, fileMessages);
+                }
+            }
+            // -@cs[IllegalCatch] There is no other way to deliver filename that was under
+            // processing. See https://github.com/checkstyle/checkstyle/issues/2285
+            catch (Exception exc) {
+                if (fileName != null && cacheFile != null) {
+                    cacheFile.remove(fileName);
+                }
+
+                // We need to catch all exceptions to put a reason failure (file name) in exception
+                throw new CheckstyleException(
+                        getLocalizedMessage("Checker.processFilesException", filePath), exc);
+            }
+            catch (Error error) {
+                if (fileName != null && cacheFile != null) {
+                    cacheFile.remove(fileName);
+                }
+
+                // We need to catch all errors to put a reason failure (file name) in error
+                throw new Error(getLocalizedMessage("Checker.error", filePath), error);
+            }
+        }
+    }
+
+    /**
+     * Processes a file with all FileSetChecks.
+     *
+     * @param file a file to process.
+     * @return a sorted set of violations to be logged.
+     * @throws CheckstyleException if error condition within Checkstyle occurs.
+     * @noinspection ProhibitedExceptionThrown
+     * @noinspectionreason ProhibitedExceptionThrown - there is no other way to obey
+     *      haltOnException field
+     */
+    private SortedSet<Violation> processFile(File file) throws CheckstyleException {
+        final SortedSet<Violation> fileMessages = new TreeSet<>();
+        try {
+            final FileText theText = new FileText(file.getAbsoluteFile(), charset);
+            for (final FileSetCheck fsc : fileSetChecks) {
+                fileMessages.addAll(fsc.process(file, theText));
+            }
+        }
+        catch (final IOException ioe) {
+            log.debug("IOException occurred.", ioe);
+            fileMessages.add(new Violation(1,
+                    Definitions.CHECKSTYLE_BUNDLE, EXCEPTION_MSG,
+                    new String[] {ioe.getMessage()}, null, getClass(), null));
+        }
+        // -@cs[IllegalCatch] There is no other way to obey haltOnException field
+        catch (Exception exc) {
+            if (haltOnException) {
+                throw exc;
+            }
+
+            log.debug("Exception occurred.", exc);
+
+            final StringWriter sw = new StringWriter();
+            final PrintWriter pw = new PrintWriter(sw, true);
+
+            exc.printStackTrace(pw);
+
+            fileMessages.add(new Violation(1,
+                    Definitions.CHECKSTYLE_BUNDLE, EXCEPTION_MSG,
+                    new String[] {sw.getBuffer().toString()},
+                    null, getClass(), null));
+        }
+        return fileMessages;
+    }
+
+    /**
+     * Check if all before execution file filters accept starting the file.
+     *
+     * @param fileName
+     *            the file to be audited
+     * @return {@code true} if the file is accepted.
+     */
+    private boolean acceptFileStarted(String fileName) {
+        final String stripped = relativizePathWithCatch(fileName);
+        return beforeExecutionFileFilters.accept(stripped);
+    }
+
+    /**
+     * Notify all listeners about the beginning of a file audit.
+     *
+     * @param fileName
+     *            the file to be audited
+     */
+    @Override
+    public void fireFileStarted(String fileName) {
+        final String stripped = relativizePathWithCatch(fileName);
+        final AuditEvent event = new AuditEvent(this, stripped);
+        for (final AuditListener listener : listeners) {
+            listener.fileStarted(event);
+        }
+    }
+
+    /**
+     * Notify all listeners about the errors in a file.
+     *
+     * @param fileName the audited file
+     * @param errors the audit errors from the file
+     */
+    @Override
+    public void fireErrors(String fileName, SortedSet<Violation> errors) {
+        final String stripped = relativizePathWithCatch(fileName);
+        boolean hasNonFilteredViolations = false;
+        for (final Violation element : errors) {
+            final AuditEvent event = new AuditEvent(this, stripped, element);
+            if (filters.accept(event)) {
+                hasNonFilteredViolations = true;
+                for (final AuditListener listener : listeners) {
+                    listener.addError(event);
+                }
+            }
+        }
+        if (hasNonFilteredViolations && cacheFile != null) {
+            cacheFile.remove(fileName);
+        }
+    }
+
+    /**
+     * Notify all listeners about the end of a file audit.
+     *
+     * @param fileName
+     *            the audited file
+     */
+    @Override
+    public void fireFileFinished(String fileName) {
+        final String stripped = relativizePathWithCatch(fileName);
+        final AuditEvent event = new AuditEvent(this, stripped);
+        for (final AuditListener listener : listeners) {
+            listener.fileFinished(event);
+        }
+    }
+
+    @Override
+    protected void finishLocalSetup() throws CheckstyleException {
+        final Locale locale = Locale.of(localeLanguage, localeCountry);
+        LocalizedMessage.setLocale(locale);
+
+        if (moduleFactory == null) {
+            if (moduleClassLoader == null) {
+                throw new CheckstyleException(getLocalizedMessage("Checker.finishLocalSetup"));
+            }
+
+            final Set<String> packageNames = PackageNamesLoader
+                    .getPackageNames(moduleClassLoader);
+            moduleFactory = new PackageObjectFactory(packageNames,
+                    moduleClassLoader);
+        }
+
+        final DefaultContext context = new DefaultContext();
+        context.add("charset", charset);
+        context.add("moduleFactory", moduleFactory);
+        context.add("severity", severity.getName());
+        context.add("basedir", basedir);
+        context.add("tabWidth", String.valueOf(tabWidth));
+        childContext = context;
+    }
+
+    /**
+     * {@inheritDoc} Creates child module.
+     */
+    @Override
+    protected void setupChild(Configuration childConf)
+            throws CheckstyleException {
+        final String name = childConf.getName();
+        final Object child;
+
+        try {
+            child = moduleFactory.createModule(name);
+
+            if (child instanceof final AbstractAutomaticBean bean) {
+                bean.contextualize(childContext);
+                bean.configure(childConf);
+            }
+        }
+        catch (final CheckstyleException exc) {
+            throw new CheckstyleException(
+                    getLocalizedMessage("Checker.setupChildModule", name), exc);
+        }
+        switch (child) {
+            case FileSetCheck fsc -> {
+                fsc.init();
+                addFileSetCheck(fsc);
+            }
+            case BeforeExecutionFileFilter filter -> addBeforeExecutionFileFilter(filter);
+            case Filter filter -> addFilter(filter);
+            case AuditListener listener -> addListener(listener);
+            case null, default -> throw new CheckstyleException(
+                    getLocalizedMessage("Checker.setupChildNotAllowed", name));
+        }
+    }
+
+    /**
+     * Adds a FileSetCheck to the list of FileSetChecks that is executed in process().
+     *
+     * @param fileSetCheck the additional FileSetCheck
+     */
+    public void addFileSetCheck(FileSetCheck fileSetCheck) {
+        fileSetCheck.setMessageDispatcher(this);
+        fileSetChecks.add(fileSetCheck);
+    }
+
+    /**
+     * Adds a before execution file filter to the end of the event chain.
+     *
+     * @param filter the additional filter
+     */
+    public void addBeforeExecutionFileFilter(BeforeExecutionFileFilter filter) {
+        beforeExecutionFileFilters.addBeforeExecutionFileFilter(filter);
+    }
+
+    /**
+     * Adds a filter to the end of the audit event filter chain.
+     *
+     * @param filter the additional filter
+     */
+    public void addFilter(Filter filter) {
+        filters.addFilter(filter);
+    }
+
+    @Override
+    public final void addListener(AuditListener listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * Sets the file extensions that identify the files that pass the filter of this FileSetCheck.
+     *
+     * @param extensions the set of file extensions. A missing
+     *     initial '.' character of an extension is automatically added.
+     */
+    public final void setFileExtensions(String... extensions) {
+        if (extensions != null) {
+            fileExtensions = new String[extensions.length];
+            for (int index = 0; index < extensions.length; index++) {
+                final String extension = extensions[index];
+                if (extension.startsWith(EXTENSION_SEPARATOR)) {
+                    fileExtensions[index] = extension;
+                }
+                else {
+                    fileExtensions[index] = EXTENSION_SEPARATOR + extension;
+                }
+            }
+        }
+    }
+
+    /**
+     * Sets the factory for creating submodules.
+     *
+     * @param moduleFactory the factory for creating FileSetChecks
+     */
+    public void setModuleFactory(ModuleFactory moduleFactory) {
+        this.moduleFactory = moduleFactory;
+    }
+
+    /**
+     * Sets locale country.
+     *
+     * @param localeCountry the country to report messages
+     */
+    public void setLocaleCountry(String localeCountry) {
+        this.localeCountry = localeCountry;
+    }
+
+    /**
+     * Sets locale language.
+     *
+     * @param localeLanguage the language to report messages
+     */
+    public void setLocaleLanguage(String localeLanguage) {
+        this.localeLanguage = localeLanguage;
+    }
+
+    /**
+     * Sets the severity level.  The string should be one of the names
+     * defined in the {@code SeverityLevel} class.
+     *
+     * @param severity  The new severity level
+     * @see SeverityLevel
+     */
+    public final void setSeverity(String severity) {
+        this.severity = SeverityLevel.getInstance(severity);
+    }
+
+    @Override
+    public final void setModuleClassLoader(ClassLoader moduleClassLoader) {
+        this.moduleClassLoader = moduleClassLoader;
+    }
+
+    /**
+     * Sets a named charset.
+     *
+     * @param charset the name of a charset
+     * @throws UnsupportedEncodingException if charset is unsupported.
+     */
+    public void setCharset(String charset)
+            throws UnsupportedEncodingException {
+        if (!Charset.isSupported(charset)) {
+            throw new UnsupportedEncodingException(
+                    getLocalizedMessage("Checker.setCharset", charset));
+        }
+        this.charset = charset;
+    }
+
+    /**
+     * Sets the field haltOnException.
+     *
+     * @param haltOnException the new value.
+     */
+    public void setHaltOnException(boolean haltOnException) {
+        this.haltOnException = haltOnException;
+    }
+
+    /**
+     * Set the tab width to report audit events with.
+     *
+     * @param tabWidth an {@code int} value
+     */
+    public final void setTabWidth(int tabWidth) {
+        this.tabWidth = tabWidth;
+    }
+
+    /**
+     * Clears the cache.
+     */
+    public void clearCache() {
+        if (cacheFile != null) {
+            cacheFile.reset();
+        }
+    }
+
+    /**
+     * Extracts localized messages from properties files.
+     *
+     * @param messageKey the key pointing to localized message in respective properties file.
+     * @param args the arguments of message in respective properties file.
+     * @return a string containing extracted localized message
+     */
+    private String getLocalizedMessage(String messageKey, Object... args) {
+        final LocalizedMessage localizedMessage = new LocalizedMessage(
+            Definitions.CHECKSTYLE_BUNDLE, getClass(),
+                    messageKey, args);
+
+        return localizedMessage.getMessage();
+    }
+
+    /**
+     * Relativizes a path and wraps any exception with a user-friendly localized message.
+     *
+     * @param fileName the file path to relativize
+     * @return the relativized path
+     * @throws IllegalStateException if any exception occurs during relativization
+     */
+    private String relativizePathWithCatch(String fileName) {
+        try {
+            return CommonUtil.relativizePath(basedir, fileName);
+        }
+        // -@cs[IllegalCatch] Catching generic Exception to include fileName and basedir context
+        catch (Exception exception) {
+            throw new IllegalStateException(
+                getLocalizedMessage("general.relativizePath",
+                        fileName, basedir), exception);
+        }
+    }
+
+    /** Starts the audit and completes it when processing ends. */
+    private final class AuditCompletion implements AutoCloseable {
+
+        /** Starts the audit. */
+        private AuditCompletion() {
+            final AuditEvent event = new AuditEvent(Checker.this);
+            for (final AuditListener listener : listeners) {
+                listener.auditStarted(event);
+            }
+        }
+
+        /** Completes the audit. */
+        @Override
+        public void close() {
+            final AuditEvent event = new AuditEvent(Checker.this);
+            for (final AuditListener listener : listeners) {
+                listener.auditFinished(event);
+            }
+        }
+
+    }
+
+    /** Starts the file audit and completes it when processing ends. */
+    private final class FileAuditCompletion implements AutoCloseable {
+
+        /** Name of the file being audited. */
+        private final String fileName;
+
+        /**
+         * Starts auditing the file.
+         *
+         * @param fileName the name of the file to audit
+         */
+        private FileAuditCompletion(String fileName) {
+            this.fileName = fileName;
+            fireFileStarted(fileName);
+        }
+
+        /** Completes the file audit. */
+        @Override
+        public void close() {
+            fireFileFinished(fileName);
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/ChecksAndFilesSuppressionFileGeneratorAuditListener.java SHA256 661dd4bcd475f295404097ee8bb1986effbe5d56a502b2b81407a76f9b5be5ca
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.AuditListener;
+
+/**
+ * Generates <b>suppressions.xml</b> file, based on violations occurred.
+ * See issue <a href="https://github.com/checkstyle/checkstyle/issues/5983">#5983</a>
+ */
+public final class ChecksAndFilesSuppressionFileGeneratorAuditListener
+        extends AbstractAutomaticBean
+        implements AuditListener {
+
+    /** The " quote character. */
+    private static final String QUOTE_CHAR = "\"";
+
+    /**
+     * Helper writer that allows easy encoding and printing.
+     */
+    private final PrintWriter writer;
+
+    /** Close output stream in auditFinished. */
+    private final boolean closeStream;
+
+    /**
+     * Collects the check names corresponds to file name.
+     */
+    private final Map<Path, Set<String>> filesAndChecksCollector = new HashMap<>();
+
+    /**
+     * Collects the module ids corresponds to file name.
+     */
+    private final Map<Path, Set<String>> filesAndModuleIdCollector = new HashMap<>();
+
+    /** Determines if xml header is printed. */
+    private boolean isXmlHeaderPrinted;
+
+    /**
+     * Creates a new {@code ChecksAndFilesSuppressionFileGeneratorAuditListener} instance.
+     * Sets the output to a defined stream.
+     *
+     * @param out the output stream
+     * @param outputStreamOptions if {@code CLOSE} stream should be closed in auditFinished()
+     * @throws IllegalArgumentException if outputStreamOptions is null.
+     */
+    public ChecksAndFilesSuppressionFileGeneratorAuditListener(OutputStream out,
+                                           OutputStreamOptions outputStreamOptions) {
+        if (outputStreamOptions == null) {
+            throw new IllegalArgumentException("Parameter outputStreamOptions can not be null");
+        }
+
+        writer = new PrintWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+        closeStream = outputStreamOptions == OutputStreamOptions.CLOSE;
+    }
+
+    @Override
+    public void fileStarted(AuditEvent event) {
+        // No code by default
+    }
+
+    @Override
+    public void fileFinished(AuditEvent event) {
+        // No code by default
+    }
+
+    @Override
+    public void auditStarted(AuditEvent event) {
+        // No code by default
+    }
+
+    @Override
+    public void auditFinished(AuditEvent event) {
+        if (isXmlHeaderPrinted) {
+            writer.println("</suppressions>");
+        }
+
+        writer.flush();
+        if (closeStream) {
+            writer.close();
+        }
+    }
+
+    @Override
+    public void addError(AuditEvent event) {
+        printXmlHeader();
+
+        final Path path = Path.of(event.getFileName());
+        final Path fileName = path.getFileName();
+        final String checkName =
+                PackageObjectFactory.getShortFromFullModuleNames(event.getSourceName());
+        final String moduleIdName = event.getModuleId();
+
+        final boolean isAlreadyPresent;
+
+        if (fileName != null) {
+            if (moduleIdName == null) {
+                isAlreadyPresent = isFileAndCheckNamePresent(fileName, checkName);
+            }
+            else {
+                isAlreadyPresent = isFileAndModuleIdPresent(fileName, moduleIdName);
+            }
+        }
+        else {
+            isAlreadyPresent = true;
+        }
+
+        if (!isAlreadyPresent) {
+            suppressXmlWriter(fileName, checkName, moduleIdName);
+        }
+    }
+
+    /**
+     * Checks whether the check name is already associated with the given file
+     * in the {@code FilesAndChecksCollector} map.
+     *
+     * @param fileName The path of the file where the violation occurred.
+     * @param checkName The name of the check that triggered the violation.
+     * @return {@code true} if the collector already contains the check name for the file,
+     *     {@code false} otherwise.
+     */
+    private boolean isFileAndCheckNamePresent(Path fileName, String checkName) {
+        boolean isPresent = false;
+        final Set<String> checks = filesAndChecksCollector.get(fileName);
+        if (checks != null) {
+            isPresent = checks.contains(checkName);
+        }
+        return isPresent;
+    }
+
+    /**
+     * Checks the {@code FilesAndModuleIdCollector} map to see if the module ID has
+     * already been recorded for the specified file.
+     *
+     * @param fileName The path of the file where the violation occurred.
+     * @param moduleIdName The module ID associated with the check name which trigger violation.
+     * @return {@code true} if the module ID is not yet recorded for the file,
+     *     {@code false} otherwise.
+     */
+    private boolean isFileAndModuleIdPresent(Path fileName, String moduleIdName) {
+        boolean isPresent = false;
+        final Set<String> moduleIds = filesAndModuleIdCollector.get(fileName);
+        if (moduleIds != null) {
+            isPresent = moduleIds.contains(moduleIdName);
+        }
+        return isPresent;
+    }
+
+    @Override
+    public void addException(AuditEvent event, Throwable throwable) {
+        throw new UnsupportedOperationException("Operation is not supported");
+    }
+
+    /**
+     * Prints XML suppression with check/id and file name.
+     *
+     * @param fileName The file path associated with the check or module ID.
+     * @param checkName The check name to write if {@code moduleIdName} is {@code null}.
+     * @param moduleIdName The module ID name to write if {@code null}, {@code checkName} is
+     *     used instead.
+     */
+    private void suppressXmlWriter(Path fileName, String checkName, String moduleIdName) {
+        writer.println("  <suppress");
+        writer.print("      files=\"");
+        writer.print(XMLLogger.encode(fileName.toString()));
+        writer.println(QUOTE_CHAR);
+
+        if (moduleIdName == null) {
+            writer.print("      checks=\"");
+            writer.print(checkName);
+        }
+        else {
+            writer.print("      id=\"");
+            writer.print(moduleIdName);
+        }
+        writer.println("\"/>");
+        addCheckOrModuleId(fileName, checkName, moduleIdName);
+    }
+
+    /**
+     * Adds either the check name or module ID to the corresponding collector map
+     * for the specified file path.
+     *
+     * @param fileName The path of the file associated with the check or module ID.
+     * @param checkName The name of the check to add if {@code moduleIdName} is {@code null}.
+     * @param moduleIdName The name of the module ID to add if {@code null}, {@code checkName} is
+     *     used instead.
+     */
+    private void addCheckOrModuleId(Path fileName, String checkName, String moduleIdName) {
+        if (moduleIdName == null) {
+            addToCollector(filesAndChecksCollector, fileName, checkName);
+        }
+        else {
+            addToCollector(filesAndModuleIdCollector, fileName, moduleIdName);
+        }
+    }
+
+    /**
+     * Adds a value (either a check name or module ID) to the set associated with the given file
+     * in the specified collector map.
+     *
+     * @param collector The map that collects values (check names or module IDs) for each file.
+     * @param fileName The file path for which the value should be recorded.
+     * @param value the check name or module ID to add to the set for the specified file.
+     */
+    private static void addToCollector(Map<Path, Set<String>> collector,
+        Path fileName, String value) {
+        final Set<String> values = collector.computeIfAbsent(fileName, key -> new HashSet<>());
+        values.add(value);
+    }
+
+    /**
+     * Prints XML header if only it was not printed before.
+     */
+    private void printXmlHeader() {
+        if (!isXmlHeaderPrinted) {
+            writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            writer.println("<!DOCTYPE suppressions PUBLIC");
+            writer.println("    \"-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN\"");
+            writer.println("    \"https://checkstyle.org/dtds/suppressions_1_2.dtd\">");
+            writer.println("<suppressions>");
+            isXmlHeaderPrinted = true;
+        }
+    }
+
+    @Override
+    protected void finishLocalSetup() {
+        // No code by default
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/CheckstyleParserErrorStrategy.java SHA256 8bbd019f061c594d16037001192171e7266887b596d5650380e6b99c0a97fc86
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import org.antlr.v4.runtime.BailErrorStrategy;
+import org.antlr.v4.runtime.InputMismatchException;
+import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.Token;
+
+/**
+ * Extending BailErrorStrategy allows us to report errors while
+ * cancelling the parsing operation. If input is not syntactically
+ * correct, we do not need to use antlr's recovery strategy, which can add significant overhead.
+ *
+ */
+public class CheckstyleParserErrorStrategy extends BailErrorStrategy {
+
+    /**
+     * Creates a new {@code CheckstyleParserErrorStrategy} instance.
+     */
+    public CheckstyleParserErrorStrategy() {
+        // no code by default
+    }
+
+    @Override
+    public Token recoverInline(Parser recognizer) {
+        reportError(recognizer, new InputMismatchException(recognizer));
+        return super.recoverInline(recognizer);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/ConfigurationLoader.java SHA256 6f65d04cfd772789d0f22416acbb7a62f84dbd128250cf541f0980c12ed44436
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * Loads a configuration from a standard configuration XML file.
+ *
+ */
+@SuppressWarnings("UnrecognisedJavadocTag")
+public final class ConfigurationLoader {
+
+    /**
+     * Enum to specify behaviour regarding ignored modules.
+     */
+    public enum IgnoredModulesOptions {
+
+        /**
+         * Omit ignored modules.
+         */
+        OMIT,
+
+        /**
+         * Execute ignored modules.
+         */
+        EXECUTE,
+
+    }
+
+    /** The new public ID for version 1_3 of the configuration dtd. */
+    public static final String DTD_PUBLIC_CS_ID_1_3 =
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN";
+
+    /** The resource for version 1_3 of the configuration dtd. */
+    public static final String DTD_CONFIGURATION_NAME_1_3 =
+        "com/puppycrawl/tools/checkstyle/configuration_1_3.dtd";
+
+    /** Format of message for sax parse exception. */
+    private static final String SAX_PARSE_EXCEPTION_FORMAT = "%s - %s:%s:%s";
+
+    /** The public ID for version 1_0 of the configuration dtd. */
+    private static final String DTD_PUBLIC_ID_1_0 =
+        "-//Puppy Crawl//DTD Check Configuration 1.0//EN";
+
+    /** The new public ID for version 1_0 of the configuration dtd. */
+    private static final String DTD_PUBLIC_CS_ID_1_0 =
+        "-//Checkstyle//DTD Checkstyle Configuration 1.0//EN";
+
+    /** The resource for version 1_0 of the configuration dtd. */
+    private static final String DTD_CONFIGURATION_NAME_1_0 =
+        "com/puppycrawl/tools/checkstyle/configuration_1_0.dtd";
+
+    /** The public ID for version 1_1 of the configuration dtd. */
+    private static final String DTD_PUBLIC_ID_1_1 =
+        "-//Puppy Crawl//DTD Check Configuration 1.1//EN";
+
+    /** The new public ID for version 1_1 of the configuration dtd. */
+    private static final String DTD_PUBLIC_CS_ID_1_1 =
+        "-//Checkstyle//DTD Checkstyle Configuration 1.1//EN";
+
+    /** The resource for version 1_1 of the configuration dtd. */
+    private static final String DTD_CONFIGURATION_NAME_1_1 =
+        "com/puppycrawl/tools/checkstyle/configuration_1_1.dtd";
+
+    /** The public ID for version 1_2 of the configuration dtd. */
+    private static final String DTD_PUBLIC_ID_1_2 =
+        "-//Puppy Crawl//DTD Check Configuration 1.2//EN";
+
+    /** The new public ID for version 1_2 of the configuration dtd. */
+    private static final String DTD_PUBLIC_CS_ID_1_2 =
+        "-//Checkstyle//DTD Checkstyle Configuration 1.2//EN";
+
+    /** The resource for version 1_2 of the configuration dtd. */
+    private static final String DTD_CONFIGURATION_NAME_1_2 =
+        "com/puppycrawl/tools/checkstyle/configuration_1_2.dtd";
+
+    /** The public ID for version 1_3 of the configuration dtd. */
+    private static final String DTD_PUBLIC_ID_1_3 =
+        "-//Puppy Crawl//DTD Check Configuration 1.3//EN";
+
+    /** Prefix for the exception when unable to parse resource. */
+    private static final String UNABLE_TO_PARSE_EXCEPTION_PREFIX = "unable to parse"
+            + " configuration stream";
+
+    /** Dollar sign literal. */
+    private static final char DOLLAR_SIGN = '$';
+    /** Dollar sign string. */
+    private static final String DOLLAR_SIGN_STRING = String.valueOf(DOLLAR_SIGN);
+
+    /** Static map of DTD IDs to resource names. */
+    private static final Map<String, String> ID_TO_RESOURCE_NAME_MAP = Map.ofEntries(
+        Map.entry(DTD_PUBLIC_ID_1_0, DTD_CONFIGURATION_NAME_1_0),
+        Map.entry(DTD_PUBLIC_ID_1_1, DTD_CONFIGURATION_NAME_1_1),
+        Map.entry(DTD_PUBLIC_ID_1_2, DTD_CONFIGURATION_NAME_1_2),
+        Map.entry(DTD_PUBLIC_ID_1_3, DTD_CONFIGURATION_NAME_1_3),
+        Map.entry(DTD_PUBLIC_CS_ID_1_0, DTD_CONFIGURATION_NAME_1_0),
+        Map.entry(DTD_PUBLIC_CS_ID_1_1, DTD_CONFIGURATION_NAME_1_1),
+        Map.entry(DTD_PUBLIC_CS_ID_1_2, DTD_CONFIGURATION_NAME_1_2),
+        Map.entry(DTD_PUBLIC_CS_ID_1_3, DTD_CONFIGURATION_NAME_1_3)
+    );
+
+    /** The SAX document handler. */
+    private final InternalLoader saxHandler;
+
+    /** Property resolver. */
+    private final PropertyResolver overridePropsResolver;
+
+    /** Flags if modules with the severity 'ignore' should be omitted. */
+    private final boolean omitIgnoredModules;
+
+    /** The thread mode configuration. */
+    private final ThreadModeSettings threadModeSettings;
+
+    /**
+     * Creates a new {@code ConfigurationLoader} instance.
+     *
+     * @param overrideProps resolver for overriding properties
+     * @param omitIgnoredModules {@code true} if ignored modules should be omitted
+     * @param threadModeSettings the thread mode configuration
+     * @throws ParserConfigurationException if an error occurs
+     * @throws SAXException if an error occurs
+     */
+    private ConfigurationLoader(final PropertyResolver overrideProps,
+                                final boolean omitIgnoredModules,
+                                final ThreadModeSettings threadModeSettings)
+            throws ParserConfigurationException, SAXException {
+        saxHandler = new InternalLoader();
+        overridePropsResolver = overrideProps;
+        this.omitIgnoredModules = omitIgnoredModules;
+        this.threadModeSettings = threadModeSettings;
+    }
+
+    /**
+     * Parses the specified input source loading the configuration information.
+     * The stream wrapped inside the source, if any, is NOT
+     * explicitly closed after parsing, it is the responsibility of the caller to close the stream.
+     *
+     * @param source the source that contains the configuration data
+     * @return the check configurations
+     * @throws IOException if an error occurs
+     * @throws SAXException if an error occurs
+     */
+    private Configuration parseInputSource(InputSource source)
+            throws IOException, SAXException {
+        saxHandler.parseInputSource(source);
+        return saxHandler.configuration;
+    }
+
+    /**
+     * Returns the module configurations in a specified file.
+     *
+     * @param config location of config file, can be either a URL or a filename
+     * @param overridePropsResolver overriding properties
+     * @return the check configurations
+     * @throws CheckstyleException if an error occurs
+     */
+    public static Configuration loadConfiguration(String config,
+            PropertyResolver overridePropsResolver)
+                    throws CheckstyleException {
+        return loadConfiguration(config, overridePropsResolver, IgnoredModulesOptions.EXECUTE);
+    }
+
+    /**
+     * Returns the module configurations in a specified file.
+     *
+     * @param config location of config file, can be either a URL or a filename
+     * @param overridePropsResolver overriding properties
+     * @param threadModeSettings the thread mode configuration
+     * @return the check configurations
+     * @throws CheckstyleException if an error occurs
+     */
+    public static Configuration loadConfiguration(String config,
+            PropertyResolver overridePropsResolver, ThreadModeSettings threadModeSettings)
+                    throws CheckstyleException {
+        return loadConfiguration(config, overridePropsResolver,
+                IgnoredModulesOptions.EXECUTE, threadModeSettings);
+    }
+
+    /**
+     * Returns the module configurations in a specified file.
+     *
+     * @param config location of config file, can be either a URL or a filename
+     * @param overridePropsResolver overriding properties
+     * @param ignoredModulesOptions {@code OMIT} if modules with severity
+     *            'ignore' should be omitted, {@code EXECUTE} otherwise
+     * @return the check configurations
+     * @throws CheckstyleException if an error occurs
+     */
+    public static Configuration loadConfiguration(String config,
+                                                  PropertyResolver overridePropsResolver,
+                                                  IgnoredModulesOptions ignoredModulesOptions)
+            throws CheckstyleException {
+        return loadConfiguration(config, overridePropsResolver, ignoredModulesOptions,
+                ThreadModeSettings.SINGLE_THREAD_MODE_INSTANCE);
+    }
+
+    /**
+     * Returns the module configurations from a specified input source.
+     * Note that if the source does wrap an open byte or character
+     * stream, clients are required to close that stream by themselves
+     *
+     * @param configSource the input stream to the Checkstyle configuration
+     * @param overridePropsResolver overriding properties
+     * @param ignoredModulesOptions {@code OMIT} if modules with severity
+     *            'ignore' should be omitted, {@code EXECUTE} otherwise
+     * @return the check configurations
+     * @throws CheckstyleException if an error occurs
+     */
+    public static Configuration loadConfiguration(InputSource configSource,
+                                                  PropertyResolver overridePropsResolver,
+                                                  IgnoredModulesOptions ignoredModulesOptions)
+            throws CheckstyleException {
+        return loadConfiguration(configSource, overridePropsResolver,
+                ignoredModulesOptions, ThreadModeSettings.SINGLE_THREAD_MODE_INSTANCE);
+    }
+
+    /**
+     * Returns the module configurations in a specified file.
+     *
+     * @param config location of config file, can be either a URL or a filename
+     * @param overridePropsResolver overriding properties
+     * @param ignoredModulesOptions {@code OMIT} if modules with severity
+     *            'ignore' should be omitted, {@code EXECUTE} otherwise
+     * @param threadModeSettings the thread mode configuration
+     * @return the check configurations
+     * @throws CheckstyleException if an error occurs
+     */
+    public static Configuration loadConfiguration(String config,
+                                                  PropertyResolver overridePropsResolver,
+                                                  IgnoredModulesOptions ignoredModulesOptions,
+                                                  ThreadModeSettings threadModeSettings)
+            throws CheckstyleException {
+        return loadConfiguration(CommonUtil.sourceFromFilename(config), overridePropsResolver,
+                ignoredModulesOptions, threadModeSettings);
+    }
+
+    /**
+     * Returns the module configurations from a specified input source.
+     * Note that if the source does wrap an open byte or character
+     * stream, clients are required to close that stream by themselves
+     *
+     * @param configSource the input stream to the Checkstyle configuration
+     * @param overridePropsResolver overriding properties
+     * @param ignoredModulesOptions {@code OMIT} if modules with severity
+     *            'ignore' should be omitted, {@code EXECUTE} otherwise
+     * @param threadModeSettings the thread mode configuration
+     * @return the check configurations
+     * @throws CheckstyleException if an error occurs
+     * @noinspection WeakerAccess
+     * @noinspectionreason WeakerAccess - we avoid 'protected' when possible
+     */
+    public static Configuration loadConfiguration(InputSource configSource,
+                                                  PropertyResolver overridePropsResolver,
+                                                  IgnoredModulesOptions ignoredModulesOptions,
+                                                  ThreadModeSettings threadModeSettings)
+            throws CheckstyleException {
+        try {
+            final boolean omitIgnoreModules = ignoredModulesOptions == IgnoredModulesOptions.OMIT;
+            final ConfigurationLoader loader =
+                    new ConfigurationLoader(overridePropsResolver,
+                            omitIgnoreModules, threadModeSettings);
+            return loader.parseInputSource(configSource);
+        }
+        catch (final SAXParseException exc) {
+            final String message = String.format(Locale.ROOT, SAX_PARSE_EXCEPTION_FORMAT,
+                    UNABLE_TO_PARSE_EXCEPTION_PREFIX,
+                    exc.getMessage(), exc.getLineNumber(), exc.getColumnNumber());
+            throw new CheckstyleException(message, exc);
+        }
+        catch (final ParserConfigurationException | IOException | SAXException exc) {
+            throw new CheckstyleException(UNABLE_TO_PARSE_EXCEPTION_PREFIX, exc);
+        }
+    }
+
+    /**
+     * Implements the SAX document handler interfaces, so they do not
+     * appear in the public API of the ConfigurationLoader.
+     */
+    private final class InternalLoader extends XmlLoader {
+
+        /** Module elements. */
+        private static final String MODULE = "module";
+        /** Name attribute. */
+        private static final String NAME = "name";
+        /** Property element. */
+        private static final String PROPERTY = "property";
+        /** Value attribute. */
+        private static final String VALUE = "value";
+        /** Default attribute. */
+        private static final String DEFAULT = "default";
+        /** Name of the severity property. */
+        private static final String SEVERITY = "severity";
+        /** Name of the message element. */
+        private static final String MESSAGE = "message";
+        /** Name of the message element. */
+        private static final String METADATA = "metadata";
+        /** Name of the key attribute. */
+        private static final String KEY = "key";
+
+        /** The loaded configurations. */
+        private final Deque<DefaultConfiguration> configStack = new ArrayDeque<>();
+
+        /** The Configuration that is being built. */
+        private Configuration configuration;
+
+        /**
+         * Creates a new InternalLoader.
+         *
+         * @throws ParserConfigurationException if an error occurs
+         * @throws SAXException if an error occurs
+         */
+        private InternalLoader()
+                throws SAXException, ParserConfigurationException {
+            super(ID_TO_RESOURCE_NAME_MAP);
+        }
+
+        /**
+         * Replaces {@code ${xxx}} style constructions in the given value
+         * with the string value of the corresponding data types.
+         *
+         * <p>Code copied from
+         * <a href="https://github.com/apache/ant/blob/master/src/main/org/apache/tools/ant/ProjectHelper.java">
+         * ant
+         * </a>
+         *
+         * @param value The string to be scanned for property references. Must not be {@code null}.
+         * @param defaultValue default to use if one of the properties in value
+         *              cannot be resolved from props.
+         *
+         * @return the original string with the properties replaced.
+         * @throws CheckstyleException if the string contains an opening
+         *                           {@code ${} without a closing
+         *                           {@code }}
+         */
+        private String replaceProperties(
+                String value, String defaultValue)
+                        throws CheckstyleException {
+
+            final List<String> fragments = new ArrayList<>();
+            final List<String> propertyRefs = new ArrayList<>();
+            parsePropertyString(value, fragments, propertyRefs);
+
+            final StringBuilder sb = new StringBuilder(256);
+            final Iterator<String> fragmentsIterator = fragments.iterator();
+            final Iterator<String> propertyRefsIterator = propertyRefs.iterator();
+            while (fragmentsIterator.hasNext()) {
+                String fragment = fragmentsIterator.next();
+                if (fragment == null) {
+                    final String propertyName = propertyRefsIterator.next();
+                    fragment = overridePropsResolver.resolve(propertyName);
+                    if (fragment == null) {
+                        if (defaultValue != null) {
+                            sb.replace(0, sb.length(), defaultValue);
+                            break;
+                        }
+                        throw new CheckstyleException(
+                            "Property ${" + propertyName + "} has not been set");
+                    }
+                }
+                sb.append(fragment);
+            }
+
+            return sb.toString();
+        }
+
+        /**
+         * Parses a string containing {@code ${xxx}} style property
+         * references into two collections. The first one is a collection
+         * of text fragments, while the other is a set of string property names.
+         * {@code null} entries in the first collection indicate a property
+         * reference from the second collection.
+         *
+         * <p>Code copied from
+         * <a href="https://github.com/apache/ant/blob/master/src/main/org/apache/tools/ant/ProjectHelper.java">
+         * ant
+         * </a>
+         *
+         * @param value     Text to parse. Must not be {@code null}.
+         * @param fragments Collection to add text fragments to.
+         *                  Must not be {@code null}.
+         * @param propertyRefs Collection to add property names to.
+         *                     Must not be {@code null}.
+         *
+         * @throws CheckstyleException if the string contains an opening
+         *                           {@code ${} without a closing
+         *                           {@code }}
+         */
+        private static void parsePropertyString(String value,
+                                               Collection<String> fragments,
+                                               Collection<String> propertyRefs)
+                throws CheckstyleException {
+            int prev = 0;
+            // search for the next instance of $ from the 'prev' position
+            int pos = value.indexOf(DOLLAR_SIGN, prev);
+            while (pos >= 0) {
+                // if there was any text before this, add it as a fragment
+                if (pos > 0) {
+                    fragments.add(value.substring(prev, pos));
+                }
+                // if we are at the end of the string, we tack on a $
+                // then move past it
+                if (pos == value.length() - 1) {
+                    fragments.add(DOLLAR_SIGN_STRING);
+                    prev = pos + 1;
+                }
+                else if (value.charAt(pos + 1) == '{') {
+                    // property found, extract its name or bail on a typo
+                    final int endName = value.indexOf('}', pos);
+                    if (endName == -1) {
+                        throw new CheckstyleException("Syntax error in property: "
+                                                        + value);
+                    }
+                    final String propertyName = value.substring(pos + 2, endName);
+                    fragments.add(null);
+                    propertyRefs.add(propertyName);
+                    prev = endName + 1;
+                }
+                else {
+                    if (value.charAt(pos + 1) == DOLLAR_SIGN) {
+                        // backwards compatibility two $ map to one mode
+                        fragments.add(DOLLAR_SIGN_STRING);
+                    }
+                    else {
+                        // new behaviour: $X maps to $X for all values of X!='$'
+                        fragments.add(value.substring(pos, pos + 2));
+                    }
+                    prev = pos + 2;
+                }
+
+                // search for the next instance of $ from the 'prev' position
+                pos = value.indexOf(DOLLAR_SIGN, prev);
+            }
+            // no more $ signs found
+            // if there is any tail to the file, append it
+            if (prev < value.length()) {
+                fragments.add(value.substring(prev));
+            }
+        }
+
+        @Override
+        public void startElement(String uri,
+                                 String localName,
+                                 String qName,
+                                 Attributes attributes)
+                throws SAXException {
+            if (MODULE.equals(qName)) {
+                // create configuration
+                final String originalName = attributes.getValue(NAME);
+                final String name = threadModeSettings.resolveName(originalName);
+                final DefaultConfiguration conf =
+                    new DefaultConfiguration(name, threadModeSettings);
+
+                if (configStack.isEmpty()) {
+                    // save top config
+                    configuration = conf;
+                }
+                else {
+                    // add configuration to it's parent
+                    final DefaultConfiguration top =
+                        configStack.peek();
+                    top.addChild(conf);
+                }
+
+                configStack.push(conf);
+            }
+            else if (PROPERTY.equals(qName)) {
+                // extract value and name
+                final String attributesValue = attributes.getValue(VALUE);
+
+                final String value;
+                try {
+                    value = replaceProperties(attributesValue, attributes.getValue(DEFAULT));
+                }
+                catch (final CheckstyleException exc) {
+                    // -@cs[IllegalInstantiation] SAXException is in the overridden
+                    // method signature
+                    throw new SAXException(attributesValue, exc);
+                }
+
+                final String name = attributes.getValue(NAME);
+
+                // add to attributes of configuration
+                final DefaultConfiguration top =
+                    configStack.peek();
+                top.addProperty(name, value);
+            }
+            else if (MESSAGE.equals(qName)) {
+                // extract key and value
+                final String key = attributes.getValue(KEY);
+                final String value = attributes.getValue(VALUE);
+
+                // add to messages of configuration
+                final DefaultConfiguration top = configStack.peek();
+                top.addMessage(key, value);
+            }
+            else {
+                if (!METADATA.equals(qName)) {
+                    throw new IllegalStateException("Unknown name:" + qName + ".");
+                }
+            }
+        }
+
+        @Override
+        public void endElement(String uri,
+                               String localName,
+                               String qName)
+                throws SAXException {
+            if (MODULE.equals(qName)) {
+                final Configuration recentModule =
+                    configStack.pop();
+
+                // get severity attribute if it exists
+                Optional<SeverityLevel> level = Optional.empty();
+                if (containsAttribute(recentModule, SEVERITY)) {
+                    try {
+                        final String severity = recentModule.getProperty(SEVERITY);
+                        level = Optional.of(SeverityLevel.getInstance(severity));
+                    }
+                    catch (final CheckstyleException exc) {
+                        // -@cs[IllegalInstantiation] SAXException is in the overridden
+                        // method signature
+                        throw new SAXException(
+                                "Problem during accessing '" + SEVERITY + "' attribute for "
+                                        + recentModule.getName(), exc);
+                    }
+                }
+
+                // omit this module if these should be omitted and the module
+                // has the severity 'ignore'
+                final boolean omitModule = omitIgnoredModules
+                    && level.isPresent() && level.get() == SeverityLevel.IGNORE;
+
+                if (omitModule && !configStack.isEmpty()) {
+                    final DefaultConfiguration parentModule = configStack.peek();
+                    parentModule.removeChild(recentModule);
+                }
+            }
+        }
+
+        /**
+         * Util method to recheck attribute in module.
+         *
+         * @param module module to check
+         * @param attributeName name of attribute in module to find
+         * @return true if attribute is present in module
+         */
+        private static boolean containsAttribute(Configuration module, String attributeName) {
+            final String[] names = module.getPropertyNames();
+            final Optional<String> result = Arrays.stream(names)
+                    .filter(name -> name.equals(attributeName)).findFirst();
+            return result.isPresent();
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/DefaultConfiguration.java SHA256 ad23b5ae0eaadf24a9772b68f8490d9341d773ae715a01c344e1596838263146
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.Serial;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * Default implementation of the Configuration interface.
+ */
+public final class DefaultConfiguration implements Configuration {
+
+    /** A unique serial version identifier. */
+    @Serial
+    private static final long serialVersionUID = 9086924942941574881L;
+
+    /** Constant for optimization. */
+    private static final Configuration[] EMPTY_CONFIGURATION_ARRAY = new Configuration[0];
+
+    /** The name of this configuration. */
+    private final String name;
+
+    /** The list of child Configurations. */
+    private final List<Configuration> children = new ArrayList<>();
+
+    /** The map from property names to property values. */
+    private final Map<String, String> propertyMap = new HashMap<>();
+
+    /** The map containing custom messages. */
+    private final Map<String, String> messages = new HashMap<>();
+
+    /** The thread mode configuration. */
+    private final ThreadModeSettings threadModeSettings;
+
+    /**
+     * Instantiates a DefaultConfiguration.
+     *
+     * @param name the name for this DefaultConfiguration.
+     */
+    public DefaultConfiguration(String name) {
+        this(name, ThreadModeSettings.SINGLE_THREAD_MODE_INSTANCE);
+    }
+
+    /**
+     * Instantiates a DefaultConfiguration.
+     *
+     * @param name the name for this DefaultConfiguration.
+     * @param threadModeSettings the thread mode configuration.
+     */
+    public DefaultConfiguration(String name,
+        ThreadModeSettings threadModeSettings) {
+        this.name = name;
+        this.threadModeSettings = threadModeSettings;
+    }
+
+    @Override
+    public String[] getAttributeNames() {
+        return getPropertyNames();
+    }
+
+    @Override
+    public String getAttribute(String attributeName) throws CheckstyleException {
+        return getProperty(attributeName);
+    }
+
+    @Override
+    public String[] getPropertyNames() {
+        final Set<String> keySet = propertyMap.keySet();
+        return keySet.toArray(CommonUtil.EMPTY_STRING_ARRAY);
+    }
+
+    @Override
+    public String getProperty(String propertyName) throws CheckstyleException {
+        if (!propertyMap.containsKey(propertyName)) {
+            throw new CheckstyleException(
+                    "missing key '" + propertyName + "' in " + name);
+        }
+        return propertyMap.get(propertyName);
+    }
+
+    @Override
+    public Configuration[] getChildren() {
+        return children.toArray(
+                EMPTY_CONFIGURATION_ARRAY);
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Makes a configuration a child of this configuration.
+     *
+     * @param configuration the child configuration.
+     */
+    public void addChild(Configuration configuration) {
+        children.add(configuration);
+    }
+
+    /**
+     * Removes a child of this configuration.
+     *
+     * @param configuration the child configuration to remove.
+     */
+    public void removeChild(final Configuration configuration) {
+        children.remove(configuration);
+    }
+
+    /**
+     * Adds n property to this configuration.
+     *
+     * @param attributeName the name of the property.
+     * @param value the value of the property.
+     * @deprecated This shall be removed in future releases. Please use
+     *      {@code addProperty(String propertyName, String value)} instead.
+     */
+    @Deprecated(since = "8.45")
+    @SuppressWarnings("InlineMeSuggester")
+    public void addAttribute(String attributeName, String value) {
+        addProperty(attributeName, value);
+    }
+
+    /**
+     * Adds n property to this configuration.
+     *
+     * @param propertyName the name of the property.
+     * @param value the value of the property.
+     */
+    public void addProperty(String propertyName, String value) {
+        final String current = propertyMap.get(propertyName);
+        final String newValue;
+        if (current == null) {
+            newValue = value;
+        }
+        else {
+            newValue = current + "," + value;
+        }
+        propertyMap.put(propertyName, newValue);
+    }
+
+    /**
+     * Adds a custom message to this configuration.
+     *
+     * @param key the message key
+     * @param value the custom message pattern
+     */
+    public void addMessage(String key, String value) {
+        messages.put(key, value);
+    }
+
+    /**
+     * Returns an unmodifiable map instance containing the custom messages for this configuration.
+     *
+     * @return unmodifiable map containing custom messages
+     */
+    @Override
+    public Map<String, String> getMessages() {
+        return new HashMap<>(messages);
+    }
+
+    /**
+     * Gets the thread mode configuration.
+     *
+     * @return the thread mode configuration.
+     */
+    public ThreadModeSettings getThreadModeSettings() {
+        return threadModeSettings;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/DefaultContext.java SHA256 81010866d353703529cf16739b6a5fa7d635d0d0adcaf09e6834b727f2a11ee9
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
+import com.puppycrawl.tools.checkstyle.api.Context;
+
+/**
+ * A default implementation of the Context interface.
+ */
+public final class DefaultContext implements Context {
+
+    /** Stores the context entries. */
+    private final Map<String, Object> entries = new HashMap<>();
+
+    /**
+     * Creates a new {@code DefaultContext} instance.
+     */
+    public DefaultContext() {
+        // no code by default
+    }
+
+    @Override
+    public Object get(String key) {
+        return entries.get(key);
+    }
+
+    @Override
+    public Collection<String> getAttributeNames() {
+        return new HashSet<>(entries.keySet());
+    }
+
+    /**
+     * Adds a context entry.
+     *
+     * @param key the context key
+     * @param value the value for key
+     */
+    public void add(String key, Object value) {
+        entries.put(key, value);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/DefaultLogger.java SHA256 5fdc37c82c9f393c2b0de26c42698fce6c223ea20ac7e310e6d0626fc1c46caa
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General P

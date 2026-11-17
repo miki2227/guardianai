@@ -1,0 +1,5124 @@
+rn unmodifiable map containing custom messages
+     */
+    Map<String, String> getMessages();
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/Context.java SHA256 0051945baecd1c677a322a2fd2320892a2e5ba592fa1d1385f74196ec65d261b
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.Collection;
+
+/**
+ * A context to be used in subcomponents. The general idea of
+ * Context/Contextualizable was taken from <a target="_top"
+ * href="https://avalon.apache.org/closed.html">Jakarta's Avalon framework</a>.
+ *
+ * @see Contextualizable
+ */
+public interface Context {
+
+    /**
+     * Searches for the value with the specified attribute key in this context.
+     *
+     * @param key the attribute key.
+     * @return the value in this context with the specified attribute key value.
+     */
+    Object get(String key);
+
+    /**
+     * Returns the names of all attributes of this context.
+     *
+     * @return the names of all attributes of this context.
+     */
+    Collection<String> getAttributeNames();
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/Contextualizable.java SHA256 52e8e6108eee8c39340aa57eb79a7a14e8d450bba910402c3170396b2f207d5c
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+/**
+ * A Component that needs context information from its container(parent object) to work.
+ * The container will create a Context object and pass it to this
+ * Contextualizable. Contextualization will occur before configuration.
+ * Note: Configuring of object mean copy user defined properties to object.
+ * Contextualizing is inheriting some properties from parent that are provided by user
+ * to parent object or created by parent object.
+ * The general idea of Context/Contextualizable was taken from <a target="_top"
+ * href="https://avalon.apache.org/closed.html">Jakarta's Avalon framework</a>.
+ */
+@FunctionalInterface
+public interface Contextualizable {
+
+    /**
+     * Sets the context for this Component.
+     *
+     * @param context the context.
+     * @throws CheckstyleException if there is a contextualization error.
+     */
+    void contextualize(Context context) throws CheckstyleException;
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/DetailAST.java SHA256 e0f6cb219d64136aca1caed298744dd4b0fb88f042c762e30307973259d8c5e6
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import javax.annotation.Nullable;
+
+/**
+ * An interface of Checkstyle's AST nodes for traversing trees generated from the
+ * Java code. The main purpose of this interface is to abstract away ANTLR
+ * specific classes from API package so other libraries won't require it.
+ *
+ * @see <a href="https://www.antlr.org/">ANTLR Website</a>
+ */
+public interface DetailAST {
+
+    /**
+     * Returns the number of child nodes one level below this node. That is,
+     * does not recurse down the tree.
+     *
+     * @return the number of child nodes
+     */
+    int getChildCount();
+
+    /**
+     * Returns the number of direct child tokens that have the specified type.
+     *
+     * @param type the token type to match
+     * @return the number of matching token
+     */
+    int getChildCount(int type);
+
+    /**
+     * Returns the parent token.
+     *
+     * @return the parent token
+     */
+    DetailAST getParent();
+
+    /**
+     * Gets the text of this AST.
+     *
+     * @return the text.
+     */
+    String getText();
+
+    /**
+     * Gets the type of this AST.
+     *
+     * @return the type.
+     */
+    int getType();
+
+    /**
+     * Gets line number.
+     *
+     * @return the line number
+     */
+    int getLineNo();
+
+    /**
+     * Gets column number.
+     *
+     * @return the column number
+     */
+    int getColumnNo();
+
+    /**
+     * Gets the last child node.
+     *
+     * @return the last child node
+     */
+    DetailAST getLastChild();
+
+    /**
+     * Checks if this branch of the parse tree contains a token of the provided type.
+     *
+     * @param type a TokenType
+     * @return true if and only if this branch (including this node)
+     *     contains a token of type {@code type}.
+     * @deprecated
+     *      Usage of this method is no longer accepted. We encourage
+     *      traversal of subtrees to be written per the needs of each check
+     *      to avoid unintended side effects.
+     * @noinspection DeprecatedIsStillUsed, RedundantSuppression
+     * @noinspectionreason DeprecatedIsStillUsed - Method used in unit testing
+     * @noinspectionreason RedundantSuppression - Inspections shows false positive for
+     *      redundant suppression, see
+     *      <a href="https://github.com/checkstyle/checkstyle/issues/12359">here</a>
+     *      for more details.
+     */
+    @Deprecated(since = "8.43")
+    boolean branchContains(int type);
+
+    /**
+     * Returns the previous sibling or null if no such sibling exists.
+     *
+     * @return the previous sibling or null if no such sibling exists.
+     */
+    DetailAST getPreviousSibling();
+
+    /**
+     * Returns the first child token that makes a specified type.
+     *
+     * @param type the token type to match
+     * @return the matching token, or null if no match
+     */
+    @Nullable
+    DetailAST findFirstToken(int type);
+
+    /**
+     * Get the next sibling in line after this one.
+     *
+     * @return the next sibling or null if none.
+     */
+    DetailAST getNextSibling();
+
+    /**
+     * Get the first child of this AST.
+     *
+     * @return the first child or null if none.
+     */
+    DetailAST getFirstChild();
+
+    /**
+     * Get number of children of this AST.
+     *
+     * @return the number of children.
+     * @deprecated This method will be removed in a future release.
+     *             Use {@link #getChildCount()} instead.
+     */
+    @Deprecated(since = "8.30")
+    int getNumberOfChildren();
+
+    /**
+     * Returns whether this AST has any children.
+     *
+     * @return {@code true} if this AST has any children.
+     */
+    boolean hasChildren();
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/DetailNode.java SHA256 033d78564caa12f18585bf0fdeeb820e6f2d6ad9ca26e62729184065d2d9b53e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+/**
+ * DetailNode is used to construct tree during parsing Javadoc comments.
+ * Contains array of children, parent node and other useful fields.
+ *
+ * @see com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocNodeImpl
+ * @see com.puppycrawl.tools.checkstyle.checks.javadoc.AbstractJavadocCheck
+ */
+public interface DetailNode {
+
+    /**
+     * Node type.
+     *
+     * @return node type.
+     * @see JavadocCommentsTokenTypes
+     */
+    int getType();
+
+    /**
+     * Node text.
+     *
+     * @return node text
+     */
+    String getText();
+
+    /**
+     * Node line number.
+     *
+     * @return node line number
+     */
+    int getLineNumber();
+
+    /**
+     * Node column number.
+     *
+     * @return node column number.
+     */
+    int getColumnNumber();
+
+    /**
+     * Parent node.
+     *
+     * @return parent node.
+     */
+    DetailNode getParent();
+
+    /**
+     * Sibling node.
+     *
+     * @return sibling node
+     */
+    DetailNode getNextSibling();
+
+    /**
+     * First child node.
+     *
+     * @return first child node
+     */
+    DetailNode getFirstChild();
+
+    /**
+     * Previous sibling node.
+     *
+     * @return sibling node
+     */
+    DetailNode getPreviousSibling();
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/ExternalResourceHolder.java SHA256 61874659c616a2c7b3c05b643e2e3a9fbd772a3ba98b451dac87986c6b120f91
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.Checker;
+
+/**
+ * The following interface should be implemented by each module (inheritor of
+ * {@link AbstractCheck}, implementor of {@link FileSetCheck}, or {@link Filter}) which uses
+ * external resources of any kind for its configuration. Such modules must declare external
+ * resource locations as a set of {@code String} which will be returned from
+ * {@link #getExternalResourceLocations}. This allows Checkstyle to invalidate (clear) cache
+ * when the content of at least one external configuration resource of the module is changed.
+ *
+ */
+@FunctionalInterface
+public interface ExternalResourceHolder {
+
+    /**
+     * Returns a set of external configuration resource locations which are used by the module.
+     * ATTENTION! If 'getExternalResourceLocations()' return null, there will be
+     * {@link NullPointerException} in {@link Checker}.
+     * Such behaviour will signal that your module (check or filter) is designed incorrectly.
+     * It makes sense to return an empty set from 'getExternalResourceLocations()'
+     * only for composite modules like {@link com.puppycrawl.tools.checkstyle.TreeWalker}.
+     *
+     * @return a set of external configuration resource locations which are used by the module.
+     */
+    Set<String> getExternalResourceLocations();
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/FileContents.java SHA256 a163f0fbb297d4355f81479742b66fd019dc102f3aefe1030b078b12f6c7c497
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.grammar.CommentListener;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+
+/**
+ * Represents the contents of a file.
+ *
+ */
+public final class FileContents implements CommentListener {
+
+    /**
+     * The pattern to match a single-line comment containing only the comment itself -- no code.
+     */
+    private static final String MATCH_SINGLELINE_COMMENT_PAT = "^\\s*//.*$";
+    /** Compiled regexp to match a single-line comment line. */
+    private static final Pattern MATCH_SINGLELINE_COMMENT = Pattern
+            .compile(MATCH_SINGLELINE_COMMENT_PAT);
+
+    /** The text. */
+    private final FileText text;
+
+    /**
+     * Map of the Javadoc comments indexed on the last line of the comment.
+     * The hack is it assumes that there is only one Javadoc comment per line.
+     */
+    private final Map<Integer, TextBlock> javadocComments = new HashMap<>();
+    /** Map of the C++ comments indexed on the first line of the comment. */
+    private final Map<Integer, TextBlock> cppComments = new HashMap<>();
+
+    /**
+     * Map of the C comments indexed on the first line of the comment to a list
+     * of comments on that line.
+     */
+    private final Map<Integer, List<TextBlock>> clangComments = new HashMap<>();
+
+    /**
+     * Creates a new {@code FileContents} instance.
+     *
+     * @param text the contents of the file
+     */
+    public FileContents(FileText text) {
+        this.text = new FileText(text);
+    }
+
+    /**
+     * Get the full text of the file.
+     *
+     * @return an object containing the full text of the file
+     */
+    public FileText getText() {
+        return new FileText(text);
+    }
+
+    /**
+     * Gets the lines in the file.
+     *
+     * @return the lines in the file
+     */
+    public String[] getLines() {
+        return text.toLinesArray();
+    }
+
+    /**
+     * Get the line from text of the file.
+     *
+     * @param index index of the line
+     * @return line from text of the file
+     */
+    public String getLine(int index) {
+        return text.get(index);
+    }
+
+    /**
+     * Gets the name of the file.
+     *
+     * @return the name of the file
+     */
+    public String getFileName() {
+        return text.getFile().toString();
+    }
+
+    /**
+     * Report the location of a single-line comment.
+     *
+     * @param startLineNo the starting line number
+     * @param startColNo the starting column number
+     */
+    public void reportSingleLineComment(int startLineNo, int startColNo) {
+        final String line = line(startLineNo - 1);
+        final String[] txt = {line.substring(startColNo)};
+        final Comment comment = new Comment(txt, startColNo, startLineNo,
+                line.length() - 1);
+        cppComments.put(startLineNo, comment);
+    }
+
+    @Override
+    public void reportSingleLineComment(String type, int startLineNo,
+            int startColNo) {
+        reportSingleLineComment(startLineNo, startColNo);
+    }
+
+    /**
+     * Report the location of a block comment.
+     *
+     * @param startLineNo the starting line number
+     * @param startColNo the starting column number
+     * @param endLineNo the ending line number
+     * @param endColNo the ending column number
+     */
+    public void reportBlockComment(int startLineNo, int startColNo,
+            int endLineNo, int endColNo) {
+        final String[] cComment = extractBlockComment(startLineNo, startColNo,
+                endLineNo, endColNo);
+        final Comment comment = new Comment(cComment, startColNo, endLineNo,
+                endColNo);
+
+        // save the comment
+        final List<TextBlock> entries = clangComments.computeIfAbsent(startLineNo,
+                empty -> new ArrayList<>());
+
+        entries.add(comment);
+
+        // Remember if possible Javadoc comment
+        final String firstLine = line(startLineNo - 1);
+        if (firstLine.contains("/**") && !firstLine.contains("/**/")) {
+            javadocComments.put(endLineNo - 1, comment);
+        }
+    }
+
+    @Override
+    public void reportBlockComment(String type, int startLineNo,
+            int startColNo, int endLineNo, int endColNo) {
+        reportBlockComment(startLineNo, startColNo, endLineNo, endColNo);
+    }
+
+    /**
+     * Returns the specified block comment as a String array.
+     *
+     * @param startLineNo the starting line number
+     * @param startColNo the starting column number
+     * @param endLineNo the ending line number
+     * @param endColNo the ending column number
+     * @return block comment as an array
+     */
+    private String[] extractBlockComment(int startLineNo, int startColNo,
+            int endLineNo, int endColNo) {
+        final String[] returnValue;
+        if (startLineNo == endLineNo) {
+            returnValue = new String[1];
+            returnValue[0] = line(startLineNo - 1).substring(startColNo,
+                    endColNo + 1);
+        }
+        else {
+            returnValue = new String[endLineNo - startLineNo + 1];
+            returnValue[0] = line(startLineNo - 1).substring(startColNo);
+            for (int index = startLineNo; index < endLineNo; index++) {
+                returnValue[index - startLineNo + 1] = line(index);
+            }
+            returnValue[returnValue.length - 1] = line(endLineNo - 1).substring(0,
+                    endColNo + 1);
+        }
+        return returnValue;
+    }
+
+    /**
+     * Get a single-line.
+     * For internal use only, as getText().get(lineNo) is just as
+     * suitable for external use and avoids method duplication.
+     *
+     * @param lineNo the number of the line to get
+     * @return the corresponding line, without terminator
+     * @throws IndexOutOfBoundsException if lineNo is invalid
+     */
+    private String line(int lineNo) {
+        return text.get(lineNo);
+    }
+
+    /**
+     * Returns the Javadoc comment before the specified line.
+     * A return value of {@code null} means there is no such comment.
+     *
+     * @param lineNoBefore the line number to check before
+     * @return the Javadoc comment, or {@code null} if none
+     * @deprecated this method supports legacy checks that inspect Javadoc comments from
+     *             {@code FileContents}; use
+     *             {@link JavadocUtil#getAttachedJavadocComment(DetailAST)} with AST-based
+     *             Javadoc processing instead.
+     * @noinspection DeprecatedIsStillUsed
+     * @noinspectionreason DeprecatedIsStillUsed - Method used in unit testing to verify
+     *             legacy API behavior.
+     */
+    @Deprecated(since = "13.9.0")
+    public TextBlock getJavadocBefore(int lineNoBefore) {
+        // Lines start at 1 to the callers perspective, so need to take off 2
+        int lineNo = lineNoBefore - 2;
+
+        // skip blank lines and comments
+        while (lineNo > 0 && (lineIsBlank(lineNo) || lineIsComment(lineNo)
+                            || lineInsideBlockComment(lineNo + 1))) {
+            lineNo--;
+        }
+
+        return javadocComments.get(lineNo);
+    }
+
+    /**
+     * Checks if the specified line number is inside a block comment.
+     * This method scans through all block comments (excluding Javadoc comments)
+     * and determines whether the given line number falls within any of them
+     *
+     * @param lineNo the line number to check
+     * @return {@code true} if the line is inside a block comment (excluding Javadoc comments)
+     *          , {@code false} otherwise
+     */
+    private boolean lineInsideBlockComment(int lineNo) {
+        final Collection<List<TextBlock>> values = clangComments.values();
+        return values.stream()
+            .flatMap(List::stream)
+            .filter(comment -> !javadocComments.containsValue(comment))
+            .anyMatch(comment -> isLineBlockComment(lineNo, comment));
+    }
+
+    /**
+     * Checks if the given line is inside a block comment
+     * and both the start and end lines contain only the comment.
+     *
+     * @param lineNo the line number to check
+     * @param comment the block comment to inspect
+     * @return {@code true} line is in block comment, {@code false} otherwise
+     */
+    private boolean isLineBlockComment(int lineNo, TextBlock comment) {
+        final boolean lineInSideBlockComment = lineNo >= comment.getStartLineNo()
+                && lineNo <= comment.getEndLineNo();
+        boolean lineHasOnlyBlockComment = true;
+        final String startLine = line(comment.getStartLineNo() - 1).trim();
+        if (!startLine.startsWith("/*")) {
+            lineHasOnlyBlockComment = false;
+        }
+
+        final String endLine = line(comment.getEndLineNo() - 1).trim();
+        if (!endLine.endsWith("*/")) {
+            lineHasOnlyBlockComment = false;
+        }
+        return lineInSideBlockComment && lineHasOnlyBlockComment;
+    }
+
+    /**
+     * Checks if the specified line is blank.
+     *
+     * @param lineNo the line number to check
+     * @return if the specified line consists only of tabs and spaces.
+     */
+    public boolean lineIsBlank(int lineNo) {
+        return line(lineNo).isBlank();
+    }
+
+    /**
+     * Checks if the specified line is a single-line comment without code.
+     *
+     * @param lineNo  the line number to check
+     * @return if the specified line consists of only a single-line comment without code.
+     */
+    public boolean lineIsComment(int lineNo) {
+        return MATCH_SINGLELINE_COMMENT.matcher(line(lineNo)).matches();
+    }
+
+    /**
+     * Checks if the specified position intersects with a comment.
+     *
+     * @param startLineNo the starting line number
+     * @param startColNo the starting column number
+     * @param endLineNo the ending line number
+     * @param endColNo the ending column number
+     * @return true if the positions intersects with a comment.
+     */
+    public boolean hasIntersectionWithComment(int startLineNo,
+            int startColNo, int endLineNo, int endColNo) {
+        return hasIntersectionWithBlockComment(startLineNo, startColNo, endLineNo, endColNo)
+                || hasIntersectionWithSingleLineComment(startLineNo, startColNo, endLineNo,
+                        endColNo);
+    }
+
+    /**
+     * Checks if the specified position intersects with a block comment.
+     *
+     * @param startLineNo the starting line number
+     * @param startColNo the starting column number
+     * @param endLineNo the ending line number
+     * @param endColNo the ending column number
+     * @return true if the positions intersects with a block comment.
+     */
+    private boolean hasIntersectionWithBlockComment(int startLineNo, int startColNo,
+            int endLineNo, int endColNo) {
+        // Check C comments (all comments should be checked)
+        final Collection<List<TextBlock>> values = clangComments.values();
+        return values.stream()
+            .flatMap(List::stream)
+            .anyMatch(comment -> comment.intersects(startLineNo, startColNo, endLineNo, endColNo));
+    }
+
+    /**
+     * Checks if the specified position intersects with a single-line comment.
+     *
+     * @param startLineNo the starting line number
+     * @param startColNo the starting column number
+     * @param endLineNo the ending line number
+     * @param endColNo the ending column number
+     * @return true if the positions intersects with a single-line comment.
+     */
+    private boolean hasIntersectionWithSingleLineComment(int startLineNo, int startColNo,
+            int endLineNo, int endColNo) {
+        boolean hasIntersection = false;
+        // Check CPP comments (line searching is possible)
+        for (int lineNumber = startLineNo; lineNumber <= endLineNo;
+             lineNumber++) {
+            final TextBlock comment = cppComments.get(lineNumber);
+            if (comment != null && comment.intersects(startLineNo, startColNo,
+                    endLineNo, endColNo)) {
+                hasIntersection = true;
+                break;
+            }
+        }
+        return hasIntersection;
+    }
+
+    /**
+     * Returns a map of all the single-line comments. The key is a line number,
+     * the value is the comment {@link TextBlock} at the line.
+     *
+     * @return the Map of comments
+     */
+    public Map<Integer, TextBlock> getSingleLineComments() {
+        return Collections.unmodifiableMap(cppComments);
+    }
+
+    /**
+     * Returns a map of all block comments. The key is the line number, the
+     * value is a {@link List} of block comment {@link TextBlock}s that start at that line.
+     *
+     * @return the map of comments
+     */
+    public Map<Integer, List<TextBlock>> getBlockComments() {
+        return Collections.unmodifiableMap(clangComments);
+    }
+
+    /**
+     * Checks if the current file is a package-info.java file.
+     *
+     * @return true if the package file.
+     * @deprecated use {@link CheckUtil#isPackageInfo(String)} for the same functionality,
+     *              or use {@link AbstractCheck#getFilePath()} to process your own standards.
+     */
+    @Deprecated(since = "10.2")
+    public boolean inPackageInfo() {
+        return "package-info.java".equals(text.getFile().getName());
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/FileSetCheck.java SHA256 a0342d6a8408a59abb46406aaaaaa1b38d5bf43e656efd6d391123e8b2c9ba16
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.io.File;
+import java.util.SortedSet;
+
+/**
+ * Interface for Checking a set of files for some criteria.
+ *
+ */
+public interface FileSetCheck extends Configurable, Contextualizable {
+
+    /**
+     * Sets the MessageDispatcher that is used to dispatch audit events
+     * to AuditListeners during processing.
+     *
+     * @param dispatcher the dispatcher
+     */
+    void setMessageDispatcher(MessageDispatcher dispatcher);
+
+    /**
+     * Initialise the instance. This is the time to verify that everything
+     * required to perform its job.
+     */
+    void init();
+
+    /** Cleans up the object. */
+    void destroy();
+
+    /**
+     * Called when about to be called to process a set of files.
+     *
+     * @param charset the character set used to read the files.
+     */
+    void beginProcessing(String charset);
+
+    /**
+     * Request to process a file. The implementation should use the supplied
+     * contents and not read the contents again. This reduces the amount of file I/O.
+     *
+     * <p>
+     * The file set to process might contain files that are not
+     * interesting to the FileSetCheck. Such files should be ignored,
+     * no audit event should be fired for them. For example a FileSetCheck
+     * that checks java files should ignore HTML or properties files.
+     * </p>
+     *
+     * <p>
+     * The method should return the set of violations to be logged.
+     * </p>
+     *
+     * @param file the file to be processed
+     * @param fileText the contents of the file.
+     * @return the sorted set of violations to be logged.
+     * @throws CheckstyleException if error condition within Checkstyle occurs
+     */
+    SortedSet<Violation> process(File file, FileText fileText) throws CheckstyleException;
+
+    /**
+     * Called when all the files have been processed. This is the time to
+     * perform any checks that need to be done across a set of files. In this
+     * method, the implementation is responsible for the logging of violations.
+     */
+    void finishProcessing();
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/FileText.java SHA256 ea25d412f3f0091b14ec3ee931b8c468aca61d4951dc32bc72d8b4010220e040
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringReader;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.UnsupportedCharsetException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Represents the text contents of a file of arbitrary plain text type.
+ *
+ * <p>
+ * This class will be passed to instances of class FileSetCheck by
+ * Checker.
+ * </p>
+ *
+ */
+public final class FileText {
+
+    /**
+     * The number of characters to read in one go.
+     */
+    private static final int READ_BUFFER_SIZE = 1024;
+
+    /**
+     * Regular expression pattern matching all line terminators.
+     */
+    private static final Pattern LINE_TERMINATOR = Pattern.compile("\\n|\\r\\n?");
+
+    // For now, we always keep both full text and lines array.
+    // In the long run, however, the one passed at initialization might be
+    // enough, while the other could be lazily created when requested.
+    // This would save memory but cost CPU cycles.
+
+    /**
+     * The name of the file.
+     * {@code null} if no file name is available for whatever reason.
+     */
+    private final File file;
+
+    /**
+     * The charset used to read the file.
+     * {@code null} if the file was reconstructed from a list of lines.
+     */
+    private final Charset charset;
+
+    /**
+     * The lines of the file, without terminators.
+     */
+    private final String[] lines;
+
+    /**
+     * The full text contents of the file.
+     *
+     * @noinspection FieldMayBeFinal
+     * @noinspectionreason FieldMayBeFinal - field is not final to ease reaching full test coverage.
+     */
+    private String fullText;
+
+    /**
+     * The first position of each line within the full text.
+     */
+    private int[] lineBreaks;
+
+    /**
+     * Copy constructor.
+     *
+     * @param fileText to make copy of
+     */
+    public FileText(FileText fileText) {
+        file = fileText.file;
+        charset = fileText.charset;
+        fullText = fileText.fullText;
+        lines = fileText.lines.clone();
+        if (fileText.lineBreaks != null) {
+            lineBreaks = fileText.lineBreaks.clone();
+        }
+    }
+
+    /**
+     * Compatibility constructor.
+     *
+     * <p>This constructor reconstructs the text of the file by joining
+     * lines with linefeed characters. This process does not restore
+     * the original line terminators and should therefore be avoided.
+     *
+     * @param file the name of the file
+     * @param lines the lines of the text, without terminators
+     * @throws NullPointerException if the lines array is null
+     */
+    public FileText(File file, List<String> lines) {
+        final StringBuilder buf = new StringBuilder(1024);
+        for (final String line : lines) {
+            buf.append(line).append('\n');
+        }
+
+        this.file = file;
+        charset = null;
+        fullText = buf.toString();
+        this.lines = lines.toArray(String[]::new);
+    }
+
+    /**
+     * Creates a new file text representation.
+     *
+     * <p>The file will be read using the specified encoding, replacing
+     * malformed input and unmappable characters with the default replacement character.
+     *
+     * @param file the name of the file
+     * @param charsetName the encoding to use when reading the file
+     * @throws IOException if the file could not be read
+     * @throws IllegalStateException if the charset is not supported.
+     * @throws NullPointerException if the text is null
+     */
+    public FileText(File file, String charsetName) throws IOException {
+        this.file = file;
+
+        // We use our own decoder, to be sure we have complete control
+        // about replacements.
+        final CharsetDecoder decoder;
+        try {
+            charset = Charset.forName(charsetName);
+            decoder = charset.newDecoder();
+            decoder.onMalformedInput(CodingErrorAction.REPLACE);
+            decoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
+        }
+        catch (final UnsupportedCharsetException exc) {
+            final String message = "Unsupported charset: " + charsetName;
+            throw new IllegalStateException(message, exc);
+        }
+
+        fullText = readFile(file, decoder);
+
+        // Use the BufferedReader to break down the lines as this
+        // is about 30% faster than using the
+        // LINE_TERMINATOR.split(fullText, -1) method
+        try (BufferedReader reader = new BufferedReader(new StringReader(fullText))) {
+            final List<String> textLines = new ArrayList<>(10);
+            while (true) {
+                final String line = reader.readLine();
+                if (line == null) {
+                    break;
+                }
+                textLines.add(line);
+            }
+            lines = textLines.toArray(String[]::new);
+        }
+    }
+
+    /**
+     * Reads file using specific decoder and returns all its content as a String.
+     *
+     * @param inputFile File to read
+     * @param decoder Charset decoder
+     * @return File's text
+     * @throws FileNotFoundException when inputFile does not exist
+     * @throws IOException Unable to open or read the file
+     */
+    private static String readFile(final File inputFile, final CharsetDecoder decoder)
+            throws IOException {
+        if (!inputFile.exists()) {
+            throw new FileNotFoundException(inputFile.getPath() + " (No such file or directory)");
+        }
+        final StringBuilder buf = new StringBuilder(1024);
+        final InputStream stream = Files.newInputStream(inputFile.toPath());
+        try (Reader reader = new InputStreamReader(stream, decoder)) {
+            final char[] chars = new char[READ_BUFFER_SIZE];
+            while (true) {
+                final int len = reader.read(chars);
+                if (len == -1) {
+                    break;
+                }
+                buf.append(chars, 0, len);
+            }
+        }
+        return buf.toString();
+    }
+
+    /**
+     * Retrieves a line of the text by its number.
+     * The returned line will not contain a trailing terminator.
+     *
+     * @param lineNo the number of the line to get, starting at zero
+     * @return the line with the given number
+     */
+    public String get(final int lineNo) {
+        return lines[lineNo];
+    }
+
+    /**
+     * Get the name of the file.
+     *
+     * @return an object containing the name of the file
+     */
+    public File getFile() {
+        return file;
+    }
+
+    /**
+     * Get the character set which was used to read the file.
+     * Will be {@code null} for a file reconstructed from its lines.
+     *
+     * @return the charset used when the file was read
+     */
+    public Charset getCharset() {
+        return charset;
+    }
+
+    /**
+     * Retrieve the full text of the file.
+     *
+     * @return the full text of the file
+     */
+    public CharSequence getFullText() {
+        return fullText;
+    }
+
+    /**
+     * Returns an array of all lines.
+     * {@code text.toLinesArray()} is equivalent to
+     * {@code text.toArray(new String[text.size()])}.
+     *
+     * @return an array of all lines of the text
+     */
+    public String[] toLinesArray() {
+        return lines.clone();
+    }
+
+    /**
+     * Determine line and column numbers in full text.
+     *
+     * @param pos the character position in the full text
+     * @return the line and column numbers of this character
+     */
+    public LineColumn lineColumn(int pos) {
+        final int[] lineBreakPositions = findLineBreaks();
+        int lineNo = Arrays.binarySearch(lineBreakPositions, pos);
+        if (lineNo < 0) {
+            // we have: lineNo = -(insertion point) - 1
+            // we want: lineNo =  (insertion point) - 1
+            lineNo = -lineNo - 2;
+        }
+        final int startOfLine = lineBreakPositions[lineNo];
+        final int columnNo = pos - startOfLine;
+        // now we have lineNo and columnNo, both starting at zero.
+        return new LineColumn(lineNo + 1, columnNo);
+    }
+
+    /**
+     * Find positions of line breaks in the full text.
+     *
+     * @return an array giving the first positions of each line.
+     */
+    private int[] findLineBreaks() {
+        if (lineBreaks == null) {
+            final int[] lineBreakPositions = new int[size() + 1];
+            lineBreakPositions[0] = 0;
+            int lineNo = 1;
+            final Matcher matcher = LINE_TERMINATOR.matcher(fullText);
+            while (matcher.find()) {
+                lineBreakPositions[lineNo] = matcher.end();
+                lineNo++;
+            }
+            if (lineNo < lineBreakPositions.length) {
+                lineBreakPositions[lineNo] = fullText.length();
+            }
+            lineBreaks = lineBreakPositions;
+        }
+        return lineBreaks;
+    }
+
+    /**
+     * Counts the lines of the text.
+     *
+     * @return the number of lines in the text
+     */
+    public int size() {
+        return lines.length;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/Filter.java SHA256 00c72a9c2dab8f4bddb81222242997bca46d38ac7ffcd6f96f3cdf1786a991a7
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+/**
+ * An interface for filtering AuditEvents.
+ */
+@FunctionalInterface
+public interface Filter {
+
+    /**
+     * Determines whether or not a filtered AuditEvent is accepted.
+     * An accepted event is kept in the final report as a violation; a rejected
+     * event is filtered out. In other words, returning {@code true} makes the
+     * violation appear in the report, while returning {@code false} suppresses it.
+     *
+     * @param event the AuditEvent to filter.
+     * @return true if the event is accepted and its violation should appear in
+     *     the final report; false to suppress the event.
+     */
+    boolean accept(AuditEvent event);
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/FilterSet.java SHA256 b8da8f4ee5d797d78c82b438faa248fbdaddfd4ed5239bc89945eaa155bc28e8
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * A filter set applies filters to AuditEvents.
+ * If a filter in the set rejects an AuditEvent, then the
+ * AuditEvent is rejected. Otherwise, the AuditEvent is accepted.
+ */
+public class FilterSet implements Filter {
+
+    /** Filter set. */
+    private final Set<Filter> filters = new HashSet<>();
+
+    /**
+     * Creates a new {@code FilterSet} instance.
+     */
+    public FilterSet() {
+        // no code by default
+    }
+
+    /**
+     * Adds a Filter to the set.
+     *
+     * @param filter the Filter to add.
+     */
+    public void addFilter(Filter filter) {
+        filters.add(filter);
+    }
+
+    /**
+     * Removes filter.
+     *
+     * @param filter filter to remove.
+     */
+    public void removeFilter(Filter filter) {
+        filters.remove(filter);
+    }
+
+    /**
+     * Returns the Filters of the filter set.
+     *
+     * @return the Filters of the filter set.
+     */
+    public Set<Filter> getFilters() {
+        return Collections.unmodifiableSet(filters);
+    }
+
+    @Override
+    public String toString() {
+        return filters.toString();
+    }
+
+    @Override
+    public boolean accept(AuditEvent event) {
+        boolean result = true;
+        for (Filter filter : filters) {
+            if (!filter.accept(event)) {
+                result = false;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /** Clears the FilterSet. */
+    public void clear() {
+        filters.clear();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/FullIdent.java SHA256 53c56ba6c220a5777f857449732951df5af43f605bfc3955f5a003649b21be19
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+
+/**
+ * Represents a full identifier, including dots, with associated position information.
+ *
+ * <p>
+ * Identifiers such as {@code java.util.HashMap} are spread across
+ * multiple AST nodes in the syntax tree (three IDENT nodes, two DOT nodes).
+ * A FullIdent represents the whole String (excluding any intermediate
+ * whitespace), which is often easier to work with in Checks.
+ * </p>
+ *
+ * @see TokenTypes#DOT
+ * @see TokenTypes#IDENT
+ */
+public final class FullIdent {
+
+    /** The list holding subsequent elements of identifier. */
+    private final List<String> elements = new ArrayList<>();
+    /** The topmost and leftmost AST of the full identifier. */
+    private DetailAST detailAst;
+
+    /** Hide default constructor. */
+    private FullIdent() {
+    }
+
+    /**
+     * Creates a new FullIdent starting from the child of the specified node.
+     *
+     * @param ast the parent node from where to start from
+     * @return a {@code FullIdent} value
+     */
+    public static FullIdent createFullIdentBelow(DetailAST ast) {
+        return createFullIdent(ast.getFirstChild());
+    }
+
+    /**
+     * Creates a new FullIdent starting from the specified node.
+     *
+     * @param ast the node to start from
+     * @return a {@code FullIdent} value
+     */
+    public static FullIdent createFullIdent(DetailAST ast) {
+        DetailAST node = ast;
+        if (node != null && node.getType() == TokenTypes.SINGLE_LINE_COMMENT) {
+            node = node.getNextSibling();
+        }
+        final FullIdent ident = new FullIdent();
+        extractFullIdent(ident, node);
+        return ident;
+    }
+
+    /**
+     * Extracts a FullIdent.
+     *
+     * @param full the FullIdent to add to
+     * @param ast the node
+     */
+    private static void extractFullIdent(FullIdent full, DetailAST ast) {
+        final Deque<DetailAST> identStack = new ArrayDeque<>();
+        pushToIdentStack(identStack, ast);
+        boolean bracketsExist = false;
+        int dotCounter = 0;
+        while (!identStack.isEmpty()) {
+            final DetailAST currentAst = identStack.pop();
+
+            final DetailAST nextSibling = currentAst.getNextSibling();
+
+            // Here we want type declaration, but not initialization
+            final boolean isArrayTypeDeclarationStart = nextSibling != null
+                    && (nextSibling.getType() == TokenTypes.ARRAY_DECLARATOR
+                        || nextSibling.getType() == TokenTypes.ANNOTATIONS)
+                    && isArrayTypeDeclaration(nextSibling);
+
+            final int typeOfAst = currentAst.getType();
+            bracketsExist = bracketsExist || isArrayTypeDeclarationStart;
+            final DetailAST firstChild = currentAst.getFirstChild();
+
+            if (typeOfAst == TokenTypes.LITERAL_NEW && currentAst.hasChildren()) {
+                pushToIdentStack(identStack, firstChild);
+            }
+            else if (typeOfAst == TokenTypes.DOT) {
+                DetailAST sibling = firstChild.getNextSibling();
+                if (sibling.getType() == TokenTypes.SINGLE_LINE_COMMENT) {
+                    sibling = sibling.getNextSibling();
+                }
+                pushToIdentStack(identStack, sibling);
+                pushToIdentStack(identStack, firstChild);
+                dotCounter++;
+            }
+            else {
+                dotCounter = appendToFull(full, currentAst, dotCounter,
+                        bracketsExist, isArrayTypeDeclarationStart);
+            }
+        }
+    }
+
+    /**
+     * Populates the FullIdent node.
+     *
+     * @param full the FullIdent to add to
+     * @param ast the node
+     * @param dotCounter no of dots
+     * @param bracketsExist yes if true
+     * @param isArrayTypeDeclarationStart true if array type declaration start
+     * @return updated value of dotCounter
+     */
+    private static int appendToFull(FullIdent full, DetailAST ast,
+                int dotCounter, boolean bracketsExist, boolean isArrayTypeDeclarationStart) {
+        int result = dotCounter;
+        if (isArrayTypeDeclarationStart) {
+            full.append(ast);
+            appendBrackets(full, ast);
+        }
+        else if (ast.getType() != TokenTypes.ANNOTATIONS) {
+            full.append(ast);
+            if (dotCounter > 0) {
+                full.append(".");
+                result--;
+            }
+            if (bracketsExist) {
+                appendBrackets(full, ast.getParent());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Pushes to stack if ast is not null.
+     *
+     * @param stack stack to push into
+     * @param ast node to push into stack
+     */
+    private static void pushToIdentStack(Deque<DetailAST> stack, DetailAST ast) {
+        if (ast != null) {
+            stack.push(ast);
+        }
+    }
+
+    /**
+     * Checks an `ARRAY_DECLARATOR` ast to verify that it is not an
+     * array initialization, i.e. 'new int [2][2]'. We do this by
+     * making sure that no 'EXPR' token exists in this branch.
+     *
+     * @param arrayDeclarator the first ARRAY_DECLARATOR token in the ast
+     * @return true if ast is an array type declaration
+     */
+    private static boolean isArrayTypeDeclaration(DetailAST arrayDeclarator) {
+        DetailAST expression = arrayDeclarator;
+        while (expression != null) {
+            if (expression.getType() == TokenTypes.EXPR) {
+                break;
+            }
+            expression = expression.getFirstChild();
+        }
+        return expression == null;
+    }
+
+    /**
+     * Appends the brackets of an array type to a {@code FullIdent}.
+     *
+     * @param full the FullIdent to append brackets to
+     * @param ast the type ast we are building a {@code FullIdent} for
+     */
+    private static void appendBrackets(FullIdent full, DetailAST ast) {
+        final int bracketCount =
+                ast.getParent().getChildCount(TokenTypes.ARRAY_DECLARATOR);
+        for (int index = 0; index < bracketCount; index++) {
+            full.append("[]");
+        }
+    }
+
+    /**
+     * Gets the text.
+     *
+     * @return the text
+     */
+    public String getText() {
+        return String.join("", elements);
+    }
+
+    /**
+     * Gets the topmost leftmost DetailAST for this FullIdent.
+     *
+     * @return the topmost leftmost ast
+     */
+    public DetailAST getDetailAst() {
+        return detailAst;
+    }
+
+    /**
+     * Gets the line number.
+     *
+     * @return the line number
+     */
+    public int getLineNo() {
+        return detailAst.getLineNo();
+    }
+
+    /**
+     * Gets the column number.
+     *
+     * @return the column number
+     */
+    public int getColumnNo() {
+        return detailAst.getColumnNo();
+    }
+
+    @Override
+    public String toString() {
+        return String.join("", elements)
+            + "[" + detailAst.getLineNo() + "x" + detailAst.getColumnNo() + "]";
+    }
+
+    /**
+     * Append the specified text.
+     *
+     * @param text the text to append
+     */
+    private void append(String text) {
+        elements.add(text);
+    }
+
+    /**
+     * Append the specified token and also recalibrate the first line and column.
+     *
+     * @param ast the token to append
+     */
+    private void append(DetailAST ast) {
+        elements.add(ast.getText());
+        if (detailAst == null) {
+            detailAst = ast;
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/JavadocCommentsTokenTypes.java SHA256 36c47af781f524ae5cb99a92f63332b1cdf95bc097346521067609213192f079
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import com.puppycrawl.tools.checkstyle.grammar.javadoc.JavadocCommentsLexer;
+
+/**
+ * Contains the constants for all the tokens contained in the Abstract
+ * Syntax Tree for the javadoc grammar.
+ *
+ * @see <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/javadoc.html">
+ *     javadoc - The Java API Documentation Generator</a>
+ * @noinspection JavadocDeclaration, EmptyClass, JavadocLinkAsPlainText
+ * @noinspectionreason JavadocDeclaration - Javadoc is intentional
+ * @noinspectionreason EmptyClass - false positive from Language Injection in snippet block
+ * @noinspectionreason JavadocLinkAsPlainText - false positive in snippet block
+ */
+@SuppressWarnings({"InvalidInlineTag", "UnrecognisedJavadocTag"})
+public final class JavadocCommentsTokenTypes {
+
+    /**
+     * Root node of any Javadoc comment.
+     *
+     * <p><b>Tree for example:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * `--NEWLINE -> \n
+     * }
+     */
+    public static final int JAVADOC_CONTENT = JavadocCommentsLexer.JAVADOC;
+
+    /**
+     * Leading asterisk used to format Javadoc lines.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /**
+     *  * This is a Javadoc line.
+     *  * /
+     * }</pre>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * --BLOCK_COMMENT_BEGIN -> /**
+     *    |--COMMENT_CONTENT -> *\r\n * This is a Javadoc line.\r\n
+     *    |   `--JAVADOC_CONTENT -> JAVADOC_CONTENT
+     *    |       |--NEWLINE -> \r\n
+     *    |       |--LEADING_ASTERISK -> *
+     *    |       |--TEXT ->  This is a Javadoc line.
+     *    |       |--NEWLINE -> \r\n
+     *    |       `--TEXT ->
+     * `   --BLOCK_COMMENT_END -> *
+     * }
+     */
+    public static final int LEADING_ASTERISK = JavadocCommentsLexer.LEADING_ASTERISK;
+
+    /**
+     * Multiple leading asterisks used to format Javadoc lines.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /***
+     *  **** This is a Javadoc line.
+     *  * /
+     * }</pre>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * --BLOCK_COMMENT_BEGIN -> /*
+     *    |--COMMENT_CONTENT -> **\r\n **** This is a Javadoc line.\r\n
+     *    |   `--JAVADOC_CONTENT -> JAVADOC_CONTENT
+     *    |       |--LEADING_ASTERISK -> *
+     *    |       |--NEWLINE -> \r\n
+     *    |       |--LEADING_ASTERISKS -> ****
+     *    |       |--TEXT ->  This is a Javadoc line.
+     *    |       |--NEWLINE -> \r\n
+     *    |       `--TEXT ->
+     * `   --BLOCK_COMMENT_END -> *
+     * }
+     */
+    public static final int LEADING_ASTERISKS = JavadocCommentsLexer.LEADING_ASTERISKS;
+
+    /**
+     * Newline character in a Javadoc comment.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /**
+     *  * This is a Javadoc line.
+     *  * /
+     * }</pre>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * --BLOCK_COMMENT_BEGIN -> /**
+     *    |--COMMENT_CONTENT -> *\r\n * This is a Javadoc line.\r\n
+     *    |   `--JAVADOC_CONTENT -> JAVADOC_CONTENT
+     *    |       |--NEWLINE -> \r\n
+     *    |       |--LEADING_ASTERISK -> *
+     *    |       |--TEXT ->  This is a Javadoc line.
+     *    |       |--NEWLINE -> \r\n
+     *    |       `--TEXT ->
+     * `   --BLOCK_COMMENT_END -> *
+     * }
+     */
+
+    public static final int NEWLINE = JavadocCommentsLexer.NEWLINE;
+
+    /**
+     * Plain text content within a Javadoc comment.
+     *
+     * <p>This node represents any plain text that appears in a Javadoc comment,
+     * including spaces and punctuation.</p>
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /**
+     *  * This is plain text content.
+     *  * /
+     * }</pre>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * --BLOCK_COMMENT_BEGIN -> /**
+     *    |--COMMENT_CONTENT -> *\r\n * This is plain text content.\r\n
+     *    |   `--JAVADOC_CONTENT -> JAVADOC_CONTENT
+     *    |       |--NEWLINE -> \r\n
+     *    |       |--LEADING_ASTERISK -> *
+     *    |       |--TEXT ->  This is plain text content.
+     *    |       |--NEWLINE -> \r\n
+     *    |       `--TEXT ->
+     *    `--BLOCK_COMMENT_END -> * /
+     * }
+     *
+     * @see #JAVADOC_CONTENT
+     */
+    public static final int TEXT = JavadocCommentsLexer.TEXT;
+
+    // Block tags
+
+    /**
+     * General block tag (e.g. {@code @param}, {@code @return}).
+     *
+     * <p>Such Javadoc tag can have these children:</p>
+     * <ol>
+     * <li>{@link #PARAM_BLOCK_TAG}</li>
+     * <li>{@link #RETURN_BLOCK_TAG}</li>
+     * <li>{@link #THROWS_BLOCK_TAG}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @param value The parameter of method.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--PARAM_BLOCK_TAG -> PARAM_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> param
+     *         |--TEXT ->
+     *         |--PARAMETER_NAME -> value
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  The parameter of method.
+     * }
+     *
+     * @see #PARAM_BLOCK_TAG
+     * @see #RETURN_BLOCK_TAG
+     * @see #THROWS_BLOCK_TAG
+     */
+    public static final int JAVADOC_BLOCK_TAG = JavadocCommentsLexer.JAVADOC_BLOCK_TAG;
+
+    /**
+     * At-sign {@code @} that starts a block tag.
+     *
+     * <p><b>Example:</b>{@code * @author name}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--AUTHOR_BLOCK_TAG -> AUTHOR_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> author
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  name
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int AT_SIGN = JavadocCommentsLexer.AT_SIGN;
+
+    /**
+     * {@code @author} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @author name.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--AUTHOR_BLOCK_TAG -> AUTHOR_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> author
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  name.
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int AUTHOR_BLOCK_TAG = JavadocCommentsLexer.AUTHOR_BLOCK_TAG;
+
+    /**
+     * {@code @deprecated} block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @deprecated deprecated text.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--DEPRECATED_BLOCK_TAG -> DEPRECATED_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> deprecated
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  deprecated text.
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int DEPRECATED_BLOCK_TAG = JavadocCommentsLexer.DEPRECATED_BLOCK_TAG;
+
+    /**
+     * {@code @param} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have two children:</p>
+     * <ol>
+     *   <li>{@link #PARAMETER_NAME}</li>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @param value The parameter of method.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--PARAM_BLOCK_TAG -> PARAM_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> param
+     *         |--TEXT ->
+     *         |--PARAMETER_NAME -> value
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  The parameter of method.
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int PARAM_BLOCK_TAG = JavadocCommentsLexer.PARAM_BLOCK_TAG;
+
+    /**
+     * {@code @return} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @return The return of method.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--RETURN_BLOCK_TAG -> RETURN_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> return
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  The return of method.
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int RETURN_BLOCK_TAG = JavadocCommentsLexer.RETURN_BLOCK_TAG;
+
+    /**
+     * {@code @throws} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have two children:</p>
+     * <ol>
+     *   <li>{@link #IDENTIFIER} - the exception class</li>
+     *   <li>{@link #DESCRIPTION} - description</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @throws IOException if an I/O error occurs}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--THROWS_BLOCK_TAG -> THROWS_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> throws
+     *         |--TEXT ->
+     *         |--IDENTIFIER -> IOException
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  if an I/O error occurs
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int THROWS_BLOCK_TAG = JavadocCommentsLexer.THROWS_BLOCK_TAG;
+
+    /**
+     * {@code @exception} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have two children:</p>
+     * <ol>
+     *   <li>{@link #IDENTIFIER}</li>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @exception FileNotFoundException when file is not found.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--EXCEPTION_BLOCK_TAG -> EXCEPTION_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> exception
+     *         |--TEXT ->
+     *         |--IDENTIFIER -> FileNotFoundException
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  when file is not found.
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int EXCEPTION_BLOCK_TAG = JavadocCommentsLexer.EXCEPTION_BLOCK_TAG;
+
+    /**
+     * {@code @since} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example: </b>{@code * @since 1.0}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--SINCE_BLOCK_TAG -> SINCE_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> since
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  1.0
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int SINCE_BLOCK_TAG = JavadocCommentsLexer.SINCE_BLOCK_TAG;
+
+    /**
+     * {@code @version} Javadoc block tag.
+     *
+     * <p>This tag has only one argument — {@link #TEXT}:</p>
+     *
+     * <p><b>Example:</b>{@code * @version value}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--VERSION_BLOCK_TAG -> VERSION_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> version
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  value
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int VERSION_BLOCK_TAG = JavadocCommentsLexer.VERSION_BLOCK_TAG;
+
+    /**
+     * {@code @see} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have three children:</p>
+     * <ol>
+     *   <li>{@link #REFERENCE}</li>
+     *   <li>{@link #DESCRIPTION}</li>
+     *   <li>{@link #HTML_ELEMENT}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @see SomeClass#Field}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--SEE_BLOCK_TAG -> SEE_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> see
+     *         |--TEXT ->
+     *         `--REFERENCE -> REFERENCE
+     *             |--IDENTIFIER -> SomeClass
+     *             |--HASH -> #
+     *             `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *                 `--IDENTIFIER -> Field
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int SEE_BLOCK_TAG = JavadocCommentsLexer.SEE_BLOCK_TAG;
+
+    /**
+     * {@code @hidden} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #DESCRIPTION} – optional description text</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @hidden value}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--HIDDEN_BLOCK_TAG -> HIDDEN_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> hidden
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  value
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int HIDDEN_BLOCK_TAG = JavadocCommentsLexer.HIDDEN_BLOCK_TAG;
+
+    /**
+     * {@code @uses} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #IDENTIFIER} – the referenced service type</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @uses com.example.app.MyService}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--USES_BLOCK_TAG -> USES_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> uses
+     *         |--TEXT ->
+     *         `--IDENTIFIER -> com.example.app.MyService
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int USES_BLOCK_TAG = JavadocCommentsLexer.USES_BLOCK_TAG;
+
+    /**
+     * {@code @provides} block tag.
+     *
+     * <p>Such Javadoc tag can have two children:</p>
+     * <ol>
+     *   <li>{@link #IDENTIFIER}</li>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b></p>
+     *
+     * <p>{@code * @provides com.example.MyService with com.example.MyServiceImpl}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--PROVIDES_BLOCK_TAG -> PROVIDES_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> provides
+     *         |--TEXT ->
+     *         |--IDENTIFIER -> com.example.MyService
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  with com.example.MyServiceImpl
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int PROVIDES_BLOCK_TAG = JavadocCommentsLexer.PROVIDES_BLOCK_TAG;
+
+    /**
+     * {@code @serial} block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #DESCRIPTION} – optional description text</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @serial include}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--SERIAL_BLOCK_TAG -> SERIAL_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> serial
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  include
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int SERIAL_BLOCK_TAG = JavadocCommentsLexer.SERIAL_BLOCK_TAG;
+
+    /**
+     * {@code @serialData} block tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #DESCRIPTION} – optional description text</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @serialData data description value}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--SERIAL_DATA_BLOCK_TAG -> SERIAL_DATA_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> serialData
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  data description value
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int SERIAL_DATA_BLOCK_TAG = JavadocCommentsLexer.SERIAL_DATA_BLOCK_TAG;
+
+    /**
+     * {@code @serialField} Javadoc block tag.
+     *
+     * <p>Such Javadoc tag can have three children:</p>
+     * <ol>
+     *   <li>{@link #IDENTIFIER} – field name</li>
+     *   <li>{@link #FIELD_TYPE} – field type</li>
+     *   <li>{@link #DESCRIPTION} – field description</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * @serialField name String The person's full name.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--SERIAL_FIELD_BLOCK_TAG -> SERIAL_FIELD_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> serialField
+     *         |--TEXT ->
+     *         |--IDENTIFIER -> name
+     *         |--TEXT ->
+     *         |--FIELD_TYPE -> String
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  The person's full name.
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int SERIAL_FIELD_BLOCK_TAG = JavadocCommentsLexer.SERIAL_FIELD_BLOCK_TAG;
+
+    /**
+     * {@code @customBlock} Javadoc block tag.
+     *
+     * <p>This type represents any block tag that is not explicitly recognized by Checkstyle,
+     * such as a project-specific or malformed tag.</p>
+     *
+     * <p><b>Example:</b>{@code * @mycustomtag This is a custom block tag.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--CUSTOM_BLOCK_TAG -> CUSTOM_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> mycustomtag
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  This is a custom block tag.
+     * }
+     *
+     * @see #JAVADOC_BLOCK_TAG
+     */
+    public static final int CUSTOM_BLOCK_TAG = JavadocCommentsLexer.CUSTOM_BLOCK_TAG;
+
+    // Inline tags
+
+    /**
+     * General inline tag (e.g. {@code @link}).
+     *
+     * <p>Such Javadoc tag can have these children:</p>
+     * <ol>
+     * <li>{@link #CODE_INLINE_TAG}</li>
+     * <li>{@link #LINK_INLINE_TAG}</li>
+     * <li>{@link #VALUE_INLINE_TAG}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /**
+     * * {@code code}
+     * * /
+     * }</pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--TEXT -> /**
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * |   `--CODE_INLINE_TAG -> CODE_INLINE_TAG
+     * |       |--JAVADOC_INLINE_TAG_START -> { @
+     * |       |--TAG_NAME -> code
+     * |       |--TEXT ->   code
+     * |       `--JAVADOC_INLINE_TAG_END -> }
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT -> /
+     * |--NEWLINE -> \n
+     * |--TEXT -> public class Test {}
+     * `--NEWLINE -> \n
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int JAVADOC_INLINE_TAG = JavadocCommentsLexer.JAVADOC_INLINE_TAG;
+
+    /**
+     * Start of an inline tag <code>{</code>.
+     *
+     * <p>This node represents the start of a Javadoc inline tag like
+     * {@code @code} or {@code @link}.</p>
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /**
+     * * {@code code}
+     * * /
+     * }</pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--TEXT -> /**
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * |   `--CODE_INLINE_TAG -> CODE_INLINE_TAG
+     * |       |--JAVADOC_INLINE_TAG_START -> { @
+     * |       |--TAG_NAME -> code
+     * |       |--TEXT ->   code
+     * |       `--JAVADOC_INLINE_TAG_END -> }
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT -> /
+     * |--NEWLINE -> \n
+     * |--TEXT -> public class Test {}
+     * `--NEWLINE -> \n
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int JAVADOC_INLINE_TAG_START =
+            JavadocCommentsLexer.JAVADOC_INLINE_TAG_START;
+
+    /**
+     * End of an inline tag <code>}</code>.
+     *
+     * <p>This node represents the closing brace of a Javadoc inline tag like
+     * {@code @code} or {@code @link}.</p>
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /**
+     * * {@code code}
+     * * /
+     * }</pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--TEXT -> /**
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * |   `--CODE_INLINE_TAG -> CODE_INLINE_TAG
+     * |       |--JAVADOC_INLINE_TAG_START -> { @
+     * |       |--TAG_NAME -> code
+     * |       |--TEXT ->   code
+     * |       `--JAVADOC_INLINE_TAG_END -> }
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT -> /
+     * |--NEWLINE -> \n
+     * |--TEXT -> public class Test {}
+     * `--NEWLINE -> \n
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     * @see #JAVADOC_INLINE_TAG_START
+     */
+    public static final int JAVADOC_INLINE_TAG_END = JavadocCommentsLexer.JAVADOC_INLINE_TAG_END;
+
+    /**
+     * {@code {@code}} Javadoc inline tag.
+     *
+     * <p>Such Javadoc tag can have no children:</p>
+     *
+     * <p><b>Example:</b>{@code * {@code println("Hello");}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     |--CODE_INLINE_TAG -> CODE_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> { @
+     *     |--TAG_NAME -> code
+     *     |--TEXT ->  println("Hello");
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int CODE_INLINE_TAG = JavadocCommentsLexer.CODE_INLINE_TAG;
+
+    /**
+     * {@code {@link}} Javadoc inline tag.
+     *
+     * <p>Such Javadoc tag can have two children:</p>
+     * <ol>
+     *   <li>{@link #REFERENCE}</li>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * {@link Math#max(int, int) label}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * --JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> { @
+     *     |--TAG_NAME -> link
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> Math
+     *     |   |--HASH -> #
+     *     |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *     |       |--IDENTIFIER -> max
+     *     |       |--LPAREN -> (
+     *     |       |--PARAMETER_TYPE_LIST -> PARAMETER_TYPE_LIST
+     *     |       |   |--PARAMETER_TYPE -> int
+     *     |       |   |--COMMA -> ,
+     *     |       |   |--TEXT ->
+     *     |       |   `--PARAMETER_TYPE -> int
+     *     |       `--RPAREN -> )
+     *     |--DESCRIPTION -> DESCRIPTION
+     *     |   `--TEXT -> label
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int LINK_INLINE_TAG = JavadocCommentsLexer.LINK_INLINE_TAG;
+
+    /**
+     * {@code {@linkplain}} Javadoc inline tag.
+     *
+     * <p>Such Javadoc tag can have two children:</p>
+     * <ol>
+     *   <li>{@link #REFERENCE}</li>
+     *   <li>{@link #DESCRIPTION}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * {@linkplain String#indexOf(int, int) label}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * --JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINKPLAIN_INLINE_TAG -> LINKPLAIN_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> { @
+     *     |--TAG_NAME -> linkplain
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> String
+     *     |   |--HASH -> #
+     *     |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *     |       |--IDENTIFIER -> indexOf
+     *     |       |--LPAREN -> (
+     *     |       |--PARAMETER_TYPE_LIST -> PARAMETER_TYPE_LIST
+     *     |       |   |--PARAMETER_TYPE -> int
+     *     |       |   |--COMMA -> ,
+     *     |       |   |--TEXT ->
+     *     |       |   `--PARAMETER_TYPE -> int
+     *     |       `--RPAREN -> )
+     *     |--DESCRIPTION -> DESCRIPTION
+     *     |   `--TEXT ->  label
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int LINKPLAIN_INLINE_TAG = JavadocCommentsLexer.LINKPLAIN_INLINE_TAG;
+
+    /**
+     * {@code {@value}} Javadoc inline tag.
+     *
+     * <p>Such Javadoc tag can have one child:</p>
+     * <ol>
+     *   <li>{@link #REFERENCE}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * {@value Integer#MAX_VALUE}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * --JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--VALUE_INLINE_TAG -> VALUE_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> { @
+     *     |--TAG_NAME -> value
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> Integer
+     *     |   |--HASH -> #
+     *     |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *     |       `--IDENTIFIER -> MAX_VALUE
+     *     |--TEXT ->
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int VALUE_INLINE_TAG = JavadocCommentsLexer.VALUE_INLINE_TAG;
+
+    /**
+     * Inline {@code {@summary ...}} tag inside Javadoc.
+     *
+     * <p>This node represents an inline {@code {@summary ...}} tag used to provide a
+     * short summary description within a Javadoc sentence.</p>
+     *
+     * <p><b>Example:</b>{@code * Example showing {@summary This is a short summary.}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->  Example showing
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--SUMMARY_INLINE_TAG -> SUMMARY_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--TAG_NAME -> summary
+     *         |--DESCRIPTION -> DESCRIPTION
+     *         |   `--TEXT ->  This is a short summary.
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+
+    public static final int SUMMARY_INLINE_TAG = JavadocCommentsLexer.SUMMARY_INLINE_TAG;
+
+    /**
+     * {@code {@inheritDoc}} inline tag.
+     *
+     * <p>This node models the inline {@code {@inheritDoc}} tag that instructs Javadoc
+     * to inherit documentation from the corresponding element in a parent class or interface.</p>
+     *
+     * <p><b>Example:</b>{@code * {@inheritDoc}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--INHERIT_DOC_INLINE_TAG -> INHERIT_DOC_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--TAG_NAME -> inheritDoc
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int INHERIT_DOC_INLINE_TAG = JavadocCommentsLexer.INHERIT_DOC_INLINE_TAG;
+
+    /**
+     * {@code {@systemProperty}} inline tag.
+     *
+     * <p>Such Javadoc tag is used to reference a system property.</p>
+     *
+     * <p><b>Example:</b></p>
+     *
+     * <p>{@code * This method uses {@systemProperty user.home} system property.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->  This method uses
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * |   `--SYSTEM_PROPERTY_INLINE_TAG -> SYSTEM_PROPERTY_INLINE_TAG
+     * |       |--JAVADOC_INLINE_TAG_START -> { @
+     * |       |--TAG_NAME -> systemProperty
+     * |       |--TEXT ->
+     * |       |--IDENTIFIER -> user.home
+     * |       `--JAVADOC_INLINE_TAG_END -> }
+     * |--TEXT ->  system property.
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int SYSTEM_PROPERTY_INLINE_TAG =
+            JavadocCommentsLexer.SYSTEM_PROPERTY_INLINE_TAG;
+
+    /**
+     * {@code {@literal}} inline tag.
+     *
+     * <p><b>Example:</b>{@code * {@literal @Override}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--LITERAL_INLINE_TAG -> LITERAL_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--TAG_NAME -> literal
+     *         |--TEXT ->  @Override
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int LITERAL_INLINE_TAG = JavadocCommentsLexer.LITERAL_INLINE_TAG;
+
+    /**
+     * Inline {@code return} tag inside Javadoc.
+     *
+     * <p>This node represents an inline {@code {@return ...}} tag used to
+     * describe the returned value directly within a Javadoc sentence.</p>
+     *
+     * <p><b>Example:</b>{@code Example showing result {@return The computed value.}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->  Example showing result
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--RETURN_INLINE_TAG -> RETURN_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--TAG_NAME -> return
+     *         |--DESCRIPTION -> DESCRIPTION
+     *         |   `--TEXT ->  The computed value.
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+
+    public static final int RETURN_INLINE_TAG = JavadocCommentsLexer.RETURN_INLINE_TAG;
+
+    /**
+     * {@code {@index}} inline tag.
+     *
+     * <p>This node represents an inline {@code {@index ...}} tag used to mark an
+     * index term inside a Javadoc sentence.</p>
+     *
+     * <p><b>Example:</b></p>
+     *
+     * <p>{@code * Example showing {@index keyword description of the index term}.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->  Example showing
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--INDEX_INLINE_TAG -> INDEX_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--TAG_NAME -> index
+     *         |--TEXT ->
+     *         |--INDEX_TERM -> keyword
+     *         |--DESCRIPTION -> DESCRIPTION
+     *         |   `--TEXT ->  description of the index term
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * |--TEXT -> .
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+
+    public static final int INDEX_INLINE_TAG = JavadocCommentsLexer.INDEX_INLINE_TAG;
+
+    /**
+     * {@code @snippet} inline tag.
+     *
+     * <p>This node represents an inline { @code { @snippet :}} tag used to embed
+     * code snippets directly inside a Javadoc sentence.</p>
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * * Example showing {@snippet :java
+     * System.out.println("hello");
+     * }
+     * }
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT -> Example showing
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--SNIPPET_INLINE_TAG -> SNIPPET_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--COLON -> :
+     *         |--SNIPPET_BODY -> SNIPPET_BODY
+     *         |   |--TEXT -> java
+     *         |   |--NEWLINE -> \n
+     *         |   |--LEADING_ASTERISK -> *
+     *         |   |--TEXT -> System.out.println("hello");
+     *         |   |--NEWLINE -> \n
+     *         |   |--LEADING_ASTERISK -> *
+     *         |   `--TEXT ->
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int SNIPPET_INLINE_TAG = JavadocCommentsLexer.SNIPPET_INLINE_TAG;
+
+    /**
+     * {@code @custom} inline tag.
+     *
+     * <p><b>Example:</b>{@code * Example showing {@custom This is a Custom Inline Tag}.}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->  Example showing
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * |   `--CUSTOM_INLINE_TAG -> CUSTOM_INLINE_TAG
+     * |       |--JAVADOC_INLINE_TAG_START -> { @
+     * |       |--TAG_NAME -> custom
+     * |       |--DESCRIPTION -> DESCRIPTION
+     * |       |   `--TEXT ->  This is a Custom Inline Tag
+     * |       `--JAVADOC_INLINE_TAG_END -> }
+     * |--TEXT -> .
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int CUSTOM_INLINE_TAG = JavadocCommentsLexer.CUSTOM_INLINE_TAG;
+
+    // Components
+
+    /**
+     * Identifier token.
+     *
+     * <p><b>Example:</b>{@code * @throws Exception if error.}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--THROWS_BLOCK_TAG -> THROWS_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> throws
+     *         |--TEXT ->
+     *         |--IDENTIFIER -> Exception
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  if error.
+     * }
+     */
+    public static final int IDENTIFIER = JavadocCommentsLexer.IDENTIFIER;
+
+    /**
+     * Hash symbol {@code #} used in references within Javadoc.
+     *
+     * <p><b>Example:</b>{@code * @see MyClass#myMethod()}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     * |   `--SEE_BLOCK_TAG -> SEE_BLOCK_TAG
+     * |       |--AT_SIGN -> @
+     * |       |--TAG_NAME -> see
+     * |       |--TEXT ->
+     * |       `--REFERENCE -> REFERENCE
+     * |           |--IDENTIFIER -> MyClass
+     * |           |--HASH -> #
+     * |           |--IDENTIFIER -> myMethod
+     * |           |--LPAREN -> (
+     * |           `--RPAREN -> )
+     * }
+     *
+     * @see #REFERENCE
+     */
+    public static final int HASH = JavadocCommentsLexer.HASH;
+
+    /**
+     * Left parenthesis {@code (} used in references within Javadoc.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * * {@link String#length()}
+     * }</pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> {@
+     *         |--TAG_NAME -> link
+     *         |--TEXT ->
+     *         |--REFERENCE -> REFERENCE
+     *             |--IDENTIFIER -> String
+     *             |--HASH -> #
+     *             `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *                 |--IDENTIFIER -> length
+     *                 |--LPAREN -> (
+     *                 `--RPAREN -> )
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #REFERENCE
+     */
+    public static final int LPAREN = JavadocCommentsLexer.LPAREN;
+
+    /**
+     * Right parenthesis {@code (} used in references within Javadoc.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * * {@link String#length()}
+     * }</pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> {@
+     *         |--TAG_NAME -> link
+     *         |--TEXT ->
+     *         |--REFERENCE -> REFERENCE
+     *             |--IDENTIFIER -> String
+     *             |--HASH -> #
+     *             `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *                 |--IDENTIFIER -> length
+     *                 |--LPAREN -> (
+     *                 `--RPAREN -> )
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #REFERENCE
+     */
+    public static final int RPAREN = JavadocCommentsLexer.RPAREN;
+
+    /**
+     * Comma symbol {@code , }.
+     *
+     * <p><b>Example:</b>{@code * @see #method(int, int)}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--SEE_BLOCK_TAG -> SEE_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> see
+     *         |--TEXT ->
+     *         |--REFERENCE -> REFERENCE
+     *         |   |--HASH -> #
+     *         |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *         |       |--IDENTIFIER -> method
+     *         |       |--LPAREN -> (
+     *         |       |--PARAMETER_TYPE_LIST -> PARAMETER_TYPE_LIST
+     *         |       |   |--PARAMETER_TYPE -> int
+     *         |       |   |--COMMA -> ,
+     *         |       |   |--TEXT ->
+     *         |       |   `--PARAMETER_TYPE -> int
+     *         |       `--RPAREN -> )
+     * }
+     */
+    public static final int COMMA = JavadocCommentsLexer.COMMA;
+
+    /**
+     * Slash symbol {@code /} used in module or package references within Javadoc.
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * {@link String};
+     * }
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> {@
+     *         |--TAG_NAME -> link
+     *         |--TEXT ->
+     *         |--REFERENCE -> REFERENCE
+     *         |   |--IDENTIFIER -> java.base
+     *         |   |--SLASH -> /
+     *         |   `--IDENTIFIER -> java.lang.String
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #REFERENCE
+     */
+    public static final int SLASH = JavadocCommentsLexer.SLASH;
+
+    /**
+     * Question mark symbol {@code ?} used in generic type wildcards.
+     *
+     * <p>This token appears in references that use wildcard type arguments,
+     * such as {@code ? extends Type} or {@code ? super Type}.</p>
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * {@link java.util.List<? extends Number>};
+     * }
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> {@
+     *         |--TAG_NAME -> link
+     *         |--TEXT ->
+     *         |--REFERENCE -> REFERENCE
+     *         |   `--TYPE_ARGUMENTS -> TYPE_ARGUMENTS
+     *         |       |--LT -> <
+     *         |       |--TYPE_ARGUMENT -> TYPE_ARGUMENT
+     *         |       |   |--QUESTION -> ?
+     *         |       |   |--TEXT ->
+     *         |       |   |--EXTENDS -> extends
+     *         |       |   |--TEXT ->
+     *         |       |   `--IDENTIFIER -> Number
+     *         |       `--GT -> >
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #TYPE_ARGUMENT
+     */
+    public static final int QUESTION = JavadocCommentsLexer.QUESTION;
+
+    /**
+     * Less-than symbol {@code < }.
+     *
+     * <p><b>Example:</b>{@code * @see List<String>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     * |   `--SEE_BLOCK_TAG -> SEE_BLOCK_TAG
+     * |       |--AT_SIGN -> @
+     * |       |--TAG_NAME -> see
+     * |       |--TEXT ->
+     * |       `--REFERENCE -> REFERENCE
+     * |           |--IDENTIFIER -> List
+     * |           `--TYPE_ARGUMENTS -> TYPE_ARGUMENTS
+     * |               |--LT -> <
+     * |               |--TYPE_ARGUMENT -> TYPE_ARGUMENT
+     * |               |   `--IDENTIFIER -> String
+     * |               `--GT -> >
+     * |--NEWLINE -> \n
+     * `--TEXT ->
+     * }
+     */
+    public static final int LT = JavadocCommentsLexer.LT;
+
+    /**
+     * Greater-than symbol {@code > }.
+     *
+     * <p><b>Example:</b>{@code * @see List<String>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     * |   `--SEE_BLOCK_TAG -> SEE_BLOCK_TAG
+     * |       |--AT_SIGN -> @
+     * |       |--TAG_NAME -> see
+     * |       |--TEXT ->
+     * |       `--REFERENCE -> REFERENCE
+     * |           |--IDENTIFIER -> List
+     * |           `--TYPE_ARGUMENTS -> TYPE_ARGUMENTS
+     * |               |--LT -> <
+     * |               |--TYPE_ARGUMENT -> TYPE_ARGUMENT
+     * |               |   `--IDENTIFIER -> String
+     * |               `--GT -> >
+     * |--NEWLINE -> \n
+     * `--Text ->
+     * }
+     */
+
+    public static final int GT = JavadocCommentsLexer.GT;
+
+    /**
+     * {@code extends} keyword inside type arguments of a Javadoc inline tag.
+     *
+     * <p>This node represents the {@code extends} bound used inside a
+     * parameterized type within an inline Javadoc tag.</p>
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * * {@link java.util.List<? extends Number> list of any subtype of Number}
+     * }</pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--TAG_NAME -> link
+     *         |--TEXT ->
+     *         |--REFERENCE -> REFERENCE
+     *         |   |--IDENTIFIER -> java.util.List
+     *         |   `--TYPE_ARGUMENTS -> TYPE_ARGUMENTS
+     *         |       |--LT -> <
+     *         |       |--TYPE_ARGUMENT -> TYPE_ARGUMENT
+     *         |       |   |--QUESTION -> ?
+     *         |       |   |--TEXT ->
+     *         |       |   |--EXTENDS -> extends
+     *         |       |   |--TEXT ->
+     *         |       |   `--IDENTIFIER -> Number
+     *         |       `--GT -> >
+     *         |--DESCRIPTION -> DESCRIPTION
+     *         |   `--TEXT ->  list of any subtype of Number
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int EXTENDS = JavadocCommentsLexer.EXTENDS;
+
+    /**
+     * {@code SUPER} represents the {@code super} keyword inside a generic
+     * wildcard bound (e.g., {@code ? super Number}).
+     *
+     * <p><b>Example:</b> {@code {@link java.util.List <? super Integer> list}
+     * of any supertype of Integer}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> { @
+     *     |--TAG_NAME -> link
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> java.util.List
+     *     |   `--TYPE_ARGUMENTS -> TYPE_ARGUMENTS
+     *     |       |--LT -> <
+     *     |       |--TYPE_ARGUMENT -> TYPE_ARGUMENT
+     *     |       |   |--QUESTION -> ?
+     *     |       |   |--TEXT ->
+     *     |       |   |--SUPER -> super
+     *     |       |   |--TEXT ->
+     *     |       |   `--IDENTIFIER -> Integer
+     *     |       `--GT -> >
+     *     |--DESCRIPTION -> DESCRIPTION
+     *     |   `--TEXT ->  list of any supertype of Integer
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #PARAMETER_TYPE
+     */
+    public static final int SUPER = JavadocCommentsLexer.SUPER;
+
+    /**
+     * {@code PARAMETER_TYPE} Parameter type reference.
+     *
+     * <p>Represents a type used in a method parameter.</p>
+     *
+     * <p><b>Example:</b>{@code {@link java.util.List#add(Object)}}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> {@
+     *     |--TAG_NAME -> link
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> List
+     *     |   |--HASH -> #
+     *     |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *     |       |--IDENTIFIER -> add
+     *     |       |--LPAREN -> (
+     *     |       |--PARAMETER_TYPE_LIST -> PARAMETER_TYPE_LIST
+     *     |       |   `--PARAMETER_TYPE -> Object
+     *     |       `--RPAREN -> )
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #REFERENCE
+     */
+    public static final int PARAMETER_TYPE = JavadocCommentsLexer.PARAMETER_TYPE;
+
+    /**
+     * {@code REFERENCE} General reference within Javadoc.
+     *
+     * <p>Represents the target of an inline reference tag such as
+     * {@code {@link String#length()}}.</p>
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * {@link String#length()}
+     * }
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * |--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     * |   |--JAVADOC_INLINE_TAG_START -> {@
+     * |   |--TAG_NAME -> link
+     * |   |--REFERENCE -> String#length()
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int REFERENCE = JavadocCommentsLexer.REFERENCE;
+
+    /**
+     * {@code MEMBER_REFERENCE} Member reference (method or field).
+     *
+     * <p>Represents a field or method in a type reference.</p>
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * {@link String#length()}
+     * }
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> {@
+     *     |--TAG_NAME -> link
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> String
+     *     |   |--HASH -> #
+     *     |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *     |       |--IDENTIFIER -> length
+     *     |       |--LPAREN -> (
+     *     |       `--RPAREN -> )
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #REFERENCE
+     */
+    public static final int MEMBER_REFERENCE = JavadocCommentsLexer.MEMBER_REFERENCE;
+
+    /**
+     * {@code PARAMETER_TYPE_LIST} represents the list of parameter types inside a
+     * member reference within a Javadoc inline {@code @link} tag.
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * {@link Math#max(int, int)}
+     * }
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> {\@
+     *     |--TAG_NAME -> link
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> Math
+     *     |   |--HASH -> #
+     *     |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *     |       |--IDENTIFIER -> max
+     *     |       |--LPAREN -> (
+     *     |       |--PARAMETER_TYPE_LIST -> PARAMETER_TYPE_LIST
+     *     |       |   |--PARAMETER_TYPE -> int
+     *     |       |   |--COMMA -> ,
+     *     |       |   |--TEXT ->
+     *     |       |   `--PARAMETER_TYPE -> int
+     *     |       `--RPAREN -> )
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #PARAMETER_TYPE
+     */
+    public static final int PARAMETER_TYPE_LIST = JavadocCommentsLexer.PARAMETER_TYPE_LIST;
+
+    /**
+     * {@code TYPE_ARGUMENTS} Type arguments in generics.
+     *
+     * <p>Represents the type arguments inside a generic type reference.</p>
+     *
+     * <p><b>Example:</b>{@code {@link java.util.List<String>}}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> {@
+     *     |--TAG_NAME -> link
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> java.util.List
+     *     |   `--TYPE_ARGUMENTS -> TYPE_ARGUMENTS
+     *     |       |--LT -> <
+     *     |       |--TYPE_ARGUMENT -> TYPE_ARGUMENT
+     *     |       |   `--IDENTIFIER -> String
+     *     |       `--GT -> >
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #TYPE_ARGUMENT
+     */
+    public static final int TYPE_ARGUMENTS = JavadocCommentsLexer.TYPE_ARGUMENTS;
+
+    /**
+     * Single type argument in generics.
+     *
+     * <p>This node represents one individual type inside a generic type
+     * argument list.</p>
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * {@link java.util.List<String>}
+     * }
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--LINK_INLINE_TAG -> LINK_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> {@
+     *     |--TAG_NAME -> link
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *         |--IDENTIFIER -> java.util.List
+     *         `--TYPE_ARGUMENTS -> TYPE_ARGUMENTS
+     *             |--LT -> <
+     *             |--TYPE_ARGUMENT -> TYPE_ARGUMENT
+     *             |   `--IDENTIFIER -> String
+     *             `--GT -> >
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #TYPE_ARGUMENTS
+     */
+    public static final int TYPE_ARGUMENT = JavadocCommentsLexer.TYPE_ARGUMENT;
+
+    /**
+     * Description part of a Javadoc tag.
+     *
+     * <p><b>Example:</b>{@code * @param value The parameter description goes here.}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * `--PARAM_BLOCK_TAG -> PARAM_BLOCK_TAG
+     *     |--AT_SIGN -> @
+     *     |--TAG_NAME -> param
+     *     |--TEXT ->
+     *     |--PARAMETER_NAME -> value
+     *     `--DESCRIPTION -> DESCRIPTION
+     *         `--TEXT ->  The parameter description goes here.
+     * }
+     */
+    public static final int DESCRIPTION = JavadocCommentsLexer.DESCRIPTION;
+
+    /**
+     * Format specifier inside a {@code {@value}} inline tag.
+     * The {@value} tag is used to display the value of a constant directly
+     * within the Javadoc documentation. In newer Java versions (20+), there
+     * is ability include a format string inside the tag.
+     *
+     * <p>In this example, the format specifier {@code 0x%04x} is used to format the integer
+     * {@code Modifier#PUBLIC} as a hexadecimal value, padded with zeros to a width of four
+     * characters.</p>
+     * {@snippet lang="text" :
+     * {@value %04x java.lang.reflect.Modifier#PUBLIC}
+     * }
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--VALUE_INLINE_TAG -> VALUE_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> {@
+     *     |--TAG_NAME -> value
+     *     |--TEXT ->
+     *     |--FORMAT_SPECIFIER -> %04x
+     *     |--TEXT ->
+     *     |--REFERENCE -> REFERENCE
+     *     |   |--IDENTIFIER -> java.lang.reflect.Modifier
+     *     |   |--HASH -> #
+     *     |   `--MEMBER_REFERENCE -> MEMBER_REFERENCE
+     *     |       `--IDENTIFIER -> PUBLIC
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #VALUE_INLINE_TAG
+     */
+    public static final int FORMAT_SPECIFIER = JavadocCommentsLexer.FORMAT_SPECIFIER;
+
+    /**
+     * Attribute name in a {@code @snippet} tag.
+     *
+     * <p>
+     * <b>Note:</b> In the current Checkstyle AST, all snippet attributes (such as
+     * {@code lang=java}) appear as plain text under the {@code DESCRIPTION} node.
+     * There is <b>no</b> {@code SNIPPET_ATTR_NAME} node in the AST tree.
+     * All attribute content is represented as {@code TEXT}.</p>
+     *
+     * <p>
+     * <b>Example:</b>
+     * {@code * @snippet lang=java}
+     * </p>
+     *
+     * <p>
+     * <b>Tree:</b>
+     * </p>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *    `--CUSTOM_BLOCK_TAG -> CUSTOM_BLOCK_TAG
+     *        |--AT_SIGN -> @
+     *        |--TAG_NAME -> snippet
+     *        `--DESCRIPTION -> DESCRIPTION
+     *            `--TEXT ->  lang=java
+     * }
+     *
+     * @see #SNIPPET_ATTRIBUTE
+     */
+    public static final int SNIPPET_ATTR_NAME = JavadocCommentsLexer.SNIPPET_ATTR_NAME;
+
+    /**
+     * Equals sign {@code =}.
+     *
+     * <p>Used within snippet attributes to assign values.</p>
+     *
+     * <p><b>Example:</b></p>
+     * {@snippet lang="text" :
+     * { @snippet lang="java" :
+     *   int x = 1;
+     * }
+     * }
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * `--SNIPPET_INLINE_TAG -> SNIPPET_INLINE_TAG
+     *     |--JAVADOC_INLINE_TAG_START -> {@
+     *     |--SNIPPET_ATTRIBUTES -> SNIPPET_ATTRIBUTES
+     *     |   `--SNIPPET_ATTRIBUTE -> SNIPPET_ATTRIBUTE
+     *     |       |--TEXT ->
+     *     |       |--SNIPPET_ATTR_NAME -> lang
+     *     |       |--EQUALS -> =
+     *     |       `--ATTRIBUTE_VALUE -> "java"
+     *     |--COLON -> :
+     *     |--SNIPPET_BODY -> SNIPPET_BODY
+     *     |   |--NEWLINE -> \n
+     *     |   |--TEXT ->   int x = 1;
+     *     |   |--NEWLINE -> \r\n
+     *     `--JAVADOC_INLINE_TAG_END -> }
+     * }
+     *
+     * @see #SNIPPET_ATTRIBUTE
+     * @see #SNIPPET_ATTRIBUTES
+     */
+    public static final int EQUALS = JavadocCommentsLexer.EQUALS;
+
+    /**
+     * {@code ATTRIBUTE_VALUE} Value assigned to an attribute.
+     *
+     * <p><b>Example:</b>{@code <a href="example">text</a>}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * |--HTML_TAG_START -> HTML_TAG_START
+     * |   |--TAG_OPEN -> <
+     * |   |--TAG_NAME -> a
+     * |   |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     * |   |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     * |   |       |--TEXT ->
+     * |   |       |--TAG_ATTR_NAME -> href
+     * |   |       |--EQUALS -> =
+     * |   |       `--ATTRIBUTE_VALUE -> "example"
+     * |   `--TAG_CLOSE -> >
+     * |--HTML_CONTENT -> HTML_CONTENT
+     * |   `--TEXT -> text
+     * `--HTML_TAG_END -> HTML_TAG_END
+     * |--TAG_OPEN -> <
+     * |--TAG_SLASH -> /
+     * |--TAG_NAME -> a
+     * `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_ATTRIBUTE
+     * @see #TAG_ATTR_NAME
+     */
+    public static final int ATTRIBUTE_VALUE = JavadocCommentsLexer.ATTRIBUTE_VALUE;
+
+    /**
+     * Colon symbol {@code : }.
+     *
+     * <p><b>Example:</b>{@code * {@snippet :config}}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--TEXT -> /**
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     * |   `--SNIPPET_INLINE_TAG -> SNIPPET_INLINE_TAG
+     * |       |--JAVADOC_INLINE_TAG_START -> {@
+     * |       |--COLON -> :
+     * |       |--SNIPPET_BODY -> SNIPPET_BODY
+     * |       |   `--TEXT -> config
+     * |       `--JAVADOC_INLINE_TAG_END -> }
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT -> /
+     * |--NEWLINE -> \n
+     * `--TEXT -> class Test {}
+     * }
+     *
+     * @see #SNIPPET_INLINE_TAG
+     */
+    public static final int COLON = JavadocCommentsLexer.COLON;
+
+    /**
+     * Term used in {@code {@index}} tag.
+     *
+     * <p>This node represents the term inside an inline {@code {@index ...}} tag in Javadoc.</p>
+     *
+     * <p>
+     * <b>Example:</b>
+     * {@code * Example showing {@index keyword description of the index term}.}
+     * </p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->  Example showing
+     * `--JAVADOC_INLINE_TAG -> JAVADOC_INLINE_TAG
+     *     `--INDEX_INLINE_TAG -> INDEX_INLINE_TAG
+     *         |--JAVADOC_INLINE_TAG_START -> { @
+     *         |--TAG_NAME -> index
+     *         |--TEXT ->
+     *         |--INDEX_TERM -> keyword
+     *         |--DESCRIPTION -> DESCRIPTION
+     *         |   `--TEXT ->  description of the index term
+     *         `--JAVADOC_INLINE_TAG_END -> }
+     * |--TEXT -> .
+     * }
+     *
+     * @see #JAVADOC_INLINE_TAG
+     */
+    public static final int INDEX_TERM = JavadocCommentsLexer.INDEX_TERM;
+
+    /**
+     * Single attribute in a {@code @snippet} tag.
+     *
+     * <p>
+     * Represents a single attribute (e.g., {@code lang=java})
+     * in a {@code @snippet} tag.</p>
+     *
+     * <p><b>Note:</b> In the current Checkstyle AST, all snippet
+     * attributes appear as plain text under the {@code DESCRIPTION} node,
+     * not as a separate {@code SNIPPET_ATTRIBUTE} node.</p>
+     *
+     * <p><b>Example:</b>{@code * @snippet lang=java}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *    `--CUSTOM_BLOCK_TAG -> CUSTOM_BLOCK_TAG
+     *        |--AT_SIGN -> @
+     *        |--TAG_NAME -> snippet
+     *        `--DESCRIPTION -> DESCRIPTION
+     *            `--TEXT ->  lang=java
+     * }
+     */
+    public static final int SNIPPET_ATTRIBUTE = JavadocCommentsLexer.SNIPPET_ATTRIBUTE;
+
+    /**
+     * Collection of attributes in a {@code @snippet} tag.
+     *
+     * <p>
+     * Represents all attributes (e.g., {@code lang=java region=main}) in a {@code @snippet} tag.
+     * </p>
+     *
+     * <p><b>Note:</b> In the current Checkstyle AST, all snippet attributes appear as
+     * plain text under the {@code DESCRIPTION} node, not as a separate
+     * {@code SNIPPET_ATTRIBUTES} node.</p>
+     *
+     * <p><b>Example:</b>{@code * @snippet lang=java region=main}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *    `--CUSTOM_BLOCK_TAG -> CUSTOM_BLOCK_TAG
+     *        |--AT_SIGN -> @
+     *        |--TAG_NAME -> snippet
+     *        `--DESCRIPTION -> DESCRIPTION
+     *            `--TEXT ->  lang=java region=main
+     * }
+     */
+    public static final int SNIPPET_ATTRIBUTES = JavadocCommentsLexer.SNIPPET_ATTRIBUTES;
+
+    /**
+     * Body content of a {@code @snippet} tag.
+     *
+     * <p>
+     * Represents the code or text content inside a {@code @snippet} tag in Javadoc.
+     * </p>
+     *
+     * <b>Example:</b>
+     *
+     * <p>{@code * @snippet lang=java * System.out.println("hello");}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *    `--CUSTOM_BLOCK_TAG -> CUSTOM_BLOCK_TAG
+     *        |--AT_SIGN -> @
+     *        |--TAG_NAME -> snippet
+     *        `--DESCRIPTION -> DESCRIPTION
+     *            |--TEXT ->  lang=java
+     *            |--NEWLINE -> \n
+     *            |--LEADING_ASTERISK -> *
+     *            `--TEXT -> System.out.println("hello");
+     * }
+     */
+    public static final int SNIPPET_BODY = JavadocCommentsLexer.SNIPPET_BODY;
+
+    /**
+     * Field type reference in a Javadoc.
+     *
+     * <p>Example:</p>
+     * <pre>
+     * &#47;**
+     * * &#64;serialField counter int The counter.
+     * *&#47;
+     * </pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--TEXT -> /&#42;*
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     * `--SERIAL_FIELD_BLOCK_TAG -> SERIAL_FIELD_BLOCK_TAG
+     * |--AT_SIGN -> @
+     * |--TAG_NAME -> serialField
+     * |--TEXT ->
+     * |--IDENTIFIER -> counter
+     * |--TEXT ->
+     * |--FIELD_TYPE -> int
+     * `--DESCRIPTION -> DESCRIPTION
+     * |--TEXT ->  The counter.
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * `--TEXT -> /
+     * }
+     *
+     * @see #FIELD_TYPE
+     */
+    public static final int FIELD_TYPE = JavadocCommentsLexer.FIELD_TYPE;
+
+    /**
+     * Parameter name reference in a Javadoc {@code @param} block tag.
+     *
+     * <p><b>Example:</b>{@code * @param value The parameter of method.}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * `--JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     *     `--PARAM_BLOCK_TAG -> PARAM_BLOCK_TAG
+     *         |--AT_SIGN -> @
+     *         |--TAG_NAME -> param
+     *         |--TEXT ->
+     *         |--PARAMETER_NAME -> value
+     *         `--DESCRIPTION -> DESCRIPTION
+     *             `--TEXT ->  The parameter of method.
+     * }
+     *
+     * @see #PARAM_BLOCK_TAG
+     */
+    public static final int PARAMETER_NAME = JavadocCommentsLexer.PARAMETER_NAME;
+
+    /**
+     * String literal inside Javadoc.
+     *
+     * <p>Example in Javadoc:</p>
+     *
+     * {@snippet lang="text" :
+     * {@see "foo"}
+     * }
+     *
+     * <p>Tree:</p>
+     *
+     * {@snippet lang="text" :
+     * JAVADOC_BLOCK_TAG -> JAVADOC_BLOCK_TAG
+     * `--SEE_BLOCK_TAG -> SEE_BLOCK_TAG
+     *     |--AT_SIGN -> @
+     *     |--TAG_NAME -> see
+     *     |--TEXT ->
+     *     `--STRING_LITERAL -> "foo"
+     * }
+     */
+    public static final int STRING_LITERAL = JavadocCommentsLexer.STRING_LITERAL;
+
+    // HTML
+
+    /**
+     * General HTML element in a Javadoc comment.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * /**
+     *  * <p>Hello</p>
+     *  * /
+     * }</pre>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--HTML_ELEMENT -> HTML_ELEMENT
+     * |   |--HTML_TAG_START -> HTML_TAG_START
+     * |   |   |--TAG_OPEN -> <
+     * |   |   |--TAG_NAME -> p
+     * |   |   `--TAG_CLOSE -> >
+     * |   |--HTML_CONTENT -> HTML_CONTENT
+     * |   |   `--TEXT -> Hello
+     * |   `--HTML_TAG_END -> HTML_TAG_END
+     * |       |--TAG_OPEN -> <
+     * |       |--TAG_SLASH -> /
+     * |       |--TAG_NAME -> p
+     * |       `--TAG_CLOSE -> >
+     * |--NEWLINE -> \n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT -> /
+     * }
+     */
+    public static final int HTML_ELEMENT = JavadocCommentsLexer.HTML_ELEMENT;
+
+    /**
+     * Void HTML element (self-closing).
+     *
+     * <p>Example in Javadoc: {@code <br>}</p>
+     *
+     * <p>Tree:</p>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * `--VOID_ELEMENT -> VOID_ELEMENT
+     *     `--HTML_TAG_START -> HTML_TAG_START
+     *         |--TAG_OPEN -> <
+     *         |--TAG_NAME -> br
+     *         `--TAG_CLOSE -> >
+     * }
+     */
+    public static final int VOID_ELEMENT = JavadocCommentsLexer.VOID_ELEMENT;
+
+    /**
+     * Content inside an HTML element.
+     *
+     * <p>This node represents the textual content between an HTML start tag and
+     * the corresponding end tag inside a Javadoc comment.</p>
+     *
+     * <p><b>Example:</b>{@code * <a href="https://example.com">link</a>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * `--HTML_ELEMENT -> HTML_ELEMENT
+     *     |--HTML_TAG_START -> HTML_TAG_START
+     *     |   |--TAG_OPEN -> <
+     *     |   |--TAG_NAME -> a
+     *     |   |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     *     |   |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     *     |   |       |--TEXT ->   (whitespace)
+     *     |   |       |--TAG_ATTR_NAME -> href
+     *     |   |       |--EQUALS -> =
+     *     |   |       `--ATTRIBUTE_VALUE -> "https://example.com"
+     *     |   `--TAG_CLOSE -> >
+     *     |--HTML_CONTENT -> HTML_CONTENT
+     *     |   `--TEXT -> link
+     *     `--HTML_TAG_END -> HTML_TAG_END
+     *         |--TAG_OPEN -> <
+     *         |--TAG_SLASH -> /
+     *         |--TAG_NAME -> a
+     *         `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_ELEMENT
+     */
+
+    public static final int HTML_CONTENT = JavadocCommentsLexer.HTML_CONTENT;
+
+    /**
+     * {@code HTML_ATTRIBUTE} Single HTML attribute.
+     *
+     * <p>Represents one attribute inside an HTML tag.</p>
+     *
+     * <p><b>Example:</b>{@code <input type="text">}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * `--VOID_ELEMENT -> VOID_ELEMENT
+     *     `--HTML_TAG_START -> HTML_TAG_START
+     *         |--TAG_OPEN -> <
+     *         |--TAG_NAME -> input
+     *         |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     *         |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     *         |       |--TEXT ->
+     *         |       |--TAG_ATTR_NAME -> type
+     *         |       |--EQUALS -> =
+     *         |       `--ATTRIBUTE_VALUE -> "text"
+     *         `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_ATTRIBUTES
+     */
+    public static final int HTML_ATTRIBUTE = JavadocCommentsLexer.HTML_ATTRIBUTE;
+
+    /**
+     * {@code HTML_ATTRIBUTES} represents a collection of HTML attributes inside an HTML tag.
+     *
+     * <p>Appears in Javadoc comments when documenting HTML elements that contain
+     * multiple attributes.</p>
+     *
+     * <p><b>Example:</b>{@code <div lang="en" custom-attr="value"></div>}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * |--HTML_TAG_START -> HTML_TAG_START
+     * |   |--TAG_OPEN -> <
+     * |   |--TAG_NAME -> div
+     * |   |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     * |   |   |--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     * |   |   |   |--TEXT ->
+     * |   |   |   |--TAG_ATTR_NAME -> lang
+     * |   |   |   |--EQUALS -> =
+     * |   |   |   `--ATTRIBUTE_VALUE -> "en"
+     * |   |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     * |   |       |--TEXT ->
+     * |   |       |--TAG_ATTR_NAME -> custom-attr
+     * |   |       |--EQUALS -> =
+     * |   |       `--ATTRIBUTE_VALUE -> "value"
+     * |   `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_ATTRIBUTE
+     */
+    public static final int HTML_ATTRIBUTES = JavadocCommentsLexer.HTML_ATTRIBUTES;
+
+    /**
+     * Start of an HTML tag (the opening tag node).
+     *
+     * <p>This node represents the opening part of an HTML element and contains
+     * the opening delimiter, tag name, optional attributes, and the closing
+     * delimiter of the opening tag.</p>
+     *
+     * <p><b>Example:</b>{@code * <a href="https://example.com">link</a>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * `--HTML_ELEMENT -> HTML_ELEMENT
+     *     `--HTML_TAG_START -> HTML_TAG_START
+     *         |--TAG_OPEN -> <
+     *         |--TAG_NAME -> a
+     *         |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     *         |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     *         |       |--TEXT ->
+     *         |       |--TAG_ATTR_NAME -> href
+     *         |       |--EQUALS -> =
+     *         |       `--ATTRIBUTE_VALUE -> "https://example.com"
+     *         `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_ELEMENT
+     */
+
+    public static final int HTML_TAG_START = JavadocCommentsLexer.HTML_TAG_START;
+
+    /**
+     * End of an HTML tag (the closing tag node).
+     *
+     * <p>This node represents the closing part of an HTML element and contains the
+     * closing delimiter, optional slash, and the tag name.</p>
+     *
+     * <p><b>Example:</b>{@code * <a href="https://example.com">link</a>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * |--LEADING_ASTERISK -> *
+     * `--HTML_ELEMENT -> HTML_ELEMENT
+     *     |--HTML_TAG_START -> HTML_TAG_START
+     *     |   |--TAG_OPEN -> <
+     *     |   |--TAG_NAME -> a
+     *     |   |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     *     |   |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     *     |   |       |--TEXT ->   (whitespace)
+     *     |   |       |--TAG_ATTR_NAME -> href
+     *     |   |       |--EQUALS -> =
+     *     |   |       `--ATTRIBUTE_VALUE -> "https://example.com"
+     *     |   `--TAG_CLOSE -> >
+     *     |--HTML_CONTENT -> HTML_CONTENT
+     *     |   `--TEXT -> link
+     *     `--HTML_TAG_END -> HTML_TAG_END
+     *         |--TAG_OPEN -> <
+     *         |--TAG_SLASH -> /
+     *         |--TAG_NAME -> a
+     *         `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_ELEMENT
+     */
+
+    public static final int HTML_TAG_END = JavadocCommentsLexer.HTML_TAG_END;
+
+    /**
+     * Represents the opening {@literal "<"} symbol of an HTML start tag.
+     *
+     * <p><b>Example:</b>{@code <div class="container" lang="en"></div>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * |--HTML_TAG_START -> HTML_TAG_START
+     * |   |--TAG_OPEN -> <
+     * |   |--TAG_NAME -> div
+     * |   |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     * |   |   |--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     * |   |   |   |--TAG_ATTR_NAME -> class
+     * |   |   |   |--EQUALS -> =
+     * |   |   |   `--ATTRIBUTE_VALUE -> "container"
+     * |   |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     * |   |       |--TAG_ATTR_NAME -> lang
+     * |   |       |--EQUALS -> =
+     * |   |       `--ATTRIBUTE_VALUE -> "en"
+     * |   `--TAG_CLOSE -> >
+     * `--HTML_TAG_END -> HTML_TAG_END
+     *     |--TAG_OPEN -> <
+     *     |--TAG_SLASH -> /
+     *     |--TAG_NAME -> div
+     *     `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_TAG_START
+     */
+    public static final int TAG_OPEN = JavadocCommentsLexer.TAG_OPEN;
+
+    /**
+     * {@code TAG_NAME} Name of an HTML element.
+     *
+     * <p>Appears inside an HTML tag within Javadoc comments.</p>
+     *
+     * <p><b>Example: </b>{@code <div class="container">Content</div>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * |--HTML_TAG_START -> HTML_TAG_START
+     * |   |--TAG_OPEN -> <
+     * |   |--TAG_NAME -> div
+     * |   |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     * |   |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     * |   |       |--TAG_ATTR_NAME -> class
+     * |   |       |--EQUALS -> =
+     * |   |       `--ATTRIBUTE_VALUE -> "container"
+     * |   `--TAG_CLOSE -> >
+     * |--HTML_CONTENT -> HTML_CONTENT
+     * |   `--TEXT ->      Content
+     * `--HTML_TAG_END -> HTML_TAG_END
+     *     |--TAG_OPEN -> <
+     *     |--TAG_SLASH -> /
+     *     |--TAG_NAME -> div
+     *     `--TAG_CLOSE -> >
+     * }
+     *
+     * <p>Here {@code TAG_NAME} corresponds to {@code "div"}.</p>
+     */
+    public static final int TAG_NAME = JavadocCommentsLexer.TAG_NAME;
+
+    /**
+     * {@code TAG_CLOSE} represents the closing {@literal ">"} symbol of an HTML tag.
+     *
+     * <p>Appears in Javadoc comments when documenting HTML elements.</p>
+     *
+     * <p><b>Example:</b>{@code <p>Some text</p>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * |--HTML_TAG_START -> HTML_TAG_START
+     * |   |--TAG_OPEN -> <
+     * |   |--TAG_NAME -> p
+     * |   `--TAG_CLOSE -> >
+     * |--HTML_CONTENT -> HTML_CONTENT
+     * |   `--TEXT -> Some text
+     * `--HTML_TAG_END -> HTML_TAG_END
+     *     |--TAG_OPEN -> <
+     *     |--TAG_SLASH -> /
+     *     |--TAG_NAME -> p
+     *     `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_TAG_START
+     */
+    public static final int TAG_CLOSE = JavadocCommentsLexer.TAG_CLOSE;
+
+    /**
+     * {@code />} Self-closing tag delimiter.
+     *
+     * <p>Used for void HTML elements.</p>
+     *
+     * <p><b>Example:</b>{@code * <br />}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * VOID_ELEMENT -> VOID_ELEMENT
+     * |--TAG_OPEN -> <
+     * |--TAG_NAME -> br
+     * `--TAG_SLASH_CLOSE -> />
+     * }
+     *
+     * @see #HTML_ELEMENT
+     */
+    public static final int TAG_SLASH_CLOSE = JavadocCommentsLexer.TAG_SLASH_CLOSE;
+
+    /**
+     * {@code TAG_SLASH} represents the slash {@literal "/"} used inside an HTML closing tag.
+     *
+     * <p>Appears in Javadoc comments when closing HTML elements.</p>
+     *
+     * <p><b>Example: </b>{@code <p>Paragraph text</p>}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * |--HTML_TAG_START -> HTML_TAG_START
+     * |   |--TAG_OPEN -> <
+     * |   |--TAG_NAME -> p
+     * |   `--TAG_CLOSE -> >
+     * |--HTML_CONTENT -> HTML_CONTENT
+     * |   `--TEXT -> Paragraph text
+     * `--HTML_TAG_END -> HTML_TAG_END
+     *     |--TAG_OPEN -> <
+     *     |--TAG_SLASH -> /
+     *     |--TAG_NAME -> p
+     *     `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_TAG_END
+     */
+    public static final int TAG_SLASH = JavadocCommentsLexer.TAG_SLASH;
+
+    /**
+     * {@code TAG_ATTR_NAME} represents the name of an attribute inside an
+     * HTML element within a Javadoc comment.
+     *
+     * <p><b>Example: </b>{@code <img src="logo.png" alt="Site logo">}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text" :
+     * HTML_ELEMENT -> HTML_ELEMENT
+     * `--VOID_ELEMENT -> VOID_ELEMENT
+     *     `--HTML_TAG_START -> HTML_TAG_START
+     *         |--TAG_OPEN -> <
+     *         |--TAG_NAME -> img
+     *         |--HTML_ATTRIBUTES -> HTML_ATTRIBUTES
+     *         |   |--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     *         |   |   |--TEXT ->
+     *         |   |   |--TAG_ATTR_NAME -> src
+     *         |   |   |--EQUALS -> =
+     *         |   |   `--ATTRIBUTE_VALUE -> "logo.png"
+     *         |   `--HTML_ATTRIBUTE -> HTML_ATTRIBUTE
+     *         |       |--TEXT ->
+     *         |       |--TAG_ATTR_NAME -> alt
+     *         |       |--EQUALS -> =
+     *         |       `--ATTRIBUTE_VALUE -> "Site logo"
+     *         `--TAG_CLOSE -> >
+     * }
+     *
+     * @see #HTML_ATTRIBUTES
+     */
+    public static final int TAG_ATTR_NAME = JavadocCommentsLexer.TAG_ATTR_NAME;
+
+    /**
+     * Start of an HTML comment node.
+     *
+     * <p>This node represents a full HTML comment inside Javadoc.</p>
+     *
+     * <p>This node has three children:</p>
+     * <ol>
+     *   <li>{@link #HTML_COMMENT_START}</li>
+     *   <li>{@link #HTML_COMMENT_CONTENT}</li>
+     *   <li>{@link #HTML_COMMENT_END}</li>
+     * </ol>
+     *
+     * <p><b>Example:</b>{@code * <!-- Hello World! -->}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text ":
+     * JAVADOC_CONTENT -> JAVADOC_CONTENT
+     * |--TEXT -> /**
+     * |--NEWLINE -> \r\n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--HTML_COMMENT -> HTML_COMMENT
+     *     |--HTML_COMMENT_START -> <!--
+     *     |--HTML_COMMENT_CONTENT -> HTML_COMMENT_CONTENT
+     *     |   `--TEXT ->  Hello World!
+     *     `--HTML_COMMENT_END -> -->
+     * |--NEWLINE -> \r\n
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT -> /
+     * }
+     *
+     * @see #HTML_COMMENT
+     */
+    public static final int HTML_COMMENT = JavadocCommentsLexer.HTML_COMMENT;
+
+    /**
+     * {@code HTML_COMMENT_START} represents the beginning of an HTML comment,
+     * i.e., the {@literal "<!--"} sequence inside a Javadoc comment.
+     *
+     * <p>HTML comments occasionally appear in Javadoc to add internal notes or
+     * explanations without affecting the rendered output.</p>
+     * Example: {@code <!-- Note: This method is for demonstration purposes only. -->}
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text ":
+     * HTML_COMMENT -> HTML_COMMENT
+     * |--HTML_COMMENT_START -> <!--
+     * |--HTML_COMMENT_CONTENT -> HTML_COMMENT_CONTENT
+     * |   `--TEXT ->  Note: This method is for demonstration purposes only.
+     * `--HTML_COMMENT_END -> -->
+     * }
+     *
+     * @see #HTML_COMMENT_END
+     */
+    public static final int HTML_COMMENT_START = JavadocCommentsLexer.HTML_COMMENT_START;
+
+    /**
+     * Closing part of an HTML comment.
+     *
+     * <p>This node represents the closing delimiter of an HTML comment in
+     * Javadoc (for example {@code -->}).</p>
+     *
+     * <p><b>Example:</b>{@code * <!-- hidden comment -->}</p>
+     *
+     * <b>Tree:</b>
+     * {@snippet lang="text ":
+     * |--LEADING_ASTERISK -> *
+     * |--TEXT ->
+     * |--HTML_COMMENT -> HTML_COMMENT
+     * |   |--HTML_COMMENT_START -> <!--
+     * |   |--HTML_COMMENT_CONTENT -> HTML_COMMENT_CONTENT
+     * |   |   `--TEXT ->  hidden comment
+     * |   `--HTML_COMMENT_END -> -->
+     * }
+     *
+     * @see #HTML_COMMENT
+     */
+
+    public static final int HTML_COMMENT_END = JavadocCommentsLexer.HTML_COMMENT_END;
+
+    /**
+     * {@code HTML_COMMENT_CONTENT} Content inside an HTML comment.
+     *
+     * <p>Text within an HTML comment.</p>
+     *
+     * <p><b>Example:</b> {@code <!-- This is a comment -->}</p>
+     *
+     * <p><b>Tree:</b></p>
+     * {@snippet lang="text ":
+     * HTML_COMMENT -> HTML_COMMENT
+     * |--HTML_COMMENT_START -> <!--
+     * |--HTML_COMMENT_CONTENT -> HTML_COMMENT_CONTENT
+     * |   `--TEXT ->  This is a comment
+     * `--HTML_COMMENT_END -> -->
+     * }
+     *
+     * @see #HTML_COMMENT
+     */
+    public static final int HTML_COMMENT_CONTENT = JavadocCommentsLexer.HTML_COMMENT_CONTENT;
+
+    /** Empty private constructor of the current class. */
+    private JavadocCommentsTokenTypes() {
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/LineColumn.java SHA256 0a66de9e2927ba2b95a41dec500d1a07beaf00194c3f65ad5fe04312886702fe
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.Objects;
+
+/**
+ * Immutable line and column numbers.
+ *
+ * @noinspection ClassCanBeRecord
+ * @noinspectionreason Public API class – converting to record would break binary compatibility.
+ */
+public class LineColumn implements Comparable<LineColumn> {
+
+    /** The one-based line number. */
+    private final int line;
+
+    /** The zero-based column number. */
+    private final int column;
+
+    /**
+     * Constructs a new pair of line and column numbers.
+     *
+     * @param line the one-based line number
+     * @param column the zero-based column number
+     */
+    public LineColumn(int line, int column) {
+        this.line = line;
+        this.column = column;
+    }
+
+    /**
+     * Gets the one-based line number.
+     *
+     * @return the one-based line number
+     */
+    public int getLine() {
+        return line;
+    }
+
+    /**
+     * Gets the zero-based column number.
+     *
+     * @return the zero-based column number
+     */
+    public int getColumn() {
+        return column;
+    }
+
+    @Override
+    public int compareTo(LineColumn lineColumn) {
+        final int result;
+        if (line == lineColumn.line) {
+            result = Integer.compare(column, lineColumn.column);
+        }
+        else {
+            result = Integer.compare(line, lineColumn.line);
+        }
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (other == null || getClass() != other.getClass()) {
+            return false;
+        }
+        final LineColumn lineColumn = (LineColumn) other;
+        return line == lineColumn.line
+                && column == lineColumn.column;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(line, column);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/MessageDispatcher.java SHA256 395802f40282c876cc983e8dcd7e7ed1a4d2a89847a2702795cd71e6b0ff2a7e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.SortedSet;
+
+/**
+ * Used by FileSetChecks to distribute AuditEvents to AuditListeners.
+ */
+public interface MessageDispatcher {
+
+    /**
+     * Notify all listeners about the beginning of a file audit.
+     *
+     * @param fileName the file to be audited
+     */
+    void fireFileStarted(String fileName);
+
+    /**
+     * Notify all listeners about the end of a file audit.
+     *
+     * @param fileName the audited file
+     */
+    void fireFileFinished(String fileName);
+
+    /**
+     * Notify all listeners about the violations in a file.
+     *
+     * @param fileName the audited file
+     * @param errors the violations from the file
+     */
+    void fireErrors(String fileName, SortedSet<Violation> errors);
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/RootModule.java SHA256 19dc8ddd9d6495703f51e5c8c3c511d66330f9224df6245fa08cd95458aeef93
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.io.File;
+import java.util.List;
+
+/**
+ * The first module that is run as part of Checkstyle and controls its entire behavior and children.
+ */
+public interface RootModule extends Configurable {
+
+    /** Cleans up the object. */
+    void destroy();
+
+    /**
+     * Processes a set of files.
+     * Once this is done, it is highly recommended to call for
+     * the destroy method to close and remove the listeners.
+     *
+     * @param files the list of files to be audited.
+     * @return the total number of audit events with error severity found
+     * @throws CheckstyleException if error condition within Checkstyle occurs
+     * @see #destroy()
+     */
+    int process(List<File> files) throws CheckstyleException;
+
+    /**
+     * Add the listener that will be used to receive events from the audit.
+     *
+     * @param listener the nosy thing
+     */
+    void addListener(AuditListener listener);
+
+    /**
+     * Sets the classloader used to load Checkstyle core and custom module
+     * classes when the module tree is being built up.
+     * If no custom ModuleFactory is being set for the root module then
+     * this module classloader must be specified.
+     *
+     * @param moduleClassLoader the classloader used to load module classes
+     */
+    void setModuleClassLoader(ClassLoader moduleClassLoader);
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/Scope.java SHA256 c3a7e04f142b8e848a3e0bf7f277e285ace9a9e90a84a2de71bc32e32d9dc969
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.Locale;
+
+/**
+ * Represents a Java visibility scope.
+ *
+ */
+public enum Scope {
+
+    /** Nothing scope. */
+    NOTHING,
+    /** Public scope. */
+    PUBLIC,
+    /** Protected scope. */
+    PROTECTED,
+    /** Package or default scope. */
+    PACKAGE,
+    /** Private scope. */
+    PRIVATE,
+    /** Anonymous inner scope. */
+    ANONINNER;
+
+    @Override
+    public String toString() {
+        return name().toLowerCase(Locale.ENGLISH);
+    }
+
+    /**
+     * Returns name of severity level.
+     *
+     * @return the name of this severity level.
+     */
+    public String getName() {
+        return name().toLowerCase(Locale.ENGLISH);
+    }
+
+    /**
+     * Checks if this scope is a subscope of another scope.
+     * Example: PUBLIC is a subscope of PRIVATE.
+     *
+     * @param scope a {@code Scope} value
+     * @return if {@code this} is a subscope of {@code scope}.
+     */
+    public boolean isIn(Scope scope) {
+        return compareTo(scope) <= 0;
+    }
+
+    /**
+     * Scope factory method.
+     *
+     * @param scopeName scope name, such as "nothing", "public", etc.
+     * @return the {@code Scope} associated with {@code scopeName}
+     */
+    public static Scope getInstance(String scopeName) {
+        return valueOf(Scope.class, scopeName.trim().toUpperCase(Locale.ENGLISH));
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/SeverityLevel.java SHA256 a4058a3170f9708678bad9cc08f4f93b01349461be51f496b7724e2ba7292394
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import java.util.Locale;
+
+/**
+ * Severity level for a check violation.
+ *
+ * <p>
+ * Each violation of an audit check is assigned one of the severity levels
+ * defined here.
+ * </p>
+ *
+ */
+public enum SeverityLevel {
+
+    /** Severity level ignore. */
+    IGNORE,
+    /** Severity level info. */
+    INFO,
+    /** Severity level warning. */
+    WARNING,
+    /** Severity level error. */
+    ERROR;
+
+    @Override
+    public String toString() {
+        return name().toLowerCase(Locale.ENGLISH);
+    }
+
+    /**
+     * Returns name of severity level.
+     *
+     * @return the name of this severity level.
+     */
+    public String getName() {
+        return name().toLowerCase(Locale.ENGLISH);
+    }
+
+    /**
+     * SeverityLevel factory method.
+     *
+     * @param securityLevelName level name, such as "ignore", "info", etc.
+     * @return the {@code SeverityLevel} associated with {@code securityLevelName}
+     */
+    public static SeverityLevel getInstance(String securityLevelName) {
+        return valueOf(SeverityLevel.class, securityLevelName.trim()
+                .toUpperCase(Locale.ENGLISH));
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/SeverityLevelCounter.java SHA256 540ad999a1148725a11d580dbc1019c84812500c3caf5b172377dcd3ac18fb65
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+/**
+ * An audit listener that counts how many {@link AuditEvent AuditEvents}
+ * of a given severity have been generated.
+ *
+ */
+public final class SeverityLevelCounter implements AuditListener {
+
+    /** The severity level to watch out for. */
+    private final SeverityLevel level;
+
+    /** Keeps track of the number of counted events. */
+    private int count;
+
+    /**
+     * Creates a new counter.
+     *
+     * @param level the severity level events need to have, must be non-null.
+     * @throws IllegalArgumentException when level is null
+     */
+    public SeverityLevelCounter(SeverityLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("'level' cannot be null");
+        }
+        this.level = level;
+    }
+
+    @Override
+    public void addError(AuditEvent event) {
+        if (level == event.getSeverityLevel()) {
+            count++;
+        }
+    }
+
+    @Override
+    public void addException(AuditEvent event, Throwable throwable) {
+        if (level == SeverityLevel.ERROR) {
+            count++;
+        }
+    }
+
+    @Override
+    public void auditStarted(AuditEvent event) {
+        count = 0;
+    }
+
+    @Override
+    public void fileStarted(AuditEvent event) {
+        // No code by default, should be overridden only by demand at subclasses
+    }
+
+    @Override
+    public void auditFinished(AuditEvent event) {
+        // No code by default, should be overridden only by demand at subclasses
+    }
+
+    @Override
+    public void fileFinished(AuditEvent event) {
+        // No code by default, should be overridden only by demand at subclasses
+    }
+
+    /**
+     * Returns the number of counted events since audit started.
+     *
+     * @return the number of counted events since audit started.
+     */
+    public int getCount() {
+        return count;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/TextBlock.java SHA256 3497d1475dd34618c25a37aebce612a4f02a8fa04344978e878ef7816c7d09d2
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+/**
+ * A block of text from an input file that does not necessarily have any grammatical structure.
+ *
+ */
+public interface TextBlock {
+
+    /**
+     * The text content of the text block.
+     * Each line is represented by one array entry.
+     * The linebreak characters are not part of the text content.
+     *
+     * @return the text content of the text block.
+     */
+    String[] getText();
+
+    /**
+     * The line in the input file where the text block starts.
+     * Counting starts from 1.
+     *
+     * @return first line of the text block
+     */
+    int getStartLineNo();
+
+    /**
+     * The last line of the text block in the input file.
+     * Counting starts from 1.
+     *
+     * @return last line of the text block
+     */
+    int getEndLineNo();
+
+    /**
+     * The column in the input file where the text block starts.
+     * Counting starts from 0.
+     *
+     * @return first line of the text block
+     */
+    int getStartColNo();
+
+    /**
+     * The column in the input file where the text block ends.
+     * Counting starts from 0.
+     *
+     * @return last line of the text block
+     */
+    int getEndColNo();
+
+    /**
+     * Checks if this comment intersects with a specified part of the file.
+     *
+     * @param startLineNo the starting line number in the file
+     * @param startColNo the starting column number in the file
+     * @param endLineNo the ending line number in the file
+     * @param endColNo the ending column number in the file
+     * @return true if the positions intersects with this comment.
+     */
+    boolean intersects(int startLineNo, int startColNo,
+                       int endLineNo, int endColNo);
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/api/TokenTypes.java SHA256 3451c7fd7658360003f42c10b37a760e915f53f5d893a5d97714d9432d681d5f
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.api;
+
+import com.puppycrawl.tools.checkstyle.grammar.java.JavaLanguageLexer;
+
+/**
+ * Contains the constants for all the tokens contained in the Abstract Syntax Tree.
+ *
+ * <p>Implementation detail: This class has been introduced to break
+ * the circular dependency between packages.</p>
+ *
+ * @noinspection ClassWithTooManyDependents
+ * @noinspectionreason ClassWithTooManyDependents - this class is a core part of our API
+ */
+public final class TokenTypes {
+
+    /**
+     * This is the root node for the source file.  It's children
+     * are an optional package definition, zero or more import statements,
+     * and zero or more type declarations.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * import java.util.List;
+     *
+     * class MyClass{}
+     * interface MyInterface{}
+     * ;
+     * }
+     *
+     * <p>parses as:</p>
+     *
+     * {@snippet :
+     * COMPILATION_UNIT -> COMPILATION_UNIT
+     * |--IMPORT -> import
+     * |   |--DOT -> .
+     * |   |   |--DOT -> .
+     * |   |   |   |--IDENT -> java
+     * |   |   |   `--IDENT -> util
+     * |   |   `--IDENT -> List
+     * |   `--SEMI -> ;
+     * |--CLASS_DEF -> CLASS_DEF
+     * |   |--MODIFIERS -> MODIFIERS
+     * |   |--LITERAL_CLASS -> class
+     * |   |--IDENT -> MyClass
+     * |   `--OBJBLOCK -> OBJBLOCK
+     * |       |--LCURLY -> {
+     * |       `--RCURLY -> }
+     * |--INTERFACE_DEF -> INTERFACE_DEF
+     * |   |--MODIFIERS -> MODIFIERS
+     * |   |--LITERAL_INTERFACE -> interface
+     * |   |--IDENT -> MyInterface
+     * |   `--OBJBLOCK -> OBJBLOCK
+     * |       |--LCURLY -> {
+     * |       `--RCURLY -> }
+     * `--SEMI -> ;
+     * }
+     *
+     * @see #PACKAGE_DEF
+     * @see #IMPORT
+     * @see #CLASS_DEF
+     * @see #INTERFACE_DEF
+     * @see #RECORD_DEF
+     * @see #ANNOTATION_DEF
+     * @see #ENUM_DEF
+     */
+    public static final int COMPILATION_UNIT = JavaLanguageLexer.COMPILATION_UNIT;
+
+    /**
+     * The root of an AST for a JEP 512 (JDK 25) compact source file. This node
+     * replaces {@link #COMPILATION_UNIT} as the root when the source file declares
+     * any top-level method or field. It represents a {@code CompactCompilationUnit},
+     * which is one of the three mutually exclusive compilation-unit
+     * forms ({@code OrdinaryCompilationUnit}, {@code CompactCompilationUnit},
+     * {@code ModularCompilationUnit}). Import declarations and top-level members
+     * appear as direct children of this node. Compact source files cannot declare a package.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * import java.util.List;
+     *
+     * int counter = 3;
+     * void main() {}
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * COMPACT_COMPILATION_UNIT -> COMPACT_COMPILATION_UNIT
+     * |--IMPORT -> import
+     * |   |--DOT -> .
+     * |   |   |--DOT -> .
+     * |   |   |   |--IDENT -> java
+     * |   |   |   `--IDENT -> util
+     * |   |   `--IDENT -> List
+     * |   `--SEMI -> ;
+     * |--VARIABLE_DEF -> VARIABLE_DEF
+     * |   |--MODIFIERS -> MODIFIERS
+     * |   |--TYPE -> TYPE
+     * |   |   `--LITERAL_INT -> int
+     * |   |--IDENT -> counter
+     * |   |--ASSIGN -> =
+     * |   |   `--EXPR -> EXPR
+     * |   |       `--NUM_INT -> 3
+     * |   `--SEMI -> ;
+     * `--METHOD_DEF -> METHOD_DEF
+     *     |--MODIFIERS -> MODIFIERS
+     *     |--TYPE -> TYPE
+     *     |   `--LITERAL_VOID -> void
+     *     |--IDENT -> main
+     *     |--LPAREN -> (
+     *     |--PARAMETERS -> PARAMETERS
+     *     |--RPAREN -> )
+     *     `--SLIST -> {
+     *         `--RCURLY -> }
+     * }
+     *
+     * @see <a href="https://openjdk.org/jeps/512">JEP 512: Compact Source Files
+     *     and Instance Main Methods</a>
+     * @see #COMPILATION_UNIT
+     */
+    public static final int COMPACT_COMPILATION_UNIT =
+            JavaLanguageLexer.COMPACT_COMPILATION_UNIT;
+
+    /**
+     * Modifiers for type, method, and field declarations.  The
+     * modifiers element is always present even though it may have no children.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * public int x;
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * VARIABLE_DEF -> VARIABLE_DEF
+     *  |--MODIFIERS -> MODIFIERS
+     *  |   `--LITERAL_PUBLIC -> public
+     *  |--TYPE -> TYPE
+     *  |   `--LITERAL_INT -> int
+     *  |--IDENT -> x
+     *  `--SEMI -> ;
+     * }
+     *
+     * @see <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html">Java
+     *     Language Specification, &sect;8</a>
+     * @see #LITERAL_PUBLIC
+     * @see #LITERAL_PROTECTED
+     * @see #LITERAL_PRIVATE
+     * @see #ABSTRACT
+     * @see #LITERAL_STATIC
+     * @see #FINAL
+     * @see #LITERAL_TRANSIENT
+     * @see #LITERAL_VOLATILE
+     * @see #LITERAL_SYNCHRONIZED
+     * @see #LITERAL_NATIVE
+     * @see #STRICTFP
+     * @see #ANNOTATION
+     * @see #LITERAL_DEFAULT
+     */
+    public static final int MODIFIERS = JavaLanguageLexer.MODIFIERS;
+
+    /**
+     * An object block.  These are children of class, interface, enum,
+     * annotation and enum constant declarations.
+     * Also, object blocks are children of the new keyword when defining anonymous inner types.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * class Test {}
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * CLASS_DEF -> CLASS_DEF
+     * |--MODIFIERS -> MODIFIERS
+     * |--LITERAL_CLASS -> class
+     * |--IDENT -> Test
+     * `--OBJBLOCK -> OBJBLOCK
+     *     |--LCURLY -> {
+     *     `--RCURLY -> }
+     * }
+     *
+     * @see #LCURLY
+     * @see #INSTANCE_INIT
+     * @see #STATIC_INIT
+     * @see #CLASS_DEF
+     * @see #CTOR_DEF
+     * @see #METHOD_DEF
+     * @see #VARIABLE_DEF
+     * @see #RCURLY
+     * @see #INTERFACE_DEF
+     * @see #LITERAL_NEW
+     * @see #ENUM_DEF
+     * @see #ENUM_CONSTANT_DEF
+     * @see #ANNOTATION_DEF
+     */
+    public static final int OBJBLOCK = JavaLanguageLexer.OBJBLOCK;
+    /**
+     * A list of statements.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * if (c == 1) {
+     *     c = 0;
+     * }
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * LITERAL_IF -> if
+     *  |--LPAREN -> (
+     *  |--EXPR -> EXPR
+     *  |   `--EQUAL -> ==
+     *  |       |--IDENT -> c
+     *  |       `--NUM_INT -> 1
+     *  |--RPAREN -> )
+     *  `--SLIST -> {
+     *      |--EXPR -> EXPR
+     *      |   `--ASSIGN -> =
+     *      |       |--IDENT -> c
+     *      |       `--NUM_INT -> 0
+     *      |--SEMI -> ;
+     *      `--RCURLY -> }
+     * }
+     *
+     * @see #RCURLY
+     * @see #EXPR
+     * @see #LABELED_STAT
+     * @see #LITERAL_THROWS
+     * @see #LITERAL_RETURN
+     * @see #SEMI
+     * @see #METHOD_DEF
+     * @see #CTOR_DEF
+     * @see #LITERAL_FOR
+     * @see #LITERAL_WHILE
+     * @see #LITERAL_IF
+     * @see #LITERAL_ELSE
+     * @see #CASE_GROUP
+     */
+    public static final int SLIST = JavaLanguageLexer.SLIST;
+    /**
+     * A constructor declaration.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * public SpecialEntry(int value, String text)
+     * {
+     *   this.value = value;
+     *   this.text = text;
+     * }
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * CTOR_DEF -> CTOR_DEF
+     *  |--MODIFIERS -> MODIFIERS
+     *  |   `--LITERAL_PUBLIC -> public
+     *  |--IDENT -> SpecialEntry
+     *  |--LPAREN -> (
+     *  |--PARAMETERS -> PARAMETERS
+     *  |   |--PARAMETER_DEF -> PARAMETER_DEF
+     *  |   |   |--MODIFIERS -> MODIFIERS
+     *  |   |   |--TYPE -> TYPE
+     *  |   |   |   `--LITERAL_INT -> int
+     *  |   |   `--IDENT -> value
+     *  |   |--COMMA -> ,
+     *  |   `--PARAMETER_DEF -> PARAMETER_DEF
+     *  |       |--MODIFIERS -> MODIFIERS
+     *  |       |--TYPE -> TYPE
+     *  |       |   `--IDENT -> String
+     *  |       `--IDENT -> text
+     *  |--RPAREN -> )
+     *  `--SLIST -> {
+     *      |--EXPR -> EXPR
+     *      |   `--ASSIGN -> =
+     *      |       |--DOT -> .
+     *      |   |--LITERAL_THIS -> this
+     *      |       |   `--IDENT -> value
+     *      |       `--IDENT -> value
+     *      |--SEMI -> ;
+     *      |--EXPR -> EXPR
+     *      |   `--ASSIGN -> =
+     *      |       |--DOT -> .
+     *      |       |   |--LITERAL_THIS -> this
+     *      |       |   `--IDENT -> text
+     *      |       `--IDENT -> text
+     *      |--SEMI -> ;
+     *      `--RCURLY -> }
+     * }
+     *
+     * @see #OBJBLOCK
+     * @see #CLASS_DEF
+     */
+    public static final int CTOR_DEF = JavaLanguageLexer.CTOR_DEF;
+    /**
+     * A method declaration.  The children are modifiers, type parameters,
+     * return type, method name, parameter list, an optional throws list, and
+     * statement list.  The statement list is omitted if the method
+     * declaration appears in an interface declaration.  Method
+     * declarations may appear inside object blocks of class
+     * declarations, interface declarations, enum declarations,
+     * enum constant declarations or anonymous inner-class declarations.
+     *
+     * <p>For example:</p>
+     *
+     * {@snippet :
+     *  public static int square(int x)
+     *  {
+     *    return x*x;
+     *  }
+     * }
+     *
+     * <p>parses as:</p>
+     *
+     * {@snippet :
+     * --METHOD_DEF -> METHOD_DEF
+     *    |--MODIFIERS -> MODIFIERS
+     *    |   |--LITERAL_PUBLIC -> public
+     *    |   `--LITERAL_STATIC -> static
+     *    |--TYPE -> TYPE
+     *    |   `--LITERAL_INT -> int
+     *    |--IDENT -> square
+     *    |--LPAREN -> (
+     *    |--PARAMETERS -> PARAMETERS
+     *    |   `--PARAMETER_DEF -> PARAMETER_DEF
+     *    |       |--MODIFIERS -> MODIFIERS
+     *    |       |--TYPE -> TYPE
+     *    |       |   `--LITERAL_INT -> int
+     *    |       `--IDENT -> x
+     *    |--RPAREN -> )
+     *    `--SLIST -> {
+     *        |--LITERAL_RETURN -> return
+     *        |   |--EXPR -> EXPR
+     *        |   |   `--STAR -> *
+     *        |   |       |--IDENT -> x
+     *        |   |       `--IDENT -> x
+     *        |   `--SEMI -> ;
+     *        `--RCURLY -> }
+     * }
+     *
+     * @see #MODIFIERS
+     * @see #TYPE_PARAMETERS
+     * @see #TYPE
+     * @see #IDENT
+     * @see #PARAMETERS
+     * @see #LITERAL_THROWS
+     * @see #SLIST
+     * @see #OBJBLOCK
+     */
+    public static final int METHOD_DEF = JavaLanguageLexer.METHOD_DEF;
+
+    /**
+     * A field or local variable declaration.  The children are
+     * modifiers, type, the identifier name, and an optional assignment statement.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * final double PI = 3.14;
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * VARIABLE_DEF -> VARIABLE_DEF
+     *  |--MODIFIERS -> MODIFIERS
+     *  |   `--FINAL -> final
+     *  |--TYPE -> TYPE
+     *  |   `--LITERAL_DOUBLE -> double
+     *  |--IDENT -> PI
+     *  |--ASSIGN -> =
+     *  |   `--EXPR -> EXPR
+     *  |       `--NUM_FLOAT -> 3.14
+     *  `--SEMI -> ;
+     * }
+     *
+     * @see #MODIFIERS
+     * @see #TYPE
+     * @see #IDENT
+     * @see #ASSIGN
+     */
+    public static final int VARIABLE_DEF =
+        JavaLanguageLexer.VARIABLE_DEF;
+
+    /**
+     * An instance initializer.  Zero or more instance initializers
+     * may appear in class and enum definitions.  This token will be a child
+     * of the object block of the declaring type.
+     *
+     * <p>For example:</p>
+     * {@snippet :
+     * public class MyClass {
+     *     private int foo;
+     *     {foo = 10;}
+     * }
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * CLASS_DEF -> CLASS_DEF
+     *  |--MODIFIERS -> MODIFIERS
+     *  |   `--LITERAL_PUBLIC -> public
+     *  |--LITERAL_CLASS -> class
+     *  |--IDENT -> MyClass
+     *  `--OBJBLOCK -> OBJBLOCK
+     *      |--LCURLY -> {
+     *      |--VARIABLE_DEF -> VARIABLE_DEF
+     *      |   |--MODIFIERS -> MODIFIERS
+     *      |   |   `--LITERAL_PRIVATE -> private
+     *      |   |--TYPE -> TYPE
+     *      |   |   `--LITERAL_INT -> int
+     *      |   |--IDENT -> foo
+     *      |   `--SEMI -> ;
+     *      |--INSTANCE_INIT -> INSTANCE_INIT
+     *      |   `--SLIST -> {
+     *      |       |--EXPR -> EXPR
+     *      |       |   `--ASSIGN -> =
+     *      |       |       |--IDENT -> foo
+     *      |       |       `--NUM_INT -> 10
+     *      |       |--SEMI -> ;
+     *      |       `--RCURLY -> }
+     *      `--RCURLY -> }
+     * }
+     *
+     * @see <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.6">Java
+     *     Language Specification&sect;8.6</a>
+     * @see #SLIST
+     * @see #OBJBLOCK
+     */
+    public static final int INSTANCE_INIT =
+        JavaLanguageLexer.INSTANCE_INIT;
+
+    /**
+     * A static initialization block.  Zero or more static
+     * initializers may be children of the object block of a class
+     * or enum declaration (interfaces cannot have static initializers).  The
+     * first and only child is a statement list.
+     *
+     * <p>For Example:</p>
+     * {@snippet :
+     * static {
+     *   num = 10;
+     * }
+     * }
+     *
+     * <p>parses as:</p>
+     * {@snippet :
+     * STATIC_INIT -> STATIC_INIT
+     *  `--SLIST -> {
+     *      |--EXPR -> EXPR
+     *      |   `--ASSIGN -> =
+     *      |       |--IDENT -> num
+     *      |       `--NUM_INT -> 10
+     *      |--SEMI -> ;
+     *      `--RCURLY -> }
+     * }
+     *
+     * @see <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.7">Java
+     *     Language Specification,

@@ -1,0 +1,81 @@
+160|     * Print an Emacs compliant line on the error stream.
+161|     * If the column number is non-zero, then also display it.
+162|     *
+163|     * @see AuditListener
+164|     */
+165|    @Override
+166|    public void addError(AuditEvent event) {
+167|        final SeverityLevel severityLevel = event.getSeverityLevel();
+168|        if (severityLevel != SeverityLevel.IGNORE) {
+169|            final String errorMessage = formatter.format(event);
+170|            errorWriter.println(errorMessage);
+171|        }
+172|    }
+173|
+174|    @Override
+175|    public void addException(AuditEvent event, Throwable throwable) {
+176|        errorWriter.println(getLocalizedMessage(
+177|                DefaultLogger.class,
+178|                ADD_EXCEPTION_MESSAGE,
+179|                event.getFileName()));
+180|        throwable.printStackTrace(errorWriter);
+181|    }
+182|
+183|    @Override
+184|    public void auditStarted(AuditEvent event) {
+185|        infoWriter.println(getLocalizedMessage(
+186|                DefaultLogger.class,
+187|                AUDIT_STARTED_MESSAGE));
+188|        infoWriter.flush();
+189|    }
+190|
+191|    @Override
+192|    public void auditFinished(AuditEvent event) {
+193|        infoWriter.println(getLocalizedMessage(
+194|                DefaultLogger.class,
+195|                AUDIT_FINISHED_MESSAGE));
+196|        closeStreams();
+197|    }
+198|
+199|    @Override
+200|    public void fileStarted(AuditEvent event) {
+201|        // No need to implement this method in this class
+202|    }
+203|
+204|    @Override
+205|    public void fileFinished(AuditEvent event) {
+206|        infoWriter.flush();
+207|    }
+208|
+209|    /**
+210|     * Flushes the output streams and closes them if needed.
+211|     */
+212|    private void closeStreams() {
+213|        infoWriter.flush();
+214|        if (closeInfo) {
+215|            infoWriter.close();
+216|        }
+217|
+218|        errorWriter.flush();
+219|        if (closeError) {
+220|            errorWriter.close();
+221|        }
+222|    }
+223|
+224|    /**
+225|     * Extracts localized messages from properties files.
+226|     *
+227|     * @param caller the {@link Class} used to resolve the resource bundle
+228|     * @param messageKey the key pointing to localized message in respective properties file.
+229|     * @param args the arguments of message in respective properties file.
+230|     * @return a string containing extracted localized message
+231|     */
+232|    private static String getLocalizedMessage(Class<?> caller,
+233|                                              String messageKey, Object... args) {
+234|        final LocalizedMessage localizedMessage = new LocalizedMessage(
+235|            Definitions.CHECKSTYLE_BUNDLE, caller,
+236|                    messageKey, args);
+237|
+238|        return localizedMessage.getMessage();
+239|    }
+240|

@@ -13,6 +13,13 @@ established.
 work and declared flow gates work in the retained cases. A real supervisor-crash
 run also confirmed observed worker exit and refused identity resumption.
 
+The [recorded-run viewer](docs/frontend/README.md) presents the completed paired
+workflow, Jev receipts, native stacks, message observations and handoffs locally.
+Run `npm ci` and `npm run dev` in `frontend/` for the presentation.
+The [large-context follow-up](research/CONTEXT_PRESSURE_RUN.md) stopped on a
+supervisor fault during broad source scanning; it is retained as an incomplete
+availability result, not evidence of malicious intent.
+
 Research testbed for pretrained sender/receiver agents communicating under Jev
 oversight, supported by Linux kernel namespace isolation and execution evidence.
 See [research scope and limitations](RESEARCH.md) before running untrusted code.

@@ -1,0 +1,4825 @@
+ String MSG_FALL_THROUGH_LAST = "fall.through.last";
+
+    /** Control whether the last case group must be checked. */
+    private boolean checkLastCaseGroup;
+
+    /**
+     * Define the RegExp to match the relief comment that suppresses
+     * the warning about a fall through.
+     */
+    private Pattern reliefPattern = Pattern.compile("falls?[ -]?thr(u|ough)");
+
+    /**
+     * Creates a new {@code FallThroughCheck} instance.
+     */
+    public FallThroughCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.CASE_GROUP};
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    /**
+     * Setter to define the RegExp to match the relief comment that suppresses
+     * the warning about a fall through.
+     *
+     * @param pattern
+     *            The regular expression pattern.
+     * @since 4.0
+     */
+    public void setReliefPattern(Pattern pattern) {
+        reliefPattern = pattern;
+    }
+
+    /**
+     * Setter to control whether the last case group must be checked.
+     *
+     * @param value new value of the property.
+     * @since 4.0
+     */
+    public void setCheckLastCaseGroup(boolean value) {
+        checkLastCaseGroup = value;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final DetailAST nextGroup = ast.getNextSibling();
+        final boolean isLastGroup = nextGroup.getType() != TokenTypes.CASE_GROUP;
+        if (!isLastGroup || checkLastCaseGroup) {
+            final DetailAST slist = ast.findFirstToken(TokenTypes.SLIST);
+
+            if (slist != null && !CheckUtil.isTerminated(slist) && !hasFallThroughComment(ast)) {
+                if (isLastGroup) {
+                    log(ast, MSG_FALL_THROUGH_LAST);
+                }
+                else {
+                    log(nextGroup, MSG_FALL_THROUGH);
+                }
+            }
+        }
+    }
+
+    /**
+     * Determines if the fall through case between {@code currentCase} and
+     * {@code nextCase} is relieved by an appropriate comment.
+     *
+     * <p>Handles</p>
+     * <pre>
+     * case 1:
+     * /&#42; FALLTHRU &#42;/ case 2:
+     *
+     * switch(i) {
+     * default:
+     * /&#42; FALLTHRU &#42;/}
+     *
+     * case 1:
+     * // FALLTHRU
+     * case 2:
+     *
+     * switch(i) {
+     * default:
+     * // FALLTHRU
+     * </pre>
+     *
+     * @param currentCase AST of the case that falls through to the next case.
+     * @return True if a relief comment was found
+     */
+    private boolean hasFallThroughComment(DetailAST currentCase) {
+        final DetailAST nextSibling = currentCase.getNextSibling();
+        final DetailAST ast;
+        if (nextSibling.getType() == TokenTypes.CASE_GROUP) {
+            ast = nextSibling.getFirstChild();
+        }
+        else {
+            ast = currentCase;
+        }
+        return hasReliefComment(ast);
+    }
+
+    /**
+     * Check if there is any fall through comment.
+     *
+     * @param ast ast to check
+     * @return true if relief comment found
+     */
+    private boolean hasReliefComment(DetailAST ast) {
+        final DetailAST nonCommentAst = CheckUtil.getNextNonCommentAst(ast);
+        boolean result = false;
+        if (nonCommentAst != null) {
+            final int prevLineNumber = nonCommentAst.getPreviousSibling().getLineNo();
+            result = Stream.iterate(nonCommentAst.getPreviousSibling(),
+                            Objects::nonNull,
+                            DetailAST::getPreviousSibling)
+                    .takeWhile(sibling -> sibling.getLineNo() == prevLineNumber)
+                    .map(DetailAST::getFirstChild)
+                    .filter(Objects::nonNull)
+                    .anyMatch(firstChild -> reliefPattern.matcher(firstChild.getText()).find());
+        }
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/FinalLocalVariableCheck.java SHA256 67a91767f32b51dbe3a1e2309da0a885b850a931aadcf5c5b4fd3d7a226e51bc
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayDeque;
+import java.util.BitSet;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks that local variables that never have their values changed are declared final.
+ * The check can be configured to also check that unchanged parameters are declared final.
+ * </div>
+ *
+ * <p>
+ * Notes:
+ * When configured to check parameters, the check ignores parameters of interface
+ * methods and abstract methods.
+ * </p>
+ *
+ * @since 3.2
+ */
+@FileStatefulCheck
+public class FinalLocalVariableCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "final.variable";
+
+    /**
+     * Assign operator types.
+     */
+    private static final BitSet ASSIGN_OPERATOR_TYPES = TokenUtil.asBitSet(
+        TokenTypes.POST_INC,
+        TokenTypes.POST_DEC,
+        TokenTypes.ASSIGN,
+        TokenTypes.PLUS_ASSIGN,
+        TokenTypes.MINUS_ASSIGN,
+        TokenTypes.STAR_ASSIGN,
+        TokenTypes.DIV_ASSIGN,
+        TokenTypes.MOD_ASSIGN,
+        TokenTypes.SR_ASSIGN,
+        TokenTypes.BSR_ASSIGN,
+        TokenTypes.SL_ASSIGN,
+        TokenTypes.BAND_ASSIGN,
+        TokenTypes.BXOR_ASSIGN,
+        TokenTypes.BOR_ASSIGN,
+        TokenTypes.INC,
+        TokenTypes.DEC
+    );
+
+    /**
+     * Loop types.
+     */
+    private static final BitSet LOOP_TYPES = TokenUtil.asBitSet(
+        TokenTypes.LITERAL_FOR,
+        TokenTypes.LITERAL_WHILE,
+        TokenTypes.LITERAL_DO
+    );
+
+    /** Scope Deque. */
+    private final Deque<ScopeData> scopeStack = new ArrayDeque<>();
+
+    /** Assigned variables of current scope. */
+    private final Deque<Deque<DetailAST>> currentScopeAssignedVariables =
+            new ArrayDeque<>();
+
+    /** Unassigned candidates on entry to conditional blocks that end with a throw. */
+    private final Map<DetailAST, ThrowingBranch> throwingBranches =
+            new HashMap<>();
+
+    /**
+     * Control whether to check
+     * <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-14.html#jls-14.14.2">
+     * enhanced for-loop</a> variable.
+     */
+    private boolean validateEnhancedForLoopVariable;
+
+    /**
+     * Control whether to check
+     * <a href="https://docs.oracle.com/javase/specs/jls/se21/preview/specs/unnamed-jls.html">
+     * unnamed variables</a>.
+     */
+    private boolean validateUnnamedVariables;
+
+    /**
+     * Creates a new {@code FinalLocalVariableCheck} instance.
+     */
+    public FinalLocalVariableCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to control whether to check
+     * <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-14.html#jls-14.14.2">
+     * enhanced for-loop</a> variable.
+     *
+     * @param validateEnhancedForLoopVariable whether to check for-loop variable
+     * @since 6.5
+     */
+    public final void setValidateEnhancedForLoopVariable(boolean validateEnhancedForLoopVariable) {
+        this.validateEnhancedForLoopVariable = validateEnhancedForLoopVariable;
+    }
+
+    /**
+     * Setter to control whether to check
+     * <a href="https://docs.oracle.com/javase/specs/jls/se21/preview/specs/unnamed-jls.html">
+     * unnamed variables</a>.
+     *
+     * @param validateUnnamedVariables whether to check unnamed variables
+     * @since 10.18.0
+     */
+    public final void setValidateUnnamedVariables(boolean validateUnnamedVariables) {
+        this.validateUnnamedVariables = validateUnnamedVariables;
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.IDENT,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.SLIST,
+            TokenTypes.OBJBLOCK,
+            TokenTypes.COMPACT_COMPILATION_UNIT,
+            TokenTypes.LITERAL_BREAK,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.EXPR,
+        };
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.IDENT,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.SLIST,
+            TokenTypes.OBJBLOCK,
+            TokenTypes.COMPACT_COMPILATION_UNIT,
+            TokenTypes.LITERAL_BREAK,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.EXPR,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.IDENT,
+            TokenTypes.CTOR_DEF,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.SLIST,
+            TokenTypes.OBJBLOCK,
+            TokenTypes.COMPACT_COMPILATION_UNIT,
+            TokenTypes.LITERAL_BREAK,
+            TokenTypes.LITERAL_FOR,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.PARAMETER_DEF,
+            TokenTypes.EXPR,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        scopeStack.clear();
+        currentScopeAssignedVariables.clear();
+        throwingBranches.clear();
+    }
+
+    // -@cs[CyclomaticComplexity] The only optimization which can be done here is moving CASE-block
+    // expressions to separate methods, but that will not increase readability.
+    @Override
+    public void visitToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.COMPACT_COMPILATION_UNIT, TokenTypes.OBJBLOCK,
+                 TokenTypes.METHOD_DEF, TokenTypes.CTOR_DEF, TokenTypes.LITERAL_FOR ->
+                scopeStack.push(new ScopeData());
+
+            case TokenTypes.SLIST -> {
+                if (ThrowingBranch.isThrowingBranch(ast)) {
+                    throwingBranches.put(ast, new ThrowingBranch(scopeStack));
+                }
+                currentScopeAssignedVariables.push(new ArrayDeque<>());
+                if (ast.getParent().getType() != TokenTypes.CASE_GROUP
+                    || ast.getParent().getParent()
+                    .findFirstToken(TokenTypes.CASE_GROUP) == ast.getParent()) {
+                    storePrevScopeUninitializedVariableData();
+                    scopeStack.push(new ScopeData());
+                }
+            }
+
+            case TokenTypes.PARAMETER_DEF -> {
+                if (!isInLambda(ast)
+                        && ast.findFirstToken(TokenTypes.MODIFIERS)
+                            .findFirstToken(TokenTypes.FINAL) == null
+                        && !isInMethodWithoutBody(ast)
+                        && !isMultipleTypeCatch(ast)
+                        && !CheckUtil.isReceiverParameter(ast)) {
+                    insertParameter(ast);
+                }
+            }
+
+            case TokenTypes.VARIABLE_DEF -> {
+                if (ast.getParent().getType() != TokenTypes.OBJBLOCK
+                        && ast.findFirstToken(TokenTypes.MODIFIERS)
+                            .findFirstToken(TokenTypes.FINAL) == null
+                        && !isVariableInForInit(ast)
+                        && shouldCheckEnhancedForLoopVariable(ast)
+                        && shouldCheckUnnamedVariable(ast)) {
+                    insertVariable(ast);
+                }
+            }
+
+            case TokenTypes.IDENT -> {
+                final int parentType = ast.getParent().getType();
+                if (isAssignOperator(parentType) && isFirstChild(ast)) {
+                    final Optional<FinalVariableCandidate> candidate = getFinalCandidate(ast);
+                    if (candidate.isPresent()) {
+                        determineAssignmentConditions(ast, candidate.orElseThrow());
+                        currentScopeAssignedVariables.peek().add(ast);
+                    }
+                    removeFinalVariableCandidateFromStack(ast);
+                }
+            }
+
+            case TokenTypes.LITERAL_BREAK -> scopeStack.peek().containsBreak = true;
+
+            case TokenTypes.EXPR -> {
+                // Switch labeled expression has no slist
+                if (ast.getParent().getType() == TokenTypes.SWITCH_RULE) {
+                    storePrevScopeUninitializedVariableData();
+                }
+            }
+
+            default -> throw new IllegalStateException("Incorrect token type");
+        }
+    }
+
+    @Override
+    public void leaveToken(DetailAST ast) {
+        Map<String, FinalVariableCandidate> scope = null;
+        final DetailAST parentAst = ast.getParent();
+        switch (ast.getType()) {
+            case TokenTypes.OBJBLOCK, TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF,
+                 TokenTypes.LITERAL_FOR ->
+                scope = scopeStack.pop().scope;
+
+            case TokenTypes.EXPR -> {
+                // Switch labeled expression has no slist
+                if (parentAst.getType() == TokenTypes.SWITCH_RULE
+                    && shouldUpdateUninitializedVariables(parentAst)) {
+                    updateAllUninitializedVariables();
+                }
+            }
+
+            case TokenTypes.SLIST -> {
+                boolean containsBreak = false;
+                if (parentAst.getType() != TokenTypes.CASE_GROUP
+                    || findLastCaseGroupWhichContainsSlist(parentAst.getParent())
+                    == parentAst) {
+                    containsBreak = scopeStack.peek().containsBreak;
+                    scope = scopeStack.pop().scope;
+                }
+                if (containsBreak || shouldUpdateUninitializedVariables(parentAst)) {
+                    updateAllUninitializedVariables();
+                }
+                final ThrowingBranch branch = throwingBranches.remove(ast);
+                if (branch != null) {
+                    branch.restore();
+                }
+                updateCurrentScopeAssignedVariables();
+            }
+
+            default -> {
+                // do nothing
+            }
+        }
+
+        if (scope != null) {
+            for (FinalVariableCandidate candidate : scope.values()) {
+                final DetailAST ident = candidate.variableIdent;
+                log(ident, MSG_KEY, ident.getText());
+            }
+        }
+    }
+
+    /**
+     * Update assigned variables in a temporary stack.
+     */
+    private void updateCurrentScopeAssignedVariables() {
+        // -@cs[MoveVariableInsideIf] assignment value is a modification call, so it can't be moved
+        final Deque<DetailAST> poppedScopeAssignedVariableData =
+                currentScopeAssignedVariables.pop();
+        final Deque<DetailAST> currentScopeAssignedVariableData =
+                currentScopeAssignedVariables.peek();
+        if (currentScopeAssignedVariableData != null) {
+            currentScopeAssignedVariableData.addAll(poppedScopeAssignedVariableData);
+        }
+    }
+
+    /**
+     * Determines identifier assignment conditions (assigned or already assigned).
+     *
+     * @param ident identifier.
+     * @param candidate final local variable candidate.
+     */
+    private static void determineAssignmentConditions(DetailAST ident,
+                                                      FinalVariableCandidate candidate) {
+        if (candidate.assigned) {
+            final int[] blockTypes = {
+                TokenTypes.LITERAL_ELSE,
+                TokenTypes.CASE_GROUP,
+                TokenTypes.SWITCH_RULE,
+            };
+            if (!isInSpecificCodeBlocks(ident, blockTypes)) {
+                candidate.alreadyAssigned = true;
+            }
+        }
+        else {
+            candidate.assigned = true;
+        }
+    }
+
+    /**
+     * Checks whether the scope of a node is restricted to a specific code blocks.
+     *
+     * @param node node.
+     * @param blockTypes int array of all block types to check.
+     * @return true if the scope of a node is restricted to specific code block types.
+     */
+    private static boolean isInSpecificCodeBlocks(DetailAST node, int... blockTypes) {
+        boolean returnValue = false;
+        for (int blockType : blockTypes) {
+            for (DetailAST token = node; token != null; token = token.getParent()) {
+                final int type = token.getType();
+                if (type == blockType) {
+                    returnValue = true;
+                    break;
+                }
+            }
+        }
+        return returnValue;
+    }
+
+    /**
+     * Gets final variable candidate for ast.
+     *
+     * @param ast ast.
+     * @return Optional of {@link FinalVariableCandidate} for ast from scopeStack.
+     */
+    private Optional<FinalVariableCandidate> getFinalCandidate(DetailAST ast) {
+        Optional<FinalVariableCandidate> result = Optional.empty();
+        final Iterator<ScopeData> iterator = scopeStack.descendingIterator();
+        while (iterator.hasNext() && result.isEmpty()) {
+            final ScopeData scopeData = iterator.next();
+            result = scopeData.findFinalVariableCandidateForAst(ast);
+        }
+        return result;
+    }
+
+    /**
+     * Store un-initialized variables in a temporary stack for future use.
+     */
+    private void storePrevScopeUninitializedVariableData() {
+        final ScopeData scopeData = scopeStack.peek();
+        final Deque<DetailAST> prevScopeUninitializedVariableData =
+                new ArrayDeque<>();
+        scopeData.uninitializedVariables.forEach(prevScopeUninitializedVariableData::push);
+        scopeData.prevScopeUninitializedVariables = prevScopeUninitializedVariableData;
+    }
+
+    /**
+     * Update current scope data uninitialized variable according to the whole scope data.
+     */
+    private void updateAllUninitializedVariables() {
+        final boolean hasSomeScopes = !currentScopeAssignedVariables.isEmpty();
+        if (hasSomeScopes) {
+            scopeStack.forEach(scopeData -> {
+                updateUninitializedVariables(scopeData.prevScopeUninitializedVariables);
+            });
+        }
+    }
+
+    /**
+     * Update current scope data uninitialized variable according to the specific scope data.
+     *
+     * @param scopeUninitializedVariableData variable for specific stack of uninitialized variables
+     */
+    private void updateUninitializedVariables(Deque<DetailAST> scopeUninitializedVariableData) {
+        final Iterator<DetailAST> iterator = currentScopeAssignedVariables.peek().iterator();
+        while (iterator.hasNext()) {
+            final DetailAST assignedVariable = iterator.next();
+            boolean shouldRemove = false;
+            for (DetailAST variable : scopeUninitializedVariableData) {
+                for (ScopeData scopeData : scopeStack) {
+                    final FinalVariableCandidate candidate =
+                        scopeData.scope.get(variable.getText());
+                    DetailAST storedVariable = null;
+                    if (candidate != null) {
+                        storedVariable = candidate.variableIdent;
+                    }
+                    if (storedVariable != null
+                            && isSameVariables(assignedVariable, variable)) {
+                        scopeData.uninitializedVariables.push(variable);
+                        shouldRemove = true;
+                    }
+                }
+            }
+            if (shouldRemove) {
+                iterator.remove();
+            }
+        }
+    }
+
+    /**
+     * If there is an {@code else} following or token is CASE_GROUP or
+     * SWITCH_RULE and there is another {@code case} following, then update the
+     * uninitialized variables.
+     *
+     * @param ast token to be checked
+     * @return true if should be updated, else false
+     */
+    private static boolean shouldUpdateUninitializedVariables(DetailAST ast) {
+        return ast.getLastChild().getType() == TokenTypes.LITERAL_ELSE
+            || isCaseTokenWithAnotherCaseFollowing(ast);
+    }
+
+    /**
+     * If token is CASE_GROUP or SWITCH_RULE and there is another {@code case} following.
+     *
+     * @param ast token to be checked
+     * @return true if token is CASE_GROUP or SWITCH_RULE and there is another {@code case}
+     *     following, else false
+     */
+    private static boolean isCaseTokenWithAnotherCaseFollowing(DetailAST ast) {
+        boolean result = false;
+        if (ast.getType() == TokenTypes.CASE_GROUP) {
+            result = findLastCaseGroupWhichContainsSlist(ast.getParent()) != ast;
+        }
+        else if (ast.getType() == TokenTypes.SWITCH_RULE) {
+            result = ast.getNextSibling().getType() == TokenTypes.SWITCH_RULE;
+        }
+        return result;
+    }
+
+    /**
+     * Returns the last token of type {@link TokenTypes#CASE_GROUP} which contains
+     * {@link TokenTypes#SLIST}.
+     *
+     * @param literalSwitchAst ast node of type {@link TokenTypes#LITERAL_SWITCH}
+     * @return the matching token, or null if no match
+     */
+    private static DetailAST findLastCaseGroupWhichContainsSlist(DetailAST literalSwitchAst) {
+        DetailAST returnValue = null;
+        for (DetailAST astIterator = literalSwitchAst.getFirstChild(); astIterator != null;
+             astIterator = astIterator.getNextSibling()) {
+            if (astIterator.findFirstToken(TokenTypes.SLIST) != null) {
+                returnValue = astIterator;
+            }
+        }
+        return returnValue;
+    }
+
+    /**
+     * Determines whether enhanced for-loop variable should be checked or not.
+     *
+     * @param ast The ast to compare.
+     * @return true if enhanced for-loop variable should be checked.
+     */
+    private boolean shouldCheckEnhancedForLoopVariable(DetailAST ast) {
+        return validateEnhancedForLoopVariable
+                || ast.getParent().getType() != TokenTypes.FOR_EACH_CLAUSE;
+    }
+
+    /**
+     * Determines whether unnamed variable should be checked or not.
+     *
+     * @param ast The ast to compare.
+     * @return true if unnamed variable should be checked.
+     */
+    private boolean shouldCheckUnnamedVariable(DetailAST ast) {
+        return validateUnnamedVariables
+                 || !"_".equals(TokenUtil.getIdent(ast).getText());
+    }
+
+    /**
+     * Insert a parameter at the topmost scope stack.
+     *
+     * @param ast parameter definition AST, but not receiver parameter.
+     */
+    private void insertParameter(DetailAST ast) {
+        final Map<String, FinalVariableCandidate> scope = scopeStack.peek().scope;
+        final DetailAST astNode = TokenUtil.getIdent(ast);
+        scope.put(astNode.getText(), new FinalVariableCandidate(astNode));
+    }
+
+    /**
+     * Insert a variable at the topmost scope stack.
+     *
+     * @param variableAst the variable to insert.
+     */
+    private void insertVariable(DetailAST variableAst) {
+        final Map<String, FinalVariableCandidate> scope = scopeStack.peek().scope;
+        final DetailAST astNode = TokenUtil.getIdent(variableAst);
+        final FinalVariableCandidate candidate = new FinalVariableCandidate(astNode);
+        // for-each variables are implicitly assigned
+        candidate.assigned = variableAst.getParent().getType() == TokenTypes.FOR_EACH_CLAUSE;
+        scope.put(astNode.getText(), candidate);
+        if (!isInitialized(variableAst)) {
+            scopeStack.peek().uninitializedVariables.add(astNode);
+        }
+    }
+
+    /**
+     * Check if VARIABLE_DEF is initialized or not.
+     *
+     * @param ast VARIABLE_DEF to be checked
+     * @return true if initialized
+     */
+    private static boolean isInitialized(DetailAST ast) {
+        return ast.getLastChild().getType() == TokenTypes.ASSIGN;
+    }
+
+    /**
+     * Whether the ast is the first child of its parent.
+     *
+     * @param ast the ast to check.
+     * @return true if the ast is the first child of its parent.
+     */
+    private static boolean isFirstChild(DetailAST ast) {
+        return ast.getPreviousSibling() == null;
+    }
+
+    /**
+     * Removes the final variable candidate from the Stack.
+     *
+     * @param ast variable to remove.
+     */
+    private void removeFinalVariableCandidateFromStack(DetailAST ast) {
+        final Iterator<ScopeData> iterator = scopeStack.descendingIterator();
+        while (iterator.hasNext()) {
+            final ScopeData scopeData = iterator.next();
+            final Map<String, FinalVariableCandidate> scope = scopeData.scope;
+            final FinalVariableCandidate candidate = scope.get(ast.getText());
+            DetailAST storedVariable = null;
+            if (candidate != null) {
+                storedVariable = candidate.variableIdent;
+            }
+            if (storedVariable != null && isSameVariables(storedVariable, ast)) {
+                if (shouldRemoveFinalVariableCandidate(scopeData, ast)) {
+                    scope.remove(ast.getText());
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Check if given parameter definition is a multiple type catch.
+     *
+     * @param parameterDefAst parameter definition
+     * @return true if it is a multiple type catch, false otherwise
+     */
+    private static boolean isMultipleTypeCatch(DetailAST parameterDefAst) {
+        final DetailAST typeAst = parameterDefAst.findFirstToken(TokenTypes.TYPE);
+        return typeAst.findFirstToken(TokenTypes.BOR) != null;
+    }
+
+    /**
+     * Whether the final variable candidate should be removed from the list of final local variable
+     * candidates.
+     *
+     * @param scopeData the scope data of the variable.
+     * @param ast the variable ast.
+     * @return true, if the variable should be removed.
+     */
+    private static boolean shouldRemoveFinalVariableCandidate(ScopeData scopeData, DetailAST ast) {
+        boolean shouldRemove = true;
+        for (DetailAST variable : scopeData.uninitializedVariables) {
+            if (variable.getText().equals(ast.getText())) {
+                // if the variable is declared outside the loop and initialized inside
+                // the loop, then it cannot be declared final, as it can be initialized
+                // more than once in this case
+                final DetailAST currAstLoopAstParent = getParentLoop(ast);
+                final DetailAST currVarLoopAstParent = getParentLoop(variable);
+                if (currAstLoopAstParent == currVarLoopAstParent) {
+                    final FinalVariableCandidate candidate = scopeData.scope.get(ast.getText());
+                    shouldRemove = candidate.alreadyAssigned;
+                }
+                scopeData.uninitializedVariables.remove(variable);
+                break;
+            }
+        }
+        return shouldRemove;
+    }
+
+    /**
+     * Get the ast node of type {@link FinalVariableCandidate#LOOP_TYPES} that is the ancestor
+     * of the current ast node, if there is no such node, null is returned.
+     *
+     * @param ast ast node
+     * @return ast node of type {@code FinalVariableCandidate#LOOP_TYPES} that is the ancestor
+     *         of the current ast node, null if no such node exists
+     */
+    private static DetailAST getParentLoop(DetailAST ast) {
+        DetailAST parentLoop = ast;
+        while (parentLoop != null
+            && !LOOP_TYPES.get(parentLoop.getType())) {
+            parentLoop = parentLoop.getParent();
+        }
+        return parentLoop;
+    }
+
+    /**
+     * Is Arithmetic operator.
+     *
+     * @param parentType token AST
+     * @return true is token type is in arithmetic operator
+     */
+    private static boolean isAssignOperator(int parentType) {
+        return ASSIGN_OPERATOR_TYPES.get(parentType);
+    }
+
+    /**
+     * Checks if current variable is defined in
+     *  {@link TokenTypes#FOR_INIT for-loop init}, e.g.:
+     *
+     * <p>
+     * {@code
+     * for (int i = 0, j = 0; i < j; i++) { . . . }
+     * }
+     * </p>
+     * {@code i, j} are defined in {@code TokenTypes#FOR_INIT for-loop init}
+     *
+     * @param variableDef variable definition node.
+     * @return true if variable is defined in {@code TokenTypes#FOR_INIT for-loop init}
+     */
+    private static boolean isVariableInForInit(DetailAST variableDef) {
+        return variableDef.getParent().getType() == TokenTypes.FOR_INIT;
+    }
+
+    /**
+     * Checks if a parameter is within a method that has no implementation body.
+     *
+     * @param parameterDefAst the AST node representing the parameter definition
+     * @return true if the parameter is in a method without a body
+     */
+    private static boolean isInMethodWithoutBody(DetailAST parameterDefAst) {
+        final DetailAST methodDefAst = parameterDefAst.getParent().getParent();
+        return methodDefAst.findFirstToken(TokenTypes.SLIST) == null;
+    }
+
+    /**
+     * Check if current param is lambda's param.
+     *
+     * @param paramDef {@link TokenTypes#PARAMETER_DEF parameter def}.
+     * @return true if current param is lambda's param.
+     */
+    private static boolean isInLambda(DetailAST paramDef) {
+        return paramDef.getParent().getParent().getType() == TokenTypes.LAMBDA;
+    }
+
+    /**
+     * Find the Class, Constructor, Enum, Method, or Field in which it is defined.
+     *
+     * @param ast Variable for which we want to find the scope in which it is defined
+     * @return ast The Class or Constructor or Method in which it is defined.
+     */
+    private static DetailAST findFirstUpperNamedBlock(DetailAST ast) {
+        DetailAST astTraverse = ast;
+        while (!TokenUtil.isOfType(astTraverse, TokenTypes.METHOD_DEF, TokenTypes.CLASS_DEF,
+                TokenTypes.ENUM_DEF, TokenTypes.CTOR_DEF, TokenTypes.COMPACT_CTOR_DEF)
+                && !ScopeUtil.isClassFieldDef(astTraverse)) {
+            astTraverse = astTraverse.getParent();
+        }
+        return astTraverse;
+    }
+
+    /**
+     * Check if both the Variables are same.
+     *
+     * @param ast1 Variable to compare
+     * @param ast2 Variable to compare
+     * @return true if both the variables are same, otherwise false
+     */
+    private static boolean isSameVariables(DetailAST ast1, DetailAST ast2) {
+        final DetailAST classOrMethodOfAst1 =
+            findFirstUpperNamedBlock(ast1);
+        final DetailAST classOrMethodOfAst2 =
+            findFirstUpperNamedBlock(ast2);
+        return classOrMethodOfAst1 == classOrMethodOfAst2 && ast1.getText().equals(ast2.getText());
+    }
+
+    /** Assignment state for a conditional branch that cannot complete normally. */
+    private static final class ThrowingBranch {
+
+        /** Candidates that were unassigned before entering the branch, with their scopes. */
+        private final Map<FinalVariableCandidate, ScopeData> unassigned = new HashMap<>();
+
+        /**
+         * Captures the state before entering a throwing branch.
+         *
+         * @param scopes enclosing scopes
+         */
+        private ThrowingBranch(Deque<ScopeData> scopes) {
+            for (ScopeData data : scopes) {
+                for (FinalVariableCandidate candidate : data.scope.values()) {
+                    if (!candidate.assigned
+                            && data.uninitializedVariables.contains(candidate.variableIdent)) {
+                        unassigned.put(candidate, data);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Checks for a block ending in a throw outside exception handlers.
+         * Enclosing try statements are excluded because a handler can resume execution.
+         *
+         * @param ast block to inspect
+         * @return whether assignments in the block cannot reach following statements
+         */
+        private static boolean isThrowingBranch(DetailAST ast) {
+            boolean result = TokenUtil.isOfType(ast.getLastChild().getPreviousSibling(),
+                            TokenTypes.LITERAL_THROW);
+            for (DetailAST parent = ast; result && parent != null;
+                    parent = parent.getParent()) {
+                result = parent.getType() != TokenTypes.LITERAL_TRY;
+            }
+            return result;
+        }
+
+        /**
+         * Restores assignment state on the path that does not enter the branch.
+         */
+        private void restore() {
+            unassigned.forEach((candidate, data) -> {
+                candidate.assigned = false;
+                if (!data.uninitializedVariables.contains(candidate.variableIdent)) {
+                    data.uninitializedVariables.add(candidate.variableIdent);
+                }
+            });
+        }
+
+    }
+
+    /**
+     * Holder for the scope data.
+     */
+    private static final class ScopeData {
+
+        /** Contains variable definitions. */
+        private final Map<String, FinalVariableCandidate> scope = new HashMap<>();
+
+        /** Contains definitions of uninitialized variables. */
+        private final Deque<DetailAST> uninitializedVariables = new ArrayDeque<>();
+
+        /** Contains definitions of previous scope uninitialized variables. */
+        private Deque<DetailAST> prevScopeUninitializedVariables = new ArrayDeque<>();
+
+        /** Whether there is a {@code break} in the scope. */
+        private boolean containsBreak;
+
+        /**
+         * Creates a new {@code ScopeData} instance.
+         */
+        private ScopeData() {
+            // no code by default
+        }
+
+        /**
+         * Searches for final local variable candidate for ast in the scope.
+         *
+         * @param ast ast.
+         * @return Optional of {@link FinalVariableCandidate}.
+         */
+        /* package */ Optional<FinalVariableCandidate>
+            findFinalVariableCandidateForAst(DetailAST ast) {
+            Optional<FinalVariableCandidate> result = Optional.empty();
+            DetailAST storedVariable = null;
+            final Optional<FinalVariableCandidate> candidate =
+                Optional.ofNullable(scope.get(ast.getText()));
+            if (candidate.isPresent()) {
+                storedVariable = candidate.orElseThrow().variableIdent;
+            }
+            if (storedVariable != null && isSameVariables(storedVariable, ast)) {
+                result = candidate;
+            }
+            return result;
+        }
+
+    }
+
+    /** Represents information about final local variable candidate. */
+    private static final class FinalVariableCandidate {
+
+        /** Identifier token. */
+        private final DetailAST variableIdent;
+        /** Whether the variable is assigned. */
+        private boolean assigned;
+        /** Whether the variable is already assigned. */
+        private boolean alreadyAssigned;
+
+        /**
+         * Creates new instance.
+         *
+         * @param variableIdent variable identifier.
+         */
+        private FinalVariableCandidate(DetailAST variableIdent) {
+            this.variableIdent = variableIdent;
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/FinalPatternVariableCheck.java SHA256 f860f8cca8294398a1e6f1557795e96793d6df2f85baaea51f0e3170267d8a70
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
+import javax.annotation.Nullable;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Checks that pattern variables that never have their values changed are declared final.
+ * </div>
+ *
+ * <p>
+ * Pattern variables are not implicitly final in Java, and they can be reassigned.
+ * This check verifies that pattern variables are explicitly declared as final if they
+ * are not reassigned within their flow scope.
+ * </p>
+ *
+ * @since 14.4.0
+ */
+@StatelessCheck
+public class FinalPatternVariableCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "final.pattern.variable";
+
+    /**
+     * The set of all valid types of ASSIGN token for this check.
+     */
+    private static final Set<Integer> ASSIGN_TOKEN_TYPES = Set.of(
+        TokenTypes.ASSIGN, TokenTypes.PLUS_ASSIGN, TokenTypes.MINUS_ASSIGN,
+        TokenTypes.STAR_ASSIGN, TokenTypes.DIV_ASSIGN, TokenTypes.MOD_ASSIGN,
+        TokenTypes.SR_ASSIGN, TokenTypes.BSR_ASSIGN, TokenTypes.SL_ASSIGN,
+        TokenTypes.BAND_ASSIGN, TokenTypes.BXOR_ASSIGN, TokenTypes.BOR_ASSIGN);
+
+    /**
+     * Creates a new {@code FinalPatternVariableCheck} instance.
+     */
+    public FinalPatternVariableCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.LITERAL_INSTANCEOF};
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public void visitToken(final DetailAST ast) {
+
+        final List<DetailAST> patternVariableIdents =
+                getPatternVariableIdents(ast);
+        final List<DetailAST> reassignedVariableIdents =
+                getReassignedVariableIdents(ast);
+
+        for (DetailAST patternVariableIdent : patternVariableIdents) {
+            if (shouldBeFinal(patternVariableIdent,
+                    reassignedVariableIdents)) {
+                log(patternVariableIdent, MSG_KEY,
+                        patternVariableIdent.getText());
+            }
+        }
+    }
+
+    /**
+     * Gets the list of all pattern variable idents in instanceof expression.
+     *
+     * @param ast ast tree of instanceof to get the list from.
+     * @return list of pattern variables.
+     */
+    private static List<DetailAST> getPatternVariableIdents(
+            final DetailAST ast) {
+
+        final DetailAST outermostPatternVariable =
+            ast.findFirstToken(TokenTypes.PATTERN_VARIABLE_DEF);
+
+        final List<DetailAST> patternVariableIdentsArray = new ArrayList<>();
+
+        if (outermostPatternVariable != null) {
+            final DetailAST ident =
+                outermostPatternVariable.findFirstToken(TokenTypes.IDENT);
+            patternVariableIdentsArray.add(ident);
+        }
+        else {
+            final DetailAST recordPatternDef;
+            if (ast.getType() == TokenTypes.LITERAL_INSTANCEOF) {
+                recordPatternDef =
+                    ast.findFirstToken(TokenTypes.RECORD_PATTERN_DEF);
+            }
+            else {
+                recordPatternDef = ast;
+            }
+            if (recordPatternDef != null) {
+                collectRecordPatternIdents(recordPatternDef, patternVariableIdentsArray);
+            }
+        }
+        return patternVariableIdentsArray;
+    }
+
+    /**
+     * Collects pattern variable identifiers from a record pattern AST definition.
+     *
+     * @param recordPatternDef AST of record pattern definition
+     * @param patternVariableIdentsArray collection to add pattern variable identifiers to
+     */
+    private static void collectRecordPatternIdents(
+            final DetailAST recordPatternDef,
+            final Collection<DetailAST> patternVariableIdentsArray) {
+        final DetailAST recordPatternComponents = recordPatternDef
+            .findFirstToken(TokenTypes.RECORD_PATTERN_COMPONENTS);
+
+        if (recordPatternComponents != null) {
+            for (DetailAST innerPatternVariable =
+                     recordPatternComponents.getFirstChild();
+                 innerPatternVariable != null;
+                 innerPatternVariable =
+                     innerPatternVariable.getNextSibling()) {
+
+                if (innerPatternVariable.getType()
+                        == TokenTypes.PATTERN_VARIABLE_DEF) {
+                    final DetailAST ident =
+                        innerPatternVariable.findFirstToken(
+                            TokenTypes.IDENT);
+                    patternVariableIdentsArray.add(ident);
+                }
+                else {
+                    patternVariableIdentsArray.addAll(
+                        getPatternVariableIdents(innerPatternVariable));
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets the list of AST branches of reassigned variable identifiers.
+     *
+     * @param ast ast tree of checked instanceof statement
+     * @return list of AST identifiers that represent reassigned variables
+     */
+    private static List<DetailAST> getReassignedVariableIdents(
+            final DetailAST ast) {
+
+        final List<DetailAST> reassignedVariableIdents = new ArrayList<>();
+        final DetailAST scopeRoot = findReassignmentScopeRoot(ast);
+
+        if (scopeRoot != null) {
+
+            final List<DetailAST> branches =
+                    expandReassignmentScopes(scopeRoot);
+
+            for (DetailAST branch : branches) {
+                for (DetailAST expressionBranch = branch;
+                     expressionBranch != null;
+                     expressionBranch = shiftToNextTraversedBranch(
+                             expressionBranch, branch)) {
+
+                    final DetailAST assignToken =
+                            getMatchedAssignToken(expressionBranch);
+
+                    if (assignToken != null) {
+                        reassignedVariableIdents.add(
+                                assignToken.getFirstChild());
+                    }
+                }
+            }
+        }
+
+        return reassignedVariableIdents;
+    }
+
+    /**
+     * Gets statements that follow conditional where pattern variable scope
+     * extends. Only returns top-level statements that are siblings of the
+     * conditional, excluding statements nested in control structures like while loops.
+     *
+     * @param conditionalStatement The if statement.
+     * @return List of statement nodes in the extended scope.
+     */
+    private static List<DetailAST> getStatementsInExtendedScope(
+            final DetailAST conditionalStatement) {
+        final List<DetailAST> statements = new ArrayList<>();
+
+        DetailAST nextSibling = conditionalStatement.getNextSibling();
+
+        while (nextSibling != null) {
+            final int type = nextSibling.getType();
+            if (type == TokenTypes.EXPR || type == TokenTypes.LITERAL_RETURN
+                    || type == TokenTypes.LITERAL_IF) {
+                statements.add(nextSibling);
+            }
+            else {
+                if (type != TokenTypes.EMPTY_STAT) {
+                    break;
+                }
+            }
+            nextSibling = nextSibling.getNextSibling();
+        }
+
+        return statements;
+    }
+
+    /**
+     * Shifts once to the next possible branch within traverse trajectory.
+     *
+     * @param ast AST branch to shift from.
+     * @param boundAst AST Branch that traverse cannot extend to.
+     * @return next possible branch within traverse trajectory.
+     */
+    @Nullable
+    private static DetailAST shiftToNextTraversedBranch(
+            final DetailAST ast, final DetailAST boundAst) {
+        DetailAST newAst = ast;
+
+        if (ast.getFirstChild() != null) {
+            newAst = ast.getFirstChild();
+        }
+        else {
+            while (newAst.getNextSibling() == null
+                    && !newAst.equals(boundAst)) {
+                newAst = newAst.getParent();
+            }
+            if (newAst.equals(boundAst)) {
+                newAst = null;
+            }
+            else {
+                newAst = newAst.getNextSibling();
+            }
+        }
+
+        return newAst;
+    }
+
+    /**
+     * Gets the type of ASSIGN tokens that matches with what follows the preceding branch.
+     *
+     * @param preAssignBranch branch preceding ASSIGN token types.
+     * @return type of ASSIGN token.
+     */
+    @Nullable
+    private static DetailAST getMatchedAssignToken(
+            final DetailAST preAssignBranch) {
+        DetailAST matchedAssignToken = null;
+
+        for (int assignType : ASSIGN_TOKEN_TYPES) {
+            final DetailAST assignToken =
+                    preAssignBranch.findFirstToken(assignType);
+            if (assignToken != null) {
+                matchedAssignToken = assignToken;
+                break;
+            }
+        }
+
+        return matchedAssignToken;
+    }
+
+    /**
+     * Checks whether a pattern variable should be declared final.
+     *
+     * @param patternVariableIdent AST ident of the pattern variable
+     * @param reassignedVariableIdents list of AST idents of reassigned vars
+     * @return true if pattern variable should be final, false otherwise
+     */
+    private static boolean shouldBeFinal(
+            final DetailAST patternVariableIdent,
+            final Iterable<DetailAST> reassignedVariableIdents) {
+
+        final DetailAST patternVariableDef = patternVariableIdent.getParent();
+        final DetailAST modifiers =
+                patternVariableDef.findFirstToken(TokenTypes.MODIFIERS);
+        final boolean isFinal =
+                modifiers.findFirstToken(TokenTypes.FINAL) != null;
+        boolean result = false;
+
+        if (!isFinal) {
+            boolean isReassigned = false;
+            for (DetailAST assignTokenIdent : reassignedVariableIdents) {
+                if (patternVariableIdent.getText().equals(
+                        assignTokenIdent.getText())) {
+                    isReassigned = true;
+                    break;
+                }
+            }
+            result = !isReassigned;
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds the nearest AST node that defines the scope in which reassignment
+     * of a pattern variable may occur.
+     *
+     * <p>
+     * The scope is determined by locating the closest enclosing conditional
+     * structure such as {@code if}, {@code else}, or ternary operator.
+     * </p>
+     *
+     * @param ast the AST node to start searching from
+     * @return the AST node representing the reassignment scope root,
+     *         or {@code null} if none is found
+     */
+    @Nullable
+    private static DetailAST findReassignmentScopeRoot(final DetailAST ast) {
+
+        DetailAST result = null;
+
+        for (DetailAST node = ast; node != null && result == null;
+             node = node.getParent()) {
+
+            final int type = node.getType();
+
+            if (type == TokenTypes.LITERAL_IF
+                    || type == TokenTypes.LITERAL_ELSE
+                    || type == TokenTypes.QUESTION) {
+                result = node;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Expands the reassignment scope root into concrete AST branches
+     * that may contain reassigned pattern variables.
+     *
+     * <p>
+     * For ternary expressions, the conditional expression itself is
+     * treated as the reassignment scope. For {@code if} / {@code else}
+     * statements, the method includes the statement list and any
+     * subsequent statements where the pattern variable remains in scope.
+     * </p>
+     *
+     * @param scopeRoot the root AST node of the reassignment scope
+     * @return list of AST branches that may contain reassignments
+     */
+    private static List<DetailAST> expandReassignmentScopes(
+            final DetailAST scopeRoot) {
+
+        final List<DetailAST> branches = new ArrayList<>();
+
+        addBodyBranch(branches, scopeRoot);
+        branches.addAll(getStatementsInExtendedScope(scopeRoot));
+
+        return branches;
+    }
+
+    /**
+     * Adds the body branch of a conditional (if/else) to the list.
+     * For braced blocks, adds the SLIST. For unbraced statements,
+     * adds the single statement directly.
+     *
+     * @param branches collection to add the body branch to
+     * @param scopeRoot the if/else AST node
+     */
+    private static void addBodyBranch(final Collection<DetailAST> branches,
+            final DetailAST scopeRoot) {
+        if (scopeRoot.getType() == TokenTypes.LITERAL_IF) {
+            final DetailAST rparen = scopeRoot.findFirstToken(TokenTypes.RPAREN);
+            branches.add(rparen.getNextSibling());
+        }
+        else {
+            branches.add(scopeRoot);
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/HiddenFieldCheck.java SHA256 8376203a30e14931e278dfc1b8c47215eec5987eb20efba50618a56f17283d02
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import javax.annotation.Nullable;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.Scope;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks that a local variable or a parameter does not shadow
+ * a field that is defined in the same class.
+ * </div>
+ *
+ * <p>
+ * Notes:
+ * It is possible to configure the check to ignore all property setter methods.
+ * </p>
+ *
+ * <p>
+ * A method is recognized as a setter if it is in the following form
+ * </p>
+ * {@snippet lang="text" :
+ * ${returnType} set${Name}(${anyType} ${name}) { ... }
+ * }
+ *
+ * <p>
+ * where ${anyType} is any primitive type, class or interface name;
+ * ${name} is name of the variable that is being set and ${Name} its
+ * capitalized form that appears in the method name. By default, it is expected
+ * that setter returns void, i.e. ${returnType} is 'void'. For example
+ * </p>
+ * {@snippet lang="text" :
+ * void setTime(long time) {  }
+ * }
+ *
+ * <p>
+ * Any other return types will not let method match a setter pattern. However,
+ * by setting <em>setterCanReturnItsClass</em> property to <em>true</em>
+ * definition of a setter is expanded, so that setter return type can also be
+ * a class in which setter is declared. For example
+ * </p>
+ * {@snippet lang="text" :
+ * class PageBuilder {
+ *   PageBuilder setName(String name) {  }
+ * }
+ * }
+ *
+ * <p>
+ * Such methods are known as chain-setters and a common when Builder-pattern
+ * is used. Property <em>setterCanReturnItsClass</em> has effect only if
+ * <em>ignoreSetter</em> is set to true.
+ * </p>
+ *
+ * @since 3.0
+ */
+@FileStatefulCheck
+public class HiddenFieldCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "hidden.field";
+
+    /**
+     * Stack of sets of field names,
+     * one for each class of a set of nested classes.
+     */
+    private FieldFrame frame;
+
+    /** Define the RegExp for names of variables and parameters to ignore. */
+    private Pattern ignoreFormat;
+
+    /**
+     * Allow to ignore the parameter of a property setter method.
+     */
+    private boolean ignoreSetter;
+
+    /**
+     * Allow to expand the definition of a setter method to include methods
+     * that return the class' instance.
+     */
+    private boolean setterCanReturnItsClass;
+
+    /** Control whether to ignore constructor parameters. */
+    private boolean ignoreConstructorParameter;
+
+    /** Control whether to ignore parameters of abstract methods. */
+    private boolean ignoreAbstractMethods;
+
+    /**
+     * Creates a new {@code HiddenFieldCheck} instance.
+     */
+    public HiddenFieldCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.PARAMETER_DEF,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.PATTERN_VARIABLE_DEF,
+            TokenTypes.LAMBDA,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.RECORD_COMPONENT_DEF,
+            TokenTypes.COMPACT_COMPILATION_UNIT,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.CLASS_DEF,
+            TokenTypes.ENUM_DEF,
+            TokenTypes.ENUM_CONSTANT_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.COMPACT_COMPILATION_UNIT,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        frame = new FieldFrame(null, true, null);
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final int type = ast.getType();
+        switch (type) {
+            case TokenTypes.VARIABLE_DEF,
+                 TokenTypes.PARAMETER_DEF,
+                 TokenTypes.PATTERN_VARIABLE_DEF,
+                 TokenTypes.RECORD_COMPONENT_DEF -> processVariable(ast);
+            case TokenTypes.LAMBDA -> processLambda(ast);
+            default -> visitOtherTokens(ast, type);
+        }
+    }
+
+    /**
+     * Process a lambda token.
+     * Checks whether a lambda parameter shadows a field.
+     * Note, that when parameter of lambda expression is untyped,
+     * ANTLR parses the parameter as an identifier.
+     *
+     * @param ast the lambda token.
+     */
+    private void processLambda(DetailAST ast) {
+        final DetailAST firstChild = ast.getFirstChild();
+        if (TokenUtil.isOfType(firstChild, TokenTypes.IDENT)) {
+            final String untypedLambdaParameterName = firstChild.getText();
+            if (frame.containsStaticField(untypedLambdaParameterName)
+                || isInstanceField(firstChild, untypedLambdaParameterName)) {
+                log(firstChild, MSG_KEY, untypedLambdaParameterName);
+            }
+        }
+    }
+
+    /**
+     * Called to process tokens other than {@link TokenTypes#VARIABLE_DEF}
+     * and {@link TokenTypes#PARAMETER_DEF}.
+     *
+     * @param ast token to process
+     * @param type type of the token
+     */
+    private void visitOtherTokens(DetailAST ast, int type) {
+        // A more thorough check of enum constant class bodies is
+        // possible (checking for hidden fields against the enum
+        // class body in addition to enum constant class bodies)
+        // but not attempted as it seems out of the scope of this
+        // check.
+        final boolean isStaticInnerType = isStaticInnerType(ast);
+        final String frameName;
+
+        if (type == TokenTypes.CLASS_DEF
+                || type == TokenTypes.ENUM_DEF) {
+            frameName = ast.findFirstToken(TokenTypes.IDENT).getText();
+        }
+        else {
+            frameName = null;
+        }
+        final FieldFrame newFrame = new FieldFrame(frame, isStaticInnerType, frameName);
+
+        // add fields to container
+        final DetailAST objBlock = getFieldContainer(ast);
+        // enum constants may not have bodies
+        if (objBlock != null) {
+            DetailAST child = objBlock.getFirstChild();
+            while (child != null) {
+                if (child.getType() == TokenTypes.VARIABLE_DEF) {
+                    final String name =
+                        child.findFirstToken(TokenTypes.IDENT).getText();
+                    final DetailAST mods =
+                        child.findFirstToken(TokenTypes.MODIFIERS);
+                    if (mods.findFirstToken(TokenTypes.LITERAL_STATIC) == null) {
+                        newFrame.addInstanceField(name);
+                    }
+                    else {
+                        newFrame.addStaticField(name);
+                    }
+                }
+                child = child.getNextSibling();
+            }
+        }
+        if (ast.getType() == TokenTypes.RECORD_DEF) {
+            final DetailAST recordComponents =
+                ast.findFirstToken(TokenTypes.RECORD_COMPONENTS);
+
+            // For each record component definition, we will add it to this frame.
+            TokenUtil.forEachChild(recordComponents,
+                TokenTypes.RECORD_COMPONENT_DEF, node -> {
+                    final String name = node.findFirstToken(TokenTypes.IDENT).getText();
+                    newFrame.addInstanceField(name);
+                });
+        }
+        // push container
+        frame = newFrame;
+    }
+
+    /**
+     * Checks whether a type definition is static, explicitly or implicitly.
+     *
+     * @param ast the type definition node.
+     * @return true if the type is static.
+     */
+    private static boolean isStaticInnerType(DetailAST ast) {
+        final DetailAST typeMods = ast.findFirstToken(TokenTypes.MODIFIERS);
+        return typeMods != null
+                && typeMods.findFirstToken(TokenTypes.LITERAL_STATIC) != null
+                // inner record and enum are implicitly static
+                || ast.getType() == TokenTypes.RECORD_DEF
+                || ast.getType() == TokenTypes.ENUM_DEF
+                // member type of interface or annotation is implicitly static
+                || ScopeUtil.isInInterfaceOrAnnotationBlock(ast);
+    }
+
+    /**
+     * Gets the member container for field declaration harvesting.
+     *
+     * @param ast the type definition node.
+     * @return the member container, either the compact compilation unit
+     *     itself or the OBJBLOCK child of a standard type definition.
+     */
+    @Nullable
+    private static DetailAST getFieldContainer(DetailAST ast) {
+        final DetailAST result;
+        if (ast.getType() == TokenTypes.COMPACT_COMPILATION_UNIT) {
+            result = ast;
+        }
+        else {
+            result = ast.findFirstToken(TokenTypes.OBJBLOCK);
+        }
+        return result;
+    }
+
+    @Override
+    public void leaveToken(DetailAST ast) {
+        if (ast.getType() == TokenTypes.CLASS_DEF
+            || ast.getType() == TokenTypes.ENUM_DEF
+            || ast.getType() == TokenTypes.ENUM_CONSTANT_DEF
+            || ast.getType() == TokenTypes.RECORD_DEF) {
+            // pop
+            frame = frame.getParent();
+        }
+    }
+
+    /**
+     * Process a variable token.
+     * Check whether a local variable or parameter shadows a field.
+     * Store a field for later comparison with local variables and parameters.
+     *
+     * @param ast the variable token.
+     */
+    private void processVariable(DetailAST ast) {
+        if (!ScopeUtil.isInInterfaceOrAnnotationBlock(ast)
+            && !CheckUtil.isReceiverParameter(ast)
+            && (ScopeUtil.isLocalVariableDef(ast)
+                || ast.getType() == TokenTypes.PARAMETER_DEF
+                || ast.getType() == TokenTypes.PATTERN_VARIABLE_DEF)) {
+            // local variable or parameter. Does it shadow a field?
+            final DetailAST nameAST = ast.findFirstToken(TokenTypes.IDENT);
+            final String name = nameAST.getText();
+
+            if ((frame.containsStaticField(name) || isInstanceField(ast, name))
+                    && !isMatchingRegexp(name)
+                    && !isIgnoredParam(ast, name)) {
+                log(nameAST, MSG_KEY, name);
+            }
+        }
+    }
+
+    /**
+     * Checks whether method or constructor parameter is ignored.
+     *
+     * @param ast the parameter token.
+     * @param name the parameter name.
+     * @return true if parameter is ignored.
+     */
+    private boolean isIgnoredParam(DetailAST ast, String name) {
+        return isIgnoredSetterParam(ast, name)
+            || isIgnoredConstructorParam(ast)
+            || isIgnoredParamOfAbstractMethod(ast);
+    }
+
+    /**
+     * Check for instance field.
+     *
+     * @param ast token
+     * @param name identifier of token
+     * @return true if instance field
+     */
+    private boolean isInstanceField(DetailAST ast, String name) {
+        return !isInStatic(ast) && frame.containsInstanceField(name);
+    }
+
+    /**
+     * Check name by regExp.
+     *
+     * @param name string value to check
+     * @return true is regexp is matching
+     */
+    private boolean isMatchingRegexp(String name) {
+        return ignoreFormat != null && ignoreFormat.matcher(name).find();
+    }
+
+    /**
+     * Determines whether an AST node is in a static method or static initializer.
+     *
+     * @param ast the node to check.
+     * @return true if ast is in a static method or a static block;
+     */
+    private static boolean isInStatic(DetailAST ast) {
+        DetailAST parent = ast.getParent();
+        boolean inStatic = false;
+
+        while (parent != null && !inStatic) {
+            if (parent.getType() == TokenTypes.STATIC_INIT) {
+                inStatic = true;
+            }
+            else if (parent.getType() == TokenTypes.METHOD_DEF
+                        && !ScopeUtil.isInScope(parent, Scope.ANONINNER)
+                        || parent.getType() == TokenTypes.VARIABLE_DEF) {
+                final DetailAST mods =
+                    parent.findFirstToken(TokenTypes.MODIFIERS);
+                inStatic = mods.findFirstToken(TokenTypes.LITERAL_STATIC) != null;
+                break;
+            }
+            else {
+                parent = parent.getParent();
+            }
+        }
+        return inStatic;
+    }
+
+    /**
+     * Decides whether to ignore an AST node that is the parameter of a
+     * setter method, where the property setter method for field 'xyz' has
+     * name 'setXyz', one parameter named 'xyz', and return type void
+     * (default behavior) or return type is name of the class in which
+     * such method is declared (allowed only if
+     * {@link #setSetterCanReturnItsClass(boolean)} is called with value <em>true</em>).
+     *
+     * @param ast the AST to check.
+     * @param name the name of ast.
+     * @return true if ast should be ignored because check property
+     *     ignoreSetter is true and ast is the parameter of a setter method.
+     */
+    private boolean isIgnoredSetterParam(DetailAST ast, String name) {
+        boolean isIgnoredSetterParam = false;
+        if (ignoreSetter) {
+            final DetailAST parametersAST = ast.getParent();
+            final DetailAST methodAST = parametersAST.getParent();
+            if (parametersAST.getChildCount() == 1
+                && methodAST.getType() == TokenTypes.METHOD_DEF
+                && isSetterMethod(methodAST, name)) {
+                isIgnoredSetterParam = true;
+            }
+        }
+        return isIgnoredSetterParam;
+    }
+
+    /**
+     * Determine if a specific method identified by methodAST and a single
+     * variable name parameterName is a setter. This recognition partially depends
+     * on setterCanReturnItsClass property.
+     *
+     * @param methodAST AST corresponding to a method call
+     * @param parameterName name of single parameter of this method.
+     * @return true of false indicating of method is a setter or not.
+     */
+    private boolean isSetterMethod(DetailAST methodAST, String parameterName) {
+        final String methodName =
+            methodAST.findFirstToken(TokenTypes.IDENT).getText();
+        boolean isSetterMethod = false;
+
+        if (("set" + capitalize(parameterName)).equals(methodName)) {
+            // method name did match set${Name}(${anyType} ${parameterName})
+            // where ${Name} is capitalized version of ${parameterName}
+            // therefore this method is potentially a setter
+            final DetailAST typeAST = methodAST.findFirstToken(TokenTypes.TYPE);
+            final String returnType = typeAST.getFirstChild().getText();
+            if (typeAST.findFirstToken(TokenTypes.LITERAL_VOID) != null
+                    || setterCanReturnItsClass && frame.isEmbeddedIn(returnType)) {
+                // this method has signature
+                //
+                //     void set${Name}(${anyType} ${name})
+                //
+                // and therefore considered to be a setter
+                //
+                // or
+                //
+                // return type is not void, but it is the same as the class
+                // where method is declared and setterCanReturnItsClass
+                // is set to true
+                isSetterMethod = true;
+            }
+        }
+
+        return isSetterMethod;
+    }
+
+    /**
+     * Capitalizes a given property name the way we expect to see it in a setter name.
+     *
+     * @param name a property name
+     * @return capitalized property name
+     */
+    private static String capitalize(final String name) {
+        String setterName = name;
+        // we should not capitalize the first character if the second
+        // one is a capital one, since according to JavaBeans spec
+        // setFooBar() is a setter for FooBar property, not for fooBar one.
+        if (name.length() == 1 || !Character.isUpperCase(name.charAt(1))) {
+            setterName = name.substring(0, 1).toUpperCase(Locale.ENGLISH) + name.substring(1);
+        }
+        return setterName;
+    }
+
+    /**
+     * Decides whether to ignore an AST node that is the parameter of a constructor.
+     *
+     * @param ast the AST to check.
+     * @return true if ast should be ignored because check property
+     *     ignoreConstructorParameter is true and ast is a constructor parameter.
+     */
+    private boolean isIgnoredConstructorParam(DetailAST ast) {
+        boolean result = false;
+        if (ignoreConstructorParameter
+                && ast.getType() == TokenTypes.PARAMETER_DEF) {
+            final DetailAST parametersAST = ast.getParent();
+            final DetailAST constructorAST = parametersAST.getParent();
+            result = constructorAST.getType() == TokenTypes.CTOR_DEF;
+        }
+        return result;
+    }
+
+    /**
+     * Decides whether to ignore an AST node that is the parameter of an abstract method.
+     *
+     * @param ast the AST to check.
+     * @return true if ast should be ignored because check property
+     *     ignoreAbstractMethods is true and ast is a parameter of abstract methods.
+     */
+    private boolean isIgnoredParamOfAbstractMethod(DetailAST ast) {
+        boolean result = false;
+        if (ignoreAbstractMethods) {
+            final DetailAST method = ast.getParent().getParent();
+            if (method.getType() == TokenTypes.METHOD_DEF) {
+                final DetailAST mods = method.findFirstToken(TokenTypes.MODIFIERS);
+                result = mods.findFirstToken(TokenTypes.ABSTRACT) != null;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Setter to define the RegExp for names of variables and parameters to ignore.
+     *
+     * @param pattern a pattern.
+     * @since 3.2
+     */
+    public void setIgnoreFormat(Pattern pattern) {
+        ignoreFormat = pattern;
+    }
+
+    /**
+     * Setter to allow to ignore the parameter of a property setter method.
+     *
+     * @param ignoreSetter decide whether to ignore the parameter of a property setter method.
+     * @since 3.2
+     */
+    public void setIgnoreSetter(boolean ignoreSetter) {
+        this.ignoreSetter = ignoreSetter;
+    }
+
+    /**
+     * Setter to allow to expand the definition of a setter method to include methods
+     * that return the class' instance.
+     *
+     * @param setterCanReturnItsClass if true then setter can return
+     *        either void or class in which it is declared. If false then
+     *        in order to be recognized as setter method (otherwise
+     *        already recognized as a setter) must return void.  Later is the default behavior.
+     * @since 6.3
+     */
+    public void setSetterCanReturnItsClass(
+        boolean setterCanReturnItsClass) {
+        this.setterCanReturnItsClass = setterCanReturnItsClass;
+    }
+
+    /**
+     * Setter to control whether to ignore constructor parameters.
+     *
+     * @param ignoreConstructorParameter decide whether to ignore constructor parameters.
+     * @since 3.2
+     */
+    public void setIgnoreConstructorParameter(
+        boolean ignoreConstructorParameter) {
+        this.ignoreConstructorParameter = ignoreConstructorParameter;
+    }
+
+    /**
+     * Setter to control whether to ignore parameters of abstract methods.
+     *
+     * @param ignoreAbstractMethods decide whether to ignore parameters of abstract methods.
+     * @since 4.0
+     */
+    public void setIgnoreAbstractMethods(
+        boolean ignoreAbstractMethods) {
+        this.ignoreAbstractMethods = ignoreAbstractMethods;
+    }
+
+    /**
+     * Holds the names of static and instance fields of a type.
+     */
+    private static final class FieldFrame {
+
+        /** Name of the frame, such name of the class or enum declaration. */
+        private final String frameName;
+
+        /** Is this a static inner type. */
+        private final boolean staticType;
+
+        /** Parent frame. */
+        private final FieldFrame parent;
+
+        /** Set of instance field names. */
+        private final Set<String> instanceFields = new HashSet<>();
+
+        /** Set of static field names. */
+        private final Set<String> staticFields = new HashSet<>();
+
+        /**
+         * Creates new frame.
+         *
+         * @param parent parent frame.
+         * @param staticType is this a static inner type (class or enum).
+         * @param frameName name associated with the frame, which can be a
+         */
+        private FieldFrame(FieldFrame parent, boolean staticType, String frameName) {
+            this.parent = parent;
+            this.staticType = staticType;
+            this.frameName = frameName;
+        }
+
+        /**
+         * Adds an instance field to this FieldFrame.
+         *
+         * @param field  the name of the instance field.
+         */
+        /* package */ void addInstanceField(String field) {
+            instanceFields.add(field);
+        }
+
+        /**
+         * Adds a static field to this FieldFrame.
+         *
+         * @param field  the name of the instance field.
+         */
+        /* package */ void addStaticField(String field) {
+            staticFields.add(field);
+        }
+
+        /**
+         * Determines whether this FieldFrame contains an instance field.
+         *
+         * @param field the field to check
+         * @return true if this FieldFrame contains instance field
+         */
+        /* package */ boolean containsInstanceField(String field) {
+            FieldFrame currentParent = parent;
+            boolean contains = instanceFields.contains(field);
+            boolean isStaticType = staticType;
+            while (!isStaticType && !contains) {
+                contains = currentParent.instanceFields.contains(field);
+                isStaticType = currentParent.staticType;
+                currentParent = currentParent.parent;
+            }
+            return contains;
+        }
+
+        /**
+         * Determines whether this FieldFrame contains a static field.
+         *
+         * @param field the field to check
+         * @return true if this FieldFrame contains static field
+         */
+        /* package */ boolean containsStaticField(String field) {
+            FieldFrame currentParent = parent;
+            boolean contains = staticFields.contains(field);
+            while (currentParent != null && !contains) {
+                contains = currentParent.staticFields.contains(field);
+                currentParent = currentParent.parent;
+            }
+            return contains;
+        }
+
+        /**
+         * Getter for parent frame.
+         *
+         * @return parent frame.
+         */
+        /* package */ FieldFrame getParent() {
+            return parent;
+        }
+
+        /**
+         * Check if current frame is embedded in class or enum with specific name.
+         *
+         * @param classOrEnumName name of class or enum that we are looking
+         *     for in the chain of field frames.
+         *
+         * @return true if current frame is embedded in class or enum with name classOrNameName
+         */
+        private boolean isEmbeddedIn(String classOrEnumName) {
+            FieldFrame currentFrame = this;
+            boolean isEmbeddedIn = false;
+            while (currentFrame != null) {
+                if (Objects.equals(currentFrame.frameName, classOrEnumName)) {
+                    isEmbeddedIn = true;
+                    break;
+                }
+                currentFrame = currentFrame.parent;
+            }
+            return isEmbeddedIn;
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/IllegalCatchCheck.java SHA256 d643029ff98d96e1f9c5404b78c8a7168d5ae72a427c0d756f461adb84649994
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+
+/**
+ * <div>
+ * Checks that certain exception types do not appear in a {@code catch} statement.
+ * </div>
+ *
+ * <p>
+ * Rationale: catching {@code java.lang.Exception}, {@code java.lang.Error} or
+ * {@code java.lang.RuntimeException} is almost never acceptable.
+ * Novice developers often simply catch Exception in an attempt to handle
+ * multiple exception classes. This unfortunately leads to code that inadvertently
+ * catches {@code NullPointerException}, {@code OutOfMemoryError}, etc.
+ * </p>
+ *
+ * @since 3.2
+ */
+@StatelessCheck
+public final class IllegalCatchCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "illegal.catch";
+
+    /** Specify exception class names to reject. */
+    private final Set<String> illegalClassNames = Arrays.stream(new String[] {"Exception", "Error",
+        "RuntimeException", "Throwable", "java.lang.Error", "java.lang.Exception",
+        "java.lang.RuntimeException", "java.lang.Throwable", })
+            .collect(Collectors.toCollection(HashSet::new));
+
+    /**
+     * Creates a new {@code IllegalCatchCheck} instance.
+     */
+    public IllegalCatchCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify exception class names to reject.
+     *
+     * @param classNames
+     *            array of illegal exception classes
+     * @since 3.2
+     */
+    public void setIllegalClassNames(final String... classNames) {
+        illegalClassNames.clear();
+        illegalClassNames.addAll(
+                CheckUtil.parseClassNames(classNames));
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.LITERAL_CATCH};
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public void visitToken(DetailAST detailAST) {
+        final DetailAST parameterDef =
+            detailAST.findFirstToken(TokenTypes.PARAMETER_DEF);
+        final DetailAST excTypeParent =
+                parameterDef.findFirstToken(TokenTypes.TYPE);
+
+        DetailAST currentNode = excTypeParent.getFirstChild();
+        while (currentNode != null) {
+            final FullIdent ident = FullIdent.createFullIdent(currentNode);
+            final String identText = ident.getText();
+            if (illegalClassNames.contains(identText)) {
+                log(detailAST, MSG_KEY, identText);
+            }
+            currentNode = currentNode.getNextSibling();
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/IllegalInstantiationCheck.java SHA256 d7ee8f08f13a5449828a9796866012226b704c2f8025ffdc13c5521468708b88
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * <div>
+ * Checks for illegal instantiations where a factory method is preferred.
+ * </div>
+ *
+ * <p>
+ * Rationale: Depending on the project, for some classes it might be
+ * preferable to create instances through factory methods rather than calling the constructor.
+ * </p>
+ *
+ * <p>
+ * A simple example is the {@code java.lang.Boolean} class.
+ * For performance reasons, it is preferable to use the predefined constants
+ * {@code TRUE} and {@code FALSE}.
+ * Constructor invocations should be replaced by calls to {@code Boolean.valueOf()}.
+ * </p>
+ *
+ * <p>
+ * Some extremely performance sensitive projects may require the use of factory
+ * methods for other classes as well, to enforce the usage of number caches or object pools.
+ * </p>
+ *
+ * <p>
+ * Notes:
+ * There is a limitation that it is currently not possible to specify array classes.
+ * </p>
+ *
+ * @since 3.0
+ */
+@FileStatefulCheck
+public class IllegalInstantiationCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "instantiation.avoid";
+
+    /** {@link java.lang} package as string. */
+    private static final String JAVA_LANG = "java.lang.";
+
+    /** The imports for the file. */
+    private final Set<FullIdent> imports = new HashSet<>();
+
+    /** The class names defined in the file. */
+    private final Set<String> classNames = new HashSet<>();
+
+    /** The instantiations in the file. */
+    private final Set<DetailAST> instantiations = new HashSet<>();
+
+    /** Specify fully qualified class names that should not be instantiated. */
+    private Set<String> classes = new HashSet<>();
+
+    /** Name of the package. */
+    private String pkgName;
+
+    /**
+     * Creates a new {@code IllegalInstantiationCheck} instance.
+     */
+    public IllegalInstantiationCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.IMPORT,
+            TokenTypes.LITERAL_NEW,
+            TokenTypes.PACKAGE_DEF,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.RECORD_DEF,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        pkgName = null;
+        imports.clear();
+        instantiations.clear();
+        classNames.clear();
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.LITERAL_NEW -> processLiteralNew(ast);
+            case TokenTypes.PACKAGE_DEF -> processPackageDef(ast);
+            case TokenTypes.IMPORT -> processImport(ast);
+            case TokenTypes.CLASS_DEF, TokenTypes.RECORD_DEF -> processClassDef(ast);
+            default -> throw new IllegalArgumentException("Unknown type " + ast);
+        }
+    }
+
+    @Override
+    public void finishTree(DetailAST rootAST) {
+        instantiations.forEach(this::postProcessLiteralNew);
+    }
+
+    /**
+     * Collects classes and records defined in the source file. Required
+     * to avoid false alarms for local vs. java.lang classes.
+     *
+     * @param ast the class or record def token.
+     */
+    private void processClassDef(DetailAST ast) {
+        final DetailAST identToken = ast.findFirstToken(TokenTypes.IDENT);
+        final String className = identToken.getText();
+        classNames.add(className);
+    }
+
+    /**
+     * Perform processing for an import token.
+     *
+     * @param ast the import token
+     */
+    private void processImport(DetailAST ast) {
+        final FullIdent name = FullIdent.createFullIdentBelow(ast);
+        // Note: different from UnusedImportsCheck.processImport(),
+        // '.*' imports are also added here
+        imports.add(name);
+    }
+
+    /**
+     * Perform processing for an package token.
+     *
+     * @param ast the package token
+     */
+    private void processPackageDef(DetailAST ast) {
+        final DetailAST packageNameAST = ast.getLastChild()
+                .getPreviousSibling();
+        final FullIdent packageIdent =
+                FullIdent.createFullIdent(packageNameAST);
+        pkgName = packageIdent.getText();
+    }
+
+    /**
+     * Collects a "new" token.
+     *
+     * @param ast the "new" token
+     */
+    private void processLiteralNew(DetailAST ast) {
+        if (ast.getParent().getType() != TokenTypes.METHOD_REF) {
+            instantiations.add(ast);
+        }
+    }
+
+    /**
+     * Processes one of the collected "new" tokens when walking tree has finished.
+     *
+     * @param newTokenAst the "new" token.
+     */
+    private void postProcessLiteralNew(DetailAST newTokenAst) {
+        final DetailAST typeNameAst = newTokenAst.getFirstChild();
+        final DetailAST nameSibling = typeNameAst.getNextSibling();
+        if (nameSibling.getType() != TokenTypes.ARRAY_DECLARATOR) {
+            // ast != "new Boolean[]"
+            final FullIdent typeIdent = FullIdent.createFullIdent(typeNameAst);
+            final String typeName = typeIdent.getText();
+            final String fqClassName = getIllegalInstantiation(typeName);
+            if (fqClassName != null) {
+                log(newTokenAst, MSG_KEY, fqClassName);
+            }
+        }
+    }
+
+    /**
+     * Checks illegal instantiations.
+     *
+     * @param className instantiated class, may or may not be qualified
+     * @return the fully qualified class name of className
+     *     or null if instantiation of className is OK
+     */
+    private String getIllegalInstantiation(String className) {
+        final String fullClassName;
+
+        if (classes.contains(className)) {
+            fullClassName = className;
+        }
+        else {
+            final Optional<String> importResult = checkImportStatements(className);
+            if (importResult.isPresent()) {
+                fullClassName = importResult.get();
+            }
+            else {
+                final int pkgNameLen;
+
+                if (pkgName == null) {
+                    pkgNameLen = 0;
+                }
+                else {
+                    pkgNameLen = pkgName.length();
+                }
+
+                fullClassName = classes.stream()
+                        .filter(illegal -> {
+                            return isSamePackage(className, pkgNameLen, illegal)
+                                    || isStandardClass(className, illegal);
+                        })
+                        .findFirst()
+                        .orElse(null);
+            }
+        }
+        return fullClassName;
+    }
+
+    /**
+     * Check import statements.
+     *
+     * @param className name of the class
+     * @return Optional containing value of illegal instantiated type, if found
+     */
+    private Optional<String> checkImportStatements(String className) {
+        Optional<String> result = Optional.empty();
+        for (FullIdent importLineText : imports) {
+            String importArg = importLineText.getText();
+            if (importArg.endsWith(".*")) {
+                importArg = importArg.substring(0, importArg.length() - 1)
+                        + className;
+            }
+            if (CommonUtil.baseClassName(importArg).equals(className)
+                    && classes.contains(importArg)) {
+                result = Optional.of(importArg);
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Check that type is of the same package.
+     *
+     * @param className class name
+     * @param pkgNameLen package name
+     * @param illegal illegal value
+     * @return true if type of the same package
+     */
+    private boolean isSamePackage(String className, int pkgNameLen, String illegal) {
+        // class from same package
+
+        // the top level package (pkgName == null) is covered by the
+        // "illegalInstances.contains(className)" check above
+
+        // the test is the "no garbage" version of
+        // illegal.equals(pkgName + "." + className)
+        return pkgName != null
+                && className.length() == illegal.length() - pkgNameLen - 1
+                && illegal.charAt(pkgNameLen) == '.'
+                && illegal.endsWith(className)
+                && illegal.startsWith(pkgName);
+    }
+
+    /**
+     * Is Standard Class.
+     *
+     * @param className class name
+     * @param illegal illegal value
+     * @return true if type is standard
+     */
+    private boolean isStandardClass(String className, String illegal) {
+        boolean isStandardClass = false;
+        // class from java.lang
+        if (illegal.length() - JAVA_LANG.length() == className.length()
+            && illegal.endsWith(className)
+            && illegal.startsWith(JAVA_LANG)) {
+            // java.lang needs no import, but a class without import might
+            // also come from the same file or be in the same package.
+            // E.g. if a class defines an inner class "Boolean",
+            // the expression "new Boolean()" refers to that class,
+            // not to java.lang.Boolean
+
+            final boolean isSameFile = classNames.contains(className);
+
+            if (!isSameFile) {
+                isStandardClass = true;
+            }
+        }
+        return isStandardClass;
+    }
+
+    /**
+     * Setter to specify fully qualified class names that should not be instantiated.
+     *
+     * @param names class names
+     * @since 3.0
+     */
+    public void setClasses(String... names) {
+        classes = Arrays.stream(names).collect(Collectors.toUnmodifiableSet());
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/IllegalSymbolCheck.java SHA256 5f0d662909891f451975f4ea59e6490bd39ffebd6ce3d52441cfaf2528f992e6
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * <div>
+ * Checks that specified symbols (by Unicode code points or ranges) are not used in code.
+ * By default, blocks common symbol ranges.
+ * </div>
+ *
+ * <p>
+ * Rationale: This check helps prevent emoji symbols and special characters in code
+ * (commonly added by AI tools), enforce coding standards, or forbid specific Unicode characters.
+ * </p>
+ *
+ * <p>
+ * Default ranges cover:
+ * </p>
+ * <ul>
+ * <li>U+2190–U+27BF: Arrows, Mathematical Operators, Box Drawing, Geometric Shapes,
+ * Miscellaneous Symbols, and Dingbats</li>
+ * <li>U+1F600–U+1F64F: Emoticons</li>
+ * <li>U+1F680–U+1F6FF: Transport and Map Symbols</li>
+ * <li>U+1F700–U+10FFFF: Alchemical Symbols and other pictographic symbols</li>
+ * </ul>
+ *
+ * <p>
+ * For a complete list of Unicode characters and ranges, see:
+ * <a href="https://en.wikipedia.org/wiki/List_of_Unicode_characters">
+ * List of Unicode characters</a>
+ * </p>
+ *
+ * <ul>
+ * <li>
+ * Property {@code symbolCodes} - Specify the symbols to check for, as Unicode code points
+ * or ranges. Format: comma-separated list of hex codes or ranges
+ * (e.g., {@code "0x2705, 0x1F600-0x1F64F"}). To allow only ASCII characters,
+ * use {@code "0x0080-0x10FFFF"}.
+ * Type is {@code java.lang.String}.
+ * Default value is {@code "0x2190-0x27BF, 0x1F600-0x1F64F, 0x1F680-0x1F6FF, 0x1F700-0x10FFFF"}.
+ * </li>
+ * </ul>
+ *
+ * @since 13.4.0
+ */
+@StatelessCheck
+public class IllegalSymbolCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "illegal.symbol";
+
+    /** Separator used for defining ranges. */
+    private static final String RANGE_SEPARATOR = "-";
+
+    /** Default symbol codes to check for. */
+    private static final String DEFAULT_ILLEGAL_CODES =
+        "0x2190-0x27BF, 0x1F600-0x1F64F, 0x1F680-0x1F6FF, 0x1F700-0x10FFFF";
+
+    /** Set of individual Unicode code points to disallow. */
+    private final Set<Integer> singleCodePoints = new HashSet<>();
+
+    /** Set of Unicode ranges to disallow. */
+    private final Set<CodePointRange> codePointRanges = new HashSet<>();
+
+    /** Specify the symbols to check for, as Unicode code points or ranges. */
+    private String symbolCodes = DEFAULT_ILLEGAL_CODES;
+
+    /**
+     * Creates a new {@code IllegalSymbolCheck} instance.
+     */
+    public IllegalSymbolCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify the symbols to check for.
+     *
+     * @param symbols the symbols specification
+     * @throws IllegalArgumentException if the format is invalid
+     * @since 13.4.0
+     */
+    public void setSymbolCodes(String symbols) {
+        symbolCodes = Objects.requireNonNullElse(symbols, "");
+        parseSymbolCodes();
+    }
+
+    /**
+     * Initializes the check after all properties are set.
+     *
+     * <p>
+     * Ensures that the {@code symbolCodes} property is parsed
+     * for both default configuration and custom user configuration.
+     * </p>
+     *
+     * @throws IllegalArgumentException if the configured symbol format is invalid
+     */
+    @Override
+    public void init() {
+        parseSymbolCodes();
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.COMMENT_CONTENT,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.COMMENT_CONTENT,
+            TokenTypes.STRING_LITERAL,
+            TokenTypes.CHAR_LITERAL,
+            TokenTypes.TEXT_BLOCK_CONTENT,
+            TokenTypes.IDENT,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        ast.getText().codePoints()
+            .filter(this::isIllegalSymbol)
+            .findFirst()
+            .ifPresent(codePoint -> log(ast, MSG_KEY, Character.toString(codePoint)));
+    }
+
+    /**
+     * Parses the configured symbolCodes string into singleCodePoints and codePointRanges.
+     *
+     * @throws IllegalArgumentException if format is invalid
+     */
+    private void parseSymbolCodes() {
+        for (String part : symbolCodes.split(",", -1)) {
+            final String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                try {
+                    if (trimmed.contains(RANGE_SEPARATOR)) {
+                        parseRange(trimmed);
+                    }
+                    else {
+                        singleCodePoints.add(parseCodePoint(trimmed));
+                    }
+                }
+                catch (NumberFormatException exception) {
+                    throw new IllegalArgumentException(
+                            "Invalid symbol code format: " + trimmed, exception);
+                }
+            }
+        }
+    }
+
+    /**
+     * Determines whether a code point is illegal.
+     *
+     * @param codePoint Unicode code point
+     * @return true if illegal; false otherwise
+     */
+    private boolean isIllegalSymbol(int codePoint) {
+        boolean illegal = singleCodePoints.contains(codePoint);
+
+        for (CodePointRange range : codePointRanges) {
+            if (range.contains(codePoint)) {
+                illegal = true;
+                break;
+            }
+        }
+
+        return illegal;
+    }
+
+    /**
+     * Parses and stores a Unicode range.
+     *
+     * @param rangeStr range definition string (already trimmed by caller)
+     * @throws IllegalArgumentException if format is invalid
+     */
+    private void parseRange(String rangeStr) {
+        final String[] parts = rangeStr.split(RANGE_SEPARATOR, -1);
+        if (parts.length != 2
+                || CommonUtil.isBlank(parts[0])
+                || CommonUtil.isBlank(parts[1])) {
+            throw new IllegalArgumentException(
+                    "Invalid range format: " + rangeStr);
+        }
+
+        final int start = parseCodePoint(parts[0].trim());
+        final int end = parseCodePoint(parts[1].trim());
+
+        if (start > end) {
+            throw new IllegalArgumentException(
+                    "Range start must be <= end: " + rangeStr);
+        }
+
+        codePointRanges.add(new CodePointRange(start, end));
+    }
+
+    /**
+     * Parses a Unicode code point from a trimmed string.
+     * Supported formats: {@code 0x1234}, {@code \\u1234}, {@code U+1234}, or plain hex.
+     *
+     * @param str input string (already trimmed by caller)
+     * @return parsed code point
+     * @throws NumberFormatException if invalid format
+     */
+    private static int parseCodePoint(String str) {
+        final int hexRadix = 16;
+        final int result;
+
+        final boolean hasPrefix =
+                str.startsWith("\\u")
+                        || str.startsWith("0x")
+                        || str.startsWith("0X")
+                        || str.startsWith("U+")
+                        || str.startsWith("u+");
+
+        if (hasPrefix) {
+            result = Integer.parseInt(str.substring(2), hexRadix);
+        }
+        else {
+            result = Integer.parseInt(str, hexRadix);
+        }
+        return result;
+    }
+
+    /**
+     * Represents a Unicode code point range.
+     *
+     * @param start range start (inclusive)
+     * @param end range end (inclusive)
+     */
+    private record CodePointRange(int start, int end) {
+
+        /**
+         * Checks if code point is within range.
+         *
+         * @param codePoint code point to test
+         * @return true if within range; false otherwise
+         */
+        private boolean contains(int codePoint) {
+            return codePoint >= start && codePoint <= end;
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/IllegalThrowsCheck.java SHA256 8a572e04007dde9d76d292dda4c3add42ee80c1a3c050e68fc7fc79b0ef467a8
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+
+/**
+ * <div>
+ * Checks that specified types are not declared to be thrown.
+ * Declaring that a method throws {@code java.lang.Error} or
+ * {@code java.lang.RuntimeException} is almost never acceptable.
+ * </div>
+ *
+ * @since 4.0
+ */
+@StatelessCheck
+public final class IllegalThrowsCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "illegal.throw";
+
+    /** Specify names of methods to ignore. */
+    private final Set<String> ignoredMethodNames =
+        Arrays.stream(new String[] {"finalize", }).collect(Collectors.toCollection(HashSet::new));
+
+    /** Specify throw class names to reject. */
+    private final Set<String> illegalClassNames = Arrays.stream(
+        new String[] {"Error", "RuntimeException", "Throwable", "java.lang.Error",
+                      "java.lang.RuntimeException", "java.lang.Throwable", })
+        .collect(Collectors.toCollection(HashSet::new));
+
+    /**
+     * Allow to ignore checking overridden methods (marked with {@code Override}
+     * or {@code java.lang.Override} annotation).
+     */
+    private boolean ignoreOverriddenMethods = true;
+
+    /**
+     * Creates a new {@code IllegalThrowsCheck} instance.
+     */
+    public IllegalThrowsCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify throw class names to reject.
+     *
+     * @param classNames
+     *            array of illegal exception classes
+     * @since 4.0
+     */
+    public void setIllegalClassNames(final String... classNames) {
+        illegalClassNames.clear();
+        illegalClassNames.addAll(
+                CheckUtil.parseClassNames(classNames));
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.LITERAL_THROWS};
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public void visitToken(DetailAST detailAST) {
+        final DetailAST methodDef = detailAST.getParent();
+        // Check if the method with the given name should be ignored.
+        if (!isIgnorableMethod(methodDef)) {
+            DetailAST token = detailAST.getFirstChild();
+            while (token != null) {
+                final FullIdent ident = FullIdent.createFullIdent(token);
+                final String identText = ident.getText();
+                if (illegalClassNames.contains(identText)) {
+                    log(token, MSG_KEY, identText);
+                }
+                token = token.getNextSibling();
+            }
+        }
+    }
+
+    /**
+     * Checks if current method is ignorable due to Check's properties.
+     *
+     * @param methodDef {@link TokenTypes#METHOD_DEF METHOD_DEF}
+     * @return true if method is ignorable.
+     */
+    private boolean isIgnorableMethod(DetailAST methodDef) {
+        return shouldIgnoreMethod(methodDef.findFirstToken(TokenTypes.IDENT).getText())
+            || ignoreOverriddenMethods
+               && AnnotationUtil.hasOverrideAnnotation(methodDef);
+    }
+
+    /**
+     * Check if the method is specified in the ignore method list.
+     *
+     * @param name the name to check
+     * @return whether the method with the passed name should be ignored
+     */
+    private boolean shouldIgnoreMethod(String name) {
+        return ignoredMethodNames.contains(name);
+    }
+
+    /**
+     * Setter to specify names of methods to ignore.
+     *
+     * @param methodNames array of ignored method names
+     * @since 5.4
+     */
+    public void setIgnoredMethodNames(String... methodNames) {
+        ignoredMethodNames.clear();
+        Collections.addAll(ignoredMethodNames, methodNames);
+    }
+
+    /**
+     * Setter to allow to ignore checking overridden methods
+     * (marked with {@code Override} or {@code java.lang.Override} annotation).
+     *
+     * @param ignoreOverriddenMethods Check's property.
+     * @since 6.4
+     */
+    public void setIgnoreOverriddenMethods(boolean ignoreOverriddenMethods) {
+        this.ignoreOverriddenMethods = ignoreOverriddenMethods;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/IllegalTokenCheck.java SHA256 74aef3e5d721e7f7fea7f92fe71b03a5955fe5417622449b09451ea0ec4e6bee
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks for illegal tokens. By default, labels are prohibited.
+ * </div>
+ *
+ * <p>
+ * Rationale: Certain language features can harm readability, lead to
+ * confusion or are not obvious to novice developers. Other features
+ * may be discouraged in certain frameworks, such as not having
+ * native methods in Enterprise JavaBeans components.
+ * </p>
+ *
+ * @since 3.2
+ */
+@StatelessCheck
+public class IllegalTokenCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "illegal.token";
+
+    /**
+     * Creates a new {@code IllegalTokenCheck} instance.
+     */
+    public IllegalTokenCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return new int[] {
+            TokenTypes.LABELED_STAT,
+        };
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return TokenUtil.getAllTokenIds();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        log(
+            ast,
+            MSG_KEY,
+            convertToString(ast)
+        );
+    }
+
+    /**
+     * Converts given AST node to string representation.
+     *
+     * @param ast node to be represented as string
+     * @return string representation of AST node
+     */
+    private static String convertToString(DetailAST ast) {
+        return switch (ast.getType()) {
+            case TokenTypes.LABELED_STAT -> ast.getFirstChild().getText() + ast.getText();
+            // multiline tokens need to become singlelined
+            case TokenTypes.COMMENT_CONTENT -> JavadocUtil.escapeAllControlChars(ast.getText());
+            default -> ast.getText();
+        };
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/IllegalTokenTextCheck.java SHA256 58746994efefd3a8ce7223fffa666895c1654a4740fe02a2e9cecca670da10f4
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.Objects;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+
+/**
+ * <div>
+ * Checks specified tokens text for matching an illegal pattern.
+ * By default, no tokens are specified.
+ * </div>
+ *
+ * @since 3.2
+ */
+@StatelessCheck
+public class IllegalTokenTextCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "illegal.token.text";
+
+    /**
+     * Define the message which is used to notify about violations;
+     * if empty then the default message is used.
+     */
+    private String message = "";
+
+    /** The format string of the regexp. */
+    private String formatString = "^$";
+
+    /** Define the RegExp for illegal pattern. */
+    private Pattern format = Pattern.compile(formatString);
+
+    /** Control whether to ignore case when matching. */
+    private boolean ignoreCase;
+
+    /**
+     * Creates a new {@code IllegalTokenTextCheck} instance.
+     */
+    public IllegalTokenTextCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.NUM_DOUBLE,
+            TokenTypes.NUM_FLOAT,
+            TokenTypes.NUM_INT,
+            TokenTypes.NUM_LONG,
+            TokenTypes.IDENT,
+            TokenTypes.COMMENT_CONTENT,
+            TokenTypes.STRING_LITERAL,
+            TokenTypes.CHAR_LITERAL,
+            TokenTypes.TEXT_BLOCK_CONTENT,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        final String text = ast.getText();
+        if (format.matcher(text).find()) {
+            String customMessage = message;
+            if (customMessage.isEmpty()) {
+                customMessage = MSG_KEY;
+            }
+            log(
+                ast,
+                customMessage,
+                formatString);
+        }
+    }
+
+    /**
+     * Setter to define the message which is used to notify about violations;
+     * if empty then the default message is used.
+     *
+     * @param message custom message which should be used to report about violations.
+     * @since 3.2
+     */
+    public void setMessage(String message) {
+        this.message = Objects.requireNonNullElse(message, "");
+    }
+
+    /**
+     * Setter to define the RegExp for illegal pattern.
+     *
+     * @param format a {@code String} value
+     * @since 3.2
+     */
+    public void setFormat(String format) {
+        formatString = format;
+        updateRegexp();
+    }
+
+    /**
+     * Setter to control whether to ignore case when matching.
+     *
+     * @param caseInsensitive true if the match is case-insensitive.
+     * @since 3.2
+     */
+    public void setIgnoreCase(boolean caseInsensitive) {
+        ignoreCase = caseInsensitive;
+        updateRegexp();
+    }
+
+    /**
+     * Updates the {@link #format} based on the values from {@link #formatString} and
+     * {@link #ignoreCase}.
+     */
+    private void updateRegexp() {
+        final int compileFlags;
+        if (ignoreCase) {
+            compileFlags = Pattern.CASE_INSENSITIVE;
+        }
+        else {
+            compileFlags = 0;
+        }
+        format = CommonUtil.createPattern(formatString, compileFlags);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/IllegalTypeCheck.java SHA256 1445cfe143d9553cfdf723c5b85577cae5fb2d78938dabb04d4cbc6af53003c2
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import com.puppycrawl.tools.checkstyle.FileStatefulCheck;
+import com.puppycrawl.tools.checkstyle.PropertyType;
+import com.puppycrawl.tools.checkstyle.XdocsPropertyType;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.AnnotationUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks that particular classes or interfaces are never used.
+ * </div>
+ *
+ * <p>
+ * Rationale: Helps reduce coupling on concrete classes.
+ * </p>
+ *
+ * <p>
+ * For additional restriction of type usage see also:
+ * <a href="https://checkstyle.org/checks/coding/illegalinstantiation.html">
+ * IllegalInstantiation</a>,
+ * <a href="https://checkstyle.org/checks/imports/illegalimport.html">
+ * IllegalImport</a>
+ * </p>
+ *
+ * <p>
+ * Notes:
+ * It is possible to set illegal class names via short or
+ * <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-6.html#jls-6.7">canonical</a>
+ * name. Specifying illegal type invokes analyzing imports and Check puts violations at
+ * corresponding declarations (of variables, methods or parameters).
+ * This helps to avoid ambiguous cases, e.g.: {@code java.awt.List} was set as
+ * illegal class name, then, code like:
+ * </p>
+ * {@snippet lang="text" :
+ * import java.util.List;
+ * ...
+ * List list; //No violation here
+ * }
+ *
+ * <p>
+ * will be ok.
+ * </p>
+ *
+ * <p>
+ * In most cases it's justified to put following classes to <b>illegalClassNames</b>:
+ * </p>
+ * <ul>
+ * <li>GregorianCalendar</li>
+ * <li>Hashtable</li>
+ * <li>ArrayList</li>
+ * <li>LinkedList</li>
+ * <li>Vector</li>
+ * </ul>
+ *
+ * <p>
+ * as methods that differ from interface methods are rarely used, so in most cases user will
+ * benefit from checking for them.
+ * </p>
+ *
+ * @since 3.2
+ */
+@FileStatefulCheck
+public final class IllegalTypeCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "illegal.type";
+
+    /** Types illegal by default. */
+    private static final String[] DEFAULT_ILLEGAL_TYPES = {
+        "HashSet",
+        "HashMap",
+        "LinkedHashMap",
+        "LinkedHashSet",
+        "TreeSet",
+        "TreeMap",
+        "java.util.HashSet",
+        "java.util.HashMap",
+        "java.util.LinkedHashMap",
+        "java.util.LinkedHashSet",
+        "java.util.TreeSet",
+        "java.util.TreeMap",
+    };
+
+    /** Default ignored method names. */
+    private static final String[] DEFAULT_IGNORED_METHOD_NAMES = {
+        "getInitialContext",
+        "getEnvironment",
+    };
+
+    /**
+     * Specify classes that should not be used as types in variable declarations,
+     * return values or parameters.
+     */
+    private final Set<String> illegalClassNames = new HashSet<>();
+    /** Illegal short classes. */
+    private final Set<String> illegalShortClassNames = new HashSet<>();
+    /** Define abstract classes that may be used as types. */
+    private final Set<String> legalAbstractClassNames = new HashSet<>();
+    /** Specify methods that should not be checked. */
+    private final Set<String> ignoredMethodNames = new HashSet<>();
+    /**
+     * Control whether to check only methods and fields with any of the specified modifiers.
+     * This property does not affect method calls nor method references nor record components.
+     */
+    @XdocsPropertyType(PropertyType.TOKEN_ARRAY)
+    private BitSet memberModifiers = new BitSet();
+
+    /** Specify RegExp for illegal abstract class names. */
+    private Pattern illegalAbstractClassNameFormat = Pattern.compile("^(.*[.])?Abstract.*$");
+
+    /**
+     * Control whether to validate abstract class names.
+     */
+    private boolean validateAbstractClassNames;
+
+    /** Creates new instance of the check. */
+    public IllegalTypeCheck() {
+        setIllegalClassNames(DEFAULT_ILLEGAL_TYPES);
+        setIgnoredMethodNames(DEFAULT_IGNORED_METHOD_NAMES);
+    }
+
+    /**
+     * Setter to specify RegExp for illegal abstract class names.
+     *
+     * @param pattern a pattern.
+     * @since 3.2
+     */
+    public void setIllegalAbstractClassNameFormat(Pattern pattern) {
+        illegalAbstractClassNameFormat = pattern;
+    }
+
+    /**
+     * Setter to control whether to validate abstract class names.
+     *
+     * @param validateAbstractClassNames whether abstract class names must be ignored.
+     * @since 6.10
+     */
+    public void setValidateAbstractClassNames(boolean validateAbstractClassNames) {
+        this.validateAbstractClassNames = validateAbstractClassNames;
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.ANNOTATION_FIELD_DEF,
+            TokenTypes.CLASS_DEF,
+            TokenTypes.IMPORT,
+            TokenTypes.INTERFACE_DEF,
+            TokenTypes.METHOD_CALL,
+            TokenTypes.METHOD_DEF,
+            TokenTypes.METHOD_REF,
+            TokenTypes.PARAMETER_DEF,
+            TokenTypes.VARIABLE_DEF,
+            TokenTypes.PATTERN_VARIABLE_DEF,
+            TokenTypes.RECORD_DEF,
+            TokenTypes.RECORD_COMPONENT_DEF,
+            TokenTypes.RECORD_PATTERN_DEF,
+        };
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        illegalShortClassNames.clear();
+        illegalShortClassNames.addAll(illegalClassNames);
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {TokenTypes.IMPORT};
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        switch (ast.getType()) {
+            case TokenTypes.CLASS_DEF,
+                 TokenTypes.INTERFACE_DEF,
+                 TokenTypes.RECORD_DEF -> visitTypeDef(ast);
+
+            case TokenTypes.METHOD_CALL,
+                 TokenTypes.METHOD_REF -> visitMethodCallOrRef(ast);
+
+            case TokenTypes.METHOD_DEF -> visitMethodDef(ast);
+
+            case TokenTypes.VARIABLE_DEF,
+                 TokenTypes.ANNOTATION_FIELD_DEF,
+                 TokenTypes.PATTERN_VARIABLE_DEF -> visitVariableDef(ast);
+
+            case TokenTypes.RECORD_COMPONENT_DEF,
+                 TokenTypes.RECORD_PATTERN_DEF -> checkClassName(ast);
+
+            case TokenTypes.PARAMETER_DEF -> visitParameterDef(ast);
+
+            case TokenTypes.IMPORT -> visitImport(ast);
+
+            default -> throw new IllegalStateException(ast.toString());
+        }
+    }
+
+    /**
+     * Checks if current method's return type or variable's type is verifiable
+     * according to <b>memberModifiers</b> option.
+     *
+     * @param methodOrVariableDef METHOD_DEF or VARIABLE_DEF ast node.
+     * @return true if member is verifiable according to <b>memberModifiers</b> option.
+     */
+    private boolean isVerifiable(DetailAST methodOrVariableDef) {
+        boolean result = true;
+        if (!memberModifiers.isEmpty()) {
+            final DetailAST modifiersAst = methodOrVariableDef
+                    .findFirstToken(TokenTypes.MODIFIERS);
+            result = isContainVerifiableType(modifiersAst);
+        }
+        return result;
+    }
+
+    /**
+     * Checks is modifiers contain verifiable type.
+     *
+     * @param modifiers
+     *            parent node for all modifiers
+     * @return true if method or variable can be verified
+     */
+    private boolean isContainVerifiableType(DetailAST modifiers) {
+        boolean result = false;
+        for (DetailAST modifier = modifiers.getFirstChild(); modifier != null;
+                 modifier = modifier.getNextSibling()) {
+            if (memberModifiers.get(modifier.getType())) {
+                result = true;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks the super type and implemented interfaces of a given type.
+     *
+     * @param typeDef class or interface for check.
+     */
+    private void visitTypeDef(DetailAST typeDef) {
+        if (isVerifiable(typeDef)) {
+            checkTypeParameters(typeDef);
+            final DetailAST extendsClause = typeDef.findFirstToken(TokenTypes.EXTENDS_CLAUSE);
+            if (extendsClause != null) {
+                checkBaseTypes(extendsClause);
+            }
+            final DetailAST implementsClause = typeDef.findFirstToken(TokenTypes.IMPLEMENTS_CLAUSE);
+            if (implementsClause != null) {
+                checkBaseTypes(implementsClause);
+            }
+        }
+    }
+
+    /**
+     * Checks return type of a given method.
+     *
+     * @param methodDef method for check.
+     */
+    private void visitMethodDef(DetailAST methodDef) {
+        if (isCheckedMethod(methodDef)) {
+            checkClassName(methodDef);
+        }
+    }
+
+    /**
+     * Checks type of parameters.
+     *
+     * @param parameterDef parameter list for check.
+     */
+    private void visitParameterDef(DetailAST parameterDef) {
+        final DetailAST grandParentAST = parameterDef.getParent().getParent();
+
+        if (grandParentAST.getType() == TokenTypes.METHOD_DEF && isCheckedMethod(grandParentAST)) {
+            checkClassName(parameterDef);
+        }
+    }
+
+    /**
+     * Checks type of given variable.
+     *
+     * @param variableDef variable to check.
+     */
+    private void visitVariableDef(DetailAST variableDef) {
+        if (isVerifiable(variableDef)) {
+            checkClassName(variableDef);
+        }
+    }
+
+    /**
+     * Checks the type arguments of given method call/reference.
+     *
+     * @param methodCallOrRef method call/reference to check.
+     */
+    private void visitMethodCallOrRef(DetailAST methodCallOrRef) {
+        checkTypeArguments(methodCallOrRef);
+    }
+
+    /**
+     * Checks imported type (as static and star imports are not supported by Check,
+     *  only type is in the consideration).<br>
+     * If this type is illegal due to Check's options - puts violation on it.
+     *
+     * @param importAst {@link TokenTypes#IMPORT Import}
+     */
+    private void visitImport(DetailAST importAst) {
+        if (!isStarImport(importAst)) {
+            final String canonicalName = getImportedTypeCanonicalName(importAst);
+            extendIllegalClassNamesWithShortName(canonicalName);
+        }
+    }
+
+    /**
+     * Checks if current import is star import. E.g.:
+     *
+     * <p>
+     * {@code
+     * import java.util.*;
+     * }
+     * </p>
+     *
+     * @param importAst {@link TokenTypes#IMPORT Import}
+     * @return true if it is star import
+     */
+    private static boolean isStarImport(DetailAST importAst) {
+        boolean result = false;
+        DetailAST toVisit = importAst;
+        while (toVisit != null) {
+            toVisit = getNextSubTreeNode(toVisit, importAst);
+            if (toVisit != null && toVisit.getType() == TokenTypes.STAR) {
+                result = true;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks type and type arguments/parameters of given method, parameter, variable or
+     * method call/reference.
+     *
+     * @param ast node to check.
+     */
+    private void checkClassName(DetailAST ast) {
+        final DetailAST type = ast.findFirstToken(TokenTypes.TYPE);
+        checkType(type);
+        checkTypeParameters(ast);
+    }
+
+    /**
+     * Checks the identifier of the given type.
+     *
+     * @param type node to check.
+     */
+    private void checkIdent(DetailAST type) {
+        final FullIdent ident = FullIdent.createFullIdent(type);
+        if (isMatchingClassName(ident.getText())) {
+            log(ident.getDetailAst(), MSG_KEY, ident.getText());
+        }
+    }
+
+    /**
+     * Checks the {@code extends} or {@code implements} statement.
+     *
+     * @param clause DetailAST for either {@link TokenTypes#EXTENDS_CLAUSE} or
+     *               {@link TokenTypes#IMPLEMENTS_CLAUSE}
+     */
+    private void checkBaseTypes(DetailAST clause) {
+        DetailAST child = clause.getFirstChild();
+        while (child != null) {
+            if (child.getType() == TokenTypes.IDENT) {
+                checkIdent(child);
+            }
+            else {
+                TokenUtil.forEachChild(child, TokenTypes.TYPE_ARGUMENT, this::checkType);
+            }
+            child = child.getNextSibling();
+        }
+    }
+
+    /**
+     * Checks the given type, its arguments and parameters.
+     *
+     * @param type node to check.
+     */
+    private void checkType(DetailAST type) {
+        checkIdent(type.getFirstChild());
+        checkTypeArguments(type);
+        checkTypeBounds(type);
+    }
+
+    /**
+     * Checks the upper and lower bounds for the given type.
+     *
+     * @param type node to check.
+     */
+    private void checkTypeBounds(DetailAST type) {
+        final DetailAST upperBounds = type.findFirstToken(TokenTypes.TYPE_UPPER_BOUNDS);
+        if (upperBounds != null) {
+            checkType(upperBounds);
+        }
+        final DetailAST lowerBounds = type.findFirstToken(TokenTypes.TYPE_LOWER_BOUNDS);
+        if (lowerBounds != null) {
+            checkType(lowerBounds);
+        }
+    }
+
+    /**
+     * Checks the type parameters of the node.
+     *
+     * @param node node to check.
+     */
+    private void checkTypeParameters(final DetailAST node) {
+        final DetailAST typeParameters = node.findFirstToken(TokenTypes.TYPE_PARAMETERS);
+        if (typeParameters != null) {
+            TokenUtil.forEachChild(typeParameters, TokenTypes.TYPE_PARAMETER, this::checkType);
+        }
+    }
+
+    /**
+     * Checks the type arguments of the node.
+     *
+     * @param node node to check.
+     */
+    private void checkTypeArguments(final DetailAST node) {
+        DetailAST typeArguments = node.findFirstToken(TokenTypes.TYPE_ARGUMENTS);
+        if (typeArguments == null) {
+            typeArguments = node.getFirstChild().findFirstToken(TokenTypes.TYPE_ARGUMENTS);
+        }
+
+        if (typeArguments != null) {
+            TokenUtil.forEachChild(typeArguments, TokenTypes.TYPE_ARGUMENT, this::checkType);
+        }
+    }
+
+    /**
+     * Returns true if given class name is one of illegal classes or else false.
+     *
+     * @param className class name to check.
+     * @return true if given class name is one of illegal classes
+     *         or if it matches to abstract class names pattern.
+     */
+    private boolean isMatchingClassName(String className) {
+        final String shortName = className.substring(className.lastIndexOf('.') + 1);
+        return illegalClassNames.contains(className)
+                || illegalShortClassNames.contains(shortName)
+                || validateAbstractClassNames
+                    && !legalAbstractClassNames.contains(className)
+                    && illegalAbstractClassNameFormat.matcher(className).find();
+    }
+
+    /**
+     * Extends illegal class names set via imported short type name.
+     *
+     * @param canonicalName
+     *     <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-6.html#jls-6.7">
+     *     Canonical</a> name of imported type.
+     */
+    private void extendIllegalClassNamesWithShortName(String canonicalName) {
+        if (illegalClassNames.contains(canonicalName)) {
+            final String shortName = canonicalName
+                .substring(canonicalName.lastIndexOf('.') + 1);
+            illegalShortClassNames.add(shortName);
+        }
+    }
+
+    /**
+     * Gets imported type's
+     * <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-6.html#jls-6.7">
+     *  canonical name</a>.
+     *
+     * @param importAst {@link TokenTypes#IMPORT Import}
+     * @return Imported canonical type's name.
+     */
+    private static String getImportedTypeCanonicalName(DetailAST importAst) {
+        final StringBuilder canonicalNameBuilder = new StringBuilder(256);
+        DetailAST toVisit = importAst;
+        while (toVisit != null) {
+            toVisit = getNextSubTreeNode(toVisit, importAst);
+            if (toVisit != null && toVisit.getType() == TokenTypes.IDENT) {
+                if (!canonicalNameBuilder.isEmpty()) {
+                    canonicalNameBuilder.append('.');
+                }
+                canonicalNameBuilder.append(toVisit.getText());
+            }
+        }
+        return canonicalNameBuilder.toString();
+    }
+
+    /**
+     * Gets the next node of a syntactical tree (child of a current node or
+     * sibling of a current node, or sibling of a parent of a current node).
+     *
+     * @param currentNodeAst Current node in considering
+     * @param subTreeRootAst SubTree root
+     * @return Current node after bypassing, if current node reached the root of a subtree
+     *        method returns null
+     */
+    private static DetailAST
+        getNextSubTreeNode(DetailAST currentNodeAst, DetailAST subTreeRootAst) {
+        DetailAST currentNode = currentNodeAst;
+        DetailAST toVisitAst = currentNode.getFirstChild();
+        while (toVisitAst == null) {
+            toVisitAst = currentNode.getNextSibling();
+            if (currentNode.getParent().equals(subTreeRootAst)) {
+                break;
+            }
+            currentNode = currentNode.getParent();
+        }
+        return toVisitAst;
+    }
+
+    /**
+     * Returns true if method has to be checked or false.
+     *
+     * @param ast method def to check.
+     * @return true if we should check this method.
+     */
+    private boolean isCheckedMethod(DetailAST ast) {
+        final String methodName =
+            ast.findFirstToken(TokenTypes.IDENT).getText();
+        return isVerifiable(ast) && !ignoredMethodNames.contains(methodName)
+                && !AnnotationUtil.hasOverrideAnnotation(ast);
+    }
+
+    /**
+     * Setter to specify classes that should not be used as types in variable declarations,
+     * return values or parameters.
+     *
+     * @param classNames array of illegal variable types
+     * @noinspection WeakerAccess
+     * @noinspectionreason WeakerAccess - we avoid 'protected' when possible
+     * @since 3.2
+     */
+    public void setIllegalClassNames(String... classNames) {
+        illegalClassNames.clear();
+        Collections.addAll(illegalClassNames, classNames);
+    }
+
+    /**
+     * Setter to specify methods that should not be checked.
+     *
+     * @param methodNames array of ignored method names
+     * @noinspection WeakerAccess
+     * @noinspectionreason WeakerAccess - we avoid 'protected' when possible
+     * @since 3.2
+     */
+    public void setIgnoredMethodNames(String... methodNames) {
+        ignoredMethodNames.clear();
+        Collections.addAll(ignoredMethodNames, methodNames);
+    }
+
+    /**
+     * Setter to define abstract classes that may be used as types.
+     *
+     * @param classNames array of legal abstract class names
+     * @noinspection WeakerAccess
+     * @noinspectionreason WeakerAccess - we avoid 'protected' when possible
+     * @since 4.2
+     */
+    public void setLegalAbstractClassNames(String... classNames) {
+        Collections.addAll(legalAbstractClassNames, classNames);
+    }
+
+    /**
+     * Setter to control whether to check only methods and fields with any of
+     * the specified modifiers.
+     * This property does not affect method calls nor method references nor record components.
+     *
+     * @param modifiers String contains modifiers.
+     * @since 6.3
+     */
+    public void setMemberModifiers(String modifiers) {
+        memberModifiers = TokenUtil.asBitSet(modifiers.split(",", -1));
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/InnerAssignmentCheck.java SHA256 5a4c3b3b72ba373fba574371f2e836601c98fbcf0e7ddad305cac324f47d796e
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.BitSet;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks for assignments in subexpressions, such as in
+ * {@code String s = Integer.toString(i = 2);}.
+ * </div>
+ *
+ * <p>
+ * Rationale: Except for the loop idioms,
+ * all assignments should occur in their own top-level statement to increase readability.
+ * With inner assignments like the one given above, it is difficult to see all places
+ * where a variable is set.
+ * </p>
+ *
+ * <p>
+ * Note: Check allows usage of the popular assignments in loops:
+ * </p>
+ * {@snippet :
+ * String line;
+ * while ((line = bufferedReader.readLine()) != null) { // OK
+ *   // process the line
+ * }
+ *
+ * for (;(line = bufferedReader.readLine()) != null;) { // OK
+ *   // process the line
+ * }
+ *
+ * do {
+ *   // process the line
+ * }
+ * while ((line = bufferedReader.readLine()) != null); // OK
+ * }
+ *
+ * <p>
+ * Assignment inside a condition is not a problem here, as the assignment is surrounded
+ * by an extra pair of parentheses. The comparison is {@code != null} and there is no chance that
+ * intention was to write {@code line == reader.readLine()}.
+ * </p>
+ *
+ * @since 3.0
+ */
+@StatelessCheck
+public class InnerAssignmentCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "assignment.inner.avoid";
+
+    /**
+     * Allowed AST types from an assignment AST node towards the root.
+     */
+    private static final int[][] ALLOWED_ASSIGNMENT_CONTEXT = {
+        {TokenTypes.EXPR, TokenTypes.SLIST},
+        {TokenTypes.VARIABLE_DEF},
+        {TokenTypes.EXPR, TokenTypes.ELIST, TokenTypes.FOR_INIT},
+        {TokenTypes.EXPR, TokenTypes.ELIST, TokenTypes.FOR_ITERATOR},
+        {TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR}, {
+            TokenTypes.RESOURCE,
+            TokenTypes.RESOURCES,
+            TokenTypes.RESOURCE_SPECIFICATION,
+        },
+        {TokenTypes.EXPR, TokenTypes.LAMBDA},
+        {TokenTypes.EXPR, TokenTypes.SWITCH_RULE, TokenTypes.LITERAL_SWITCH, TokenTypes.SLIST},
+    };
+
+    /**
+     * Allowed AST types from an assignment AST node towards the root.
+     */
+    private static final int[][] CONTROL_CONTEXT = {
+        {TokenTypes.EXPR, TokenTypes.LITERAL_DO},
+        {TokenTypes.EXPR, TokenTypes.LITERAL_FOR},
+        {TokenTypes.EXPR, TokenTypes.LITERAL_WHILE},
+        {TokenTypes.EXPR, TokenTypes.LITERAL_IF},
+        {TokenTypes.EXPR, TokenTypes.LITERAL_ELSE},
+    };
+
+    /**
+     * Allowed AST types from a comparison node (above an assignment) towards the root.
+     */
+    private static final int[][] ALLOWED_ASSIGNMENT_IN_COMPARISON_CONTEXT = {
+        {TokenTypes.EXPR, TokenTypes.LITERAL_WHILE},
+        {TokenTypes.EXPR, TokenTypes.FOR_CONDITION},
+        {TokenTypes.EXPR, TokenTypes.LITERAL_DO},
+    };
+
+    /**
+     * The token types that identify comparison operators.
+     */
+    private static final BitSet COMPARISON_TYPES = TokenUtil.asBitSet(
+        TokenTypes.EQUAL,
+        TokenTypes.GE,
+        TokenTypes.GT,
+        TokenTypes.LE,
+        TokenTypes.LT,
+        TokenTypes.NOT_EQUAL
+    );
+
+    /**
+     * The token types that are ignored while checking "loop-idiom".
+     */
+    private static final BitSet LOOP_IDIOM_IGNORED_PARENTS = TokenUtil.asBitSet(
+        TokenTypes.LAND,
+        TokenTypes.LOR,
+        TokenTypes.LNOT,
+        TokenTypes.BOR,
+        TokenTypes.BAND
+    );
+
+    /**
+     * Creates a new {@code InnerAssignmentCheck} instance.
+     */
+    public InnerAssignmentCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return new int[] {
+            TokenTypes.ASSIGN,            // '='
+            TokenTypes.DIV_ASSIGN,        // "/="
+            TokenTypes.PLUS_ASSIGN,       // "+="
+            TokenTypes.MINUS_ASSIGN,      // "-="
+            TokenTypes.STAR_ASSIGN,       // "*="
+            TokenTypes.MOD_ASSIGN,        // "%="
+            TokenTypes.SR_ASSIGN,         // ">>="
+            TokenTypes.BSR_ASSIGN,        // ">>>="
+            TokenTypes.SL_ASSIGN,         // "<<="
+            TokenTypes.BXOR_ASSIGN,       // "^="
+            TokenTypes.BOR_ASSIGN,        // "|="
+            TokenTypes.BAND_ASSIGN,       // "&="
+        };
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (!isInContext(ast, ALLOWED_ASSIGNMENT_CONTEXT, CommonUtil.EMPTY_BIT_SET)
+                && !isInNoBraceControlStatement(ast)
+                && !isInLoopIdiom(ast)) {
+            log(ast, MSG_KEY);
+        }
+    }
+
+    /**
+     * Determines if ast is in the body of a flow control statement without
+     * braces. An example of such a statement would be
+     * {@snippet :
+     * if (y > 0)
+     *     x = y;
+     * }
+     *
+     * <p>
+     * This leads to the following AST structure:
+     * </p>
+     * {@snippet lang="text" :
+     * LITERAL_IF
+     *     LPAREN
+     *     EXPR // test
+     *     RPAREN
+     *     EXPR // body
+     *     SEMI
+     * }
+     *
+     * <p>
+     * We need to ensure that ast is in the body and not in the test.
+     * </p>
+     *
+     * @param ast an assignment operator AST
+     * @return whether ast is in the body of a flow control statement
+     */
+    private static boolean isInNoBraceControlStatement(DetailAST ast) {
+        boolean result = false;
+        if (isInContext(ast, CONTROL_CONTEXT, CommonUtil.EMPTY_BIT_SET)) {
+            final DetailAST expr = ast.getParent();
+            final DetailAST exprNext = expr.getNextSibling();
+            result = exprNext.getType() == TokenTypes.SEMI;
+        }
+        return result;
+    }
+
+    /**
+     * Tests whether the given AST is used in the "assignment in loop" idiom.
+     * {@snippet :
+     * String line;
+     * while ((line = bufferedReader.readLine()) != null) {
+     *   // process the line
+     * }
+     * for (;(line = bufferedReader.readLine()) != null;) {
+     *   // process the line
+     * }
+     * do {
+     *   // process the line
+     * }
+     * while ((line = bufferedReader.readLine()) != null);
+     * }
+     * Assignment inside a condition is not a problem here, as the assignment is surrounded by an
+     * extra pair of parentheses. The comparison is {@code != null} and there is no chance that
+     * intention was to write {@code line == reader.readLine()}.
+     *
+     * @param ast assignment AST
+     * @return whether the context of the assignment AST indicates the idiom
+     */
+    private static boolean isInLoopIdiom(DetailAST ast) {
+        return isComparison(ast.getParent())
+                    && isInContext(ast.getParent(),
+                            ALLOWED_ASSIGNMENT_IN_COMPARISON_CONTEXT,
+                            LOOP_IDIOM_IGNORED_PARENTS);
+    }
+
+    /**
+     * Checks if an AST is a comparison operator.
+     *
+     * @param ast the AST to check
+     * @return true iff ast is a comparison operator.
+     */
+    private static boolean isComparison(DetailAST ast) {
+        final int astType = ast.getType();
+        return COMPARISON_TYPES.get(astType);
+    }
+
+    /**
+     * Tests whether the provided AST is in one of the given contexts.
+     *
+     * @param ast the AST from which to start walking towards root
+     * @param contextSet the contexts to test against.
+     * @param skipTokens parent token types to ignore
+     *
+     * @return whether the parents nodes of ast match one of the allowed type paths.
+     */
+    private static boolean isInContext(DetailAST ast, int[][] contextSet, BitSet skipTokens) {
+        boolean found = false;
+        for (int[] element : contextSet) {
+            DetailAST current = ast;
+            for (int anElement : element) {
+                current = getParent(current, skipTokens);
+                if (current.getType() == anElement) {
+                    found = true;
+                }
+                else {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                break;
+            }
+        }
+        return found;
+    }
+
+    /**
+     * Get ast parent, ignoring token types from {@code skipTokens}.
+     *
+     * @param ast token to get parent
+     * @param skipTokens token types to skip
+     * @return first not ignored parent of ast
+     */
+    private static DetailAST getParent(DetailAST ast, BitSet skipTokens) {
+        DetailAST result = ast.getParent();
+        while (skipTokens.get(result.getType())) {
+            result = result.getParent();
+        }
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/MagicNumberCheck.java SHA256 e64806ba225e42b96e22ddc518003002aaa8e0a5d7288ea70da9c9ea76aff9e1
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.Arrays;
+import java.util.BitSet;
+
+import com.puppycrawl.tools.checkstyle.PropertyType;
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.XdocsPropertyType;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CheckUtil;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * <div>
+ * Checks that there are no
+ * <a href="https://en.wikipedia.org/wiki/Magic_number_%28programming%29">
+ * {@code "magic number"}</a> where a magic
+ * number is a numeric literal that is not defined as a constant.
+ * By default, -1, 0, 1, and 2 are not considered to be magic numbers.
+ * </div>
+ *
+ * <p>Constant definition is any variable/field that has 'final' modifier.
+ * It is fine to have one constant defining multiple numeric literals within one expression:
+ * </p>
+ * {@snippet lang="text" :
+ * static final int SECONDS_PER_DAY = 24 * 60 * 60;
+ * static final double SPECIAL_RATIO = 4.0 / 3.0;
+ * static final double SPECIAL_SUM = 1 + Math.E;
+ * static final double SPECIAL_DIFFERENCE = 4 - Math.PI;
+ * static final Border STANDARD_BORDER = BorderFactory.createEmptyBorder(3, 3, 3, 3);
+ * static final Integer ANSWER_TO_THE_ULTIMATE_QUESTION_OF_LIFE = new Integer(42);
+ * }
+ *
+ * @since 3.1
+ */
+@StatelessCheck
+public class MagicNumberCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text in "messages.properties" file.
+     */
+    public static final String MSG_KEY = "magic.number";
+
+    /**
+     * Specify tokens that are allowed in the AST path from the
+     * number literal to the enclosing constant definition.
+     */
+    @XdocsPropertyType(PropertyType.TOKEN_ARRAY)
+    private BitSet constantWaiverParentToken = TokenUtil.asBitSet(
+        TokenTypes.ASSIGN,
+        TokenTypes.ARRAY_INIT,
+        TokenTypes.EXPR,
+        TokenTypes.UNARY_PLUS,
+        TokenTypes.UNARY_MINUS,
+        TokenTypes.TYPECAST,
+        TokenTypes.ELIST,
+        TokenTypes.LITERAL_NEW,
+        TokenTypes.METHOD_CALL,
+        TokenTypes.STAR,
+        TokenTypes.DIV,
+        TokenTypes.PLUS,
+        TokenTypes.MINUS,
+        TokenTypes.QUESTION,
+        TokenTypes.COLON,
+        TokenTypes.EQUAL,
+        TokenTypes.NOT_EQUAL,
+        TokenTypes.MOD,
+        TokenTypes.SR,
+        TokenTypes.BSR,
+        TokenTypes.GE,
+        TokenTypes.GT,
+        TokenTypes.SL,
+        TokenTypes.LE,
+        TokenTypes.LT,
+        TokenTypes.BXOR,
+        TokenTypes.BOR,
+        TokenTypes.BNOT,
+        TokenTypes.BAND
+    );
+
+    /** Specify non-magic numbers. */
+    private double[] ignoreNumbers = {-1, 0, 1, 2};
+
+    /** Ignore magic numbers in hashCode methods. */
+    private boolean ignoreHashCodeMethod;
+
+    /** Ignore magic numbers in annotation declarations. */
+    private boolean ignoreAnnotation;
+
+    /** Ignore magic numbers in field declarations. */
+    private boolean ignoreFieldDeclaration;
+
+    /** Ignore magic numbers in annotation elements defaults. */
+    private boolean ignoreAnnotationElementDefaults = true;
+
+    /**
+     * Creates a new {@code MagicNumberCheck} instance.
+     */
+    public MagicNumberCheck() {
+        // no code by default
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getAcceptableTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return new int[] {
+            TokenTypes.NUM_DOUBLE,
+            TokenTypes.NUM_FLOAT,
+            TokenTypes.NUM_INT,
+            TokenTypes.NUM_LONG,
+        };
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public void visitToken(DetailAST ast) {
+        if (shouldTestAnnotationArgs(ast)
+                && shouldTestAnnotationDefaults(ast)
+                && !isInIgnoreList(ast)
+                && shouldCheckHashCodeMethod(ast)
+                && shouldCheckFieldDeclaration(ast)) {
+            final DetailAST constantDefAST = findContainingConstantDef(ast);
+            if (isMagicNumberExists(ast, constantDefAST)) {
+                reportMagicNumber(ast);
+            }
+        }
+    }
+
+    /**
+     * Checks if ast is annotation argument and should be checked.
+     *
+     * @param ast token to check
+     * @return true if element is skipped, false otherwise
+     */
+    private boolean shouldTestAnnotationArgs(DetailAST ast) {
+        return !ignoreAnnotation || !isChildOf(ast, TokenTypes.ANNOTATION);
+    }
+
+    /**
+     * Checks if ast is annotation element default value and should be checked.
+     *
+     * @param ast token to check
+     * @return true if element is skipped, false otherwise
+     */
+    private boolean shouldTestAnnotationDefaults(DetailAST ast) {
+        return !ignoreAnnotationElementDefaults || !isChildOf(ast, TokenTypes.LITERAL_DEFAULT);
+    }
+
+    /**
+     * Checks if the given AST node is a HashCode Method and should be checked.
+     *
+     * @param ast the AST node to check
+     * @return true if element should be checked, false otherwise
+     */
+    private boolean shouldCheckHashCodeMethod(DetailAST ast) {
+        return !ignoreHashCodeMethod || !isInHashCodeMethod(ast);
+    }
+
+    /**
+     * Checks if the given AST node is a field declaration and should be checked.
+     *
+     * @param ast the AST node to check
+     * @return true if element should be checked, false otherwise
+     */
+    private boolean shouldCheckFieldDeclaration(DetailAST ast) {
+        return !ignoreFieldDeclaration || !isFieldDeclaration(ast);
+    }
+
+    /**
+     * Is magic number somewhere at ast tree.
+     *
+     * @param ast ast token
+     * @param constantDefAST constant ast
+     * @return true if magic number is present
+     */
+    private boolean isMagicNumberExists(DetailAST ast, DetailAST constantDefAST) {
+        boolean found = false;
+        DetailAST astNode = ast.getParent();
+        while (astNode != constantDefAST) {
+            final int type = astNode.getType();
+
+            if (!constantWaiverParentToken.get(type)) {
+                found = true;
+                break;
+            }
+
+            astNode = astNode.getParent();
+        }
+        return found;
+    }
+
+    /**
+     * Finds the constant definition that contains aAST.
+     *
+     * @param ast the AST
+     * @return the constant def or null if ast is not contained in a constant definition.
+     */
+    private static DetailAST findContainingConstantDef(DetailAST ast) {
+        DetailAST varDefAST = ast;
+        while (varDefAST != null
+                && varDefAST.getType() != TokenTypes.VARIABLE_DEF
+                && varDefAST.getType() != TokenTypes.ENUM_CONSTANT_DEF) {
+            varDefAST = varDefAST.getParent();
+        }
+        DetailAST constantDef = null;
+
+        // no containing variable definition?
+        if (varDefAST != null) {
+            // implicit constant?
+            if (ScopeUtil.isInInterfaceOrAnnotationBlock(varDefAST)
+                    || varDefAST.getType() == TokenTypes.ENUM_CONSTANT_DEF) {
+                constantDef = varDefAST;
+            }
+            else {
+                // explicit constant
+                final DetailAST modifiersAST = varDefAST.findFirstToken(TokenTypes.MODIFIERS);
+
+                if (modifiersAST.findFirstToken(TokenTypes.FINAL) != null) {
+                    constantDef = varDefAST;
+                }
+            }
+        }
+        return constantDef;
+    }
+
+    /**
+     * Reports aAST as a magic number, includes unary operators as needed.
+     *
+     * @param ast the AST node that contains the number to report
+     */
+    private void reportMagicNumber(DetailAST ast) {
+        String text = ast.getText();
+        final DetailAST parent = ast.getParent();
+        DetailAST reportAST = ast;
+        if (parent.getType() == TokenTypes.UNARY_MINUS) {
+            reportAST = parent;
+            text = "-" + text;
+        }
+        else if (parent.getType() == TokenTypes.UNARY_PLUS) {
+            reportAST = parent;
+            text = "+" + text;
+        }
+        log(reportAST,
+                MSG_KEY,
+                text);
+    }
+
+    /**
+     * Determines whether or not the given AST is in a valid hash code method.
+     * A valid hash code method is considered to be a method of the signature
+     * {@code public int hashCode()}.
+     *
+     * @param ast the AST from which to search for an enclosing hash code method definition
+     *
+     * @return {@code true} if {@code ast} is in the scope of a valid hash code method.
+     */
+    private static boolean isInHashCodeMethod(DetailAST ast) {
+        // find the method definition AST
+        DetailAST currentAST = ast;
+        while (currentAST != null
+                && currentAST.getType() != TokenTypes.METHOD_DEF) {
+            currentAST = currentAST.getParent();
+        }
+        final DetailAST methodDefAST = currentAST;
+        boolean inHashCodeMethod = false;
+
+        if (methodDefAST != null) {
+            // Check for 'hashCode' name.
+            final DetailAST identAST = methodDefAST.findFirstToken(TokenTypes.IDENT);
+
+            if ("hashCode".equals(identAST.getText())) {
+                // Check for no arguments.
+                final DetailAST paramAST = methodDefAST.findFirstToken(TokenTypes.PARAMETERS);
+                // we are in a 'public int hashCode()' method! The compiler will ensure
+                // the method returns an 'int' and is public.
+                inHashCodeMethod = !paramAST.hasChildren();
+            }
+        }
+        return inHashCodeMethod;
+    }
+
+    /**
+     * Decides whether the number of an AST is in the ignore list of this check.
+     *
+     * @param ast the AST to check
+     * @return true if the number of ast is in the ignore list of this check.
+     */
+    private boolean isInIgnoreList(DetailAST ast) {
+        double value = CheckUtil.parseDouble(ast.getText(), ast.getType());
+        final DetailAST parent = ast.getParent();
+        if (parent.getType() == TokenTypes.UNARY_MINUS) {
+            value = -1 * value;
+        }
+        return Arrays.binarySearch(ignoreNumbers, value) >= 0;
+    }
+
+    /**
+     * Determines whether or not the given AST is field declaration.
+     *
+     * @param ast AST from which to search for an enclosing field declaration
+     *
+     * @return {@code true} if {@code ast} is in the scope of field declaration
+     */
+    private static boolean isFieldDeclaration(DetailAST ast) {
+        DetailAST varDefAST = null;
+        DetailAST node = ast;
+        while (node != null && node.getType() != TokenTypes.OBJBLOCK) {
+            if (node.getType() == TokenTypes.VARIABLE_DEF) {
+                varDefAST = node;
+                break;
+            }
+            node = node.getParent();
+        }
+
+        boolean result = false;
+
+        if (varDefAST != null) {
+            final DetailAST parent = varDefAST.getParent();
+
+            if (parent.getType() == TokenTypes.COMPACT_COMPILATION_UNIT) {
+                result = true;
+            }
+            else {
+                final DetailAST grandParent = parent.getParent();
+
+                result = grandParent.getType() == TokenTypes.CLASS_DEF
+                    || grandParent.getType() == TokenTypes.RECORD_DEF
+                    || grandParent.getType() == TokenTypes.LITERAL_NEW;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Setter to specify tokens that are allowed in the AST path from the
+     * number literal to the enclosing constant definition.
+     *
+     * @param tokens The string representation of the tokens interested in
+     * @since 6.11
+     */
+    public void setConstantWaiverParentToken(String... tokens) {
+        constantWaiverParentToken = TokenUtil.asBitSet(tokens);
+    }
+
+    /**
+     * Setter to specify non-magic numbers.
+     *
+     * @param list numbers to ignore.
+     * @since 3.1
+     */
+    public void setIgnoreNumbers(double... list) {
+        ignoreNumbers = new double[list.length];
+        System.arraycopy(list, 0, ignoreNumbers, 0, list.length);
+        Arrays.sort(ignoreNumbers);
+    }
+
+    /**
+     * Setter to ignore magic numbers in hashCode methods.
+     *
+     * @param ignoreHashCodeMethod decide whether to ignore hash code methods
+     * @since 5.3
+     */
+    public void setIgnoreHashCodeMethod(boolean ignoreHashCodeMethod) {
+        this.ignoreHashCodeMethod = ignoreHashCodeMethod;
+    }
+
+    /**
+     * Setter to ignore magic numbers in annotation declarations.
+     *
+     * @param ignoreAnnotation decide whether to ignore annotations
+     * @since 5.4
+     */
+    public void setIgnoreAnnotation(boolean ignoreAnnotation) {
+        this.ignoreAnnotation = ignoreAnnotation;
+    }
+
+    /**
+     * Setter to ignore magic numbers in field declarations.
+     *
+     * @param ignoreFieldDeclaration decide whether to ignore magic numbers in field declaration
+     * @since 6.6
+     */
+    public void setIgnoreFieldDeclaration(boolean ignoreFieldDeclaration) {
+        this.ignoreFieldDeclaration = ignoreFieldDeclaration;
+    }
+
+    /**
+     * Setter to ignore magic numbers in annotation elements defaults.
+     *
+     * @param ignoreAnnotationElementDefaults decide whether to ignore annotation elements defaults
+     * @since 8.23
+     */
+    public void setIgnoreAnnotationElementDefaults(boolean ignoreAnnotationElementDefaults) {
+        this.ignoreAnnotationElementDefaults = ignoreAnnotationElementDefaults;
+    }
+
+    /**
+     * Determines if the given AST node has a parent node with given token type code.
+     *
+     * @param ast the AST from which to search for annotations
+     * @param type the type code of parent token
+     *
+     * @return {@code true} if the AST node has a parent with given token type.
+     */
+    private static boolean isChildOf(DetailAST ast, int type) {
+        boolean result = false;
+        DetailAST node = ast;
+        do {
+            if (node.getType() == type) {
+                result = true;
+                break;
+            }
+            node = node.getParent();
+        } while (node != null);
+
+        return result;
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/MatchXpathCheck.java SHA256 2bcef146cf3d89967862113f05d41b6d493a070976ecfbf73cce161467b0ded5
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import java.util.List;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
+import com.puppycrawl.tools.checkstyle.xpath.AbstractNode;
+import com.puppycrawl.tools.checkstyle.xpath.RootNode;
+import net.sf.saxon.Configuration;
+import net.sf.saxon.om.Item;
+import net.sf.saxon.sxpath.XPathDynamicContext;
+import net.sf.saxon.sxpath.XPathEvaluator;
+import net.sf.saxon.sxpath.XPathExpression;
+import net.sf.saxon.trans.XPathException;
+
+/**
+ * <div>
+ * Evaluates Xpath query and report violation on all matching AST nodes. This check allows
+ * user to implement custom checks using Xpath. If Xpath query is not specified explicitly,
+ * then the check does nothing.
+ * </div>
+ *
+ * <p>
+ * It is recommended to define custom message for violation to explain what is not allowed and what
+ * to use instead, default message might be too abstract. To customize a message you need to
+ * add {@code message} element with <b>matchxpath.match</b> as {@code key} attribute and
+ * desired message as {@code value} attribute.
+ * </p>
+ *
+ * <p>
+ * Please read more about Xpath syntax at
+ * <a href="https://www.saxonica.com/html/documentation10/expressions/index.html">Xpath Syntax</a>.
+ * Information regarding Xpath functions can be found at
+ * <a href="https://www.saxonica.com/html/documentation10/functions/fn/index.html">
+ *     XSLT/XPath Reference</a>.
+ * Note, that <b>@text</b> attribute can be used only with token types that are listed in
+ * <a href="https://github.com/checkstyle/checkstyle/search?q=%22TOKEN_TYPES_WITH_TEXT_ATTRIBUTE+%3D+Arrays.asList%22">
+ *     XpathUtil</a>.
+ * </p>
+ *
+ * @since 8.39
+ */
+@StatelessCheck
+public class MatchXpathCheck extends AbstractCheck {
+
+    /**
+     * A key is pointing to the warning message text provided by user.
+     */
+    public static final String MSG_KEY = "matchxpath.match";
+
+    /** Specify Xpath query. */
+    private String query = "";
+
+    /** Xpath expression. */
+    private XPathExpression xpathExpression;
+
+    /**
+     * Creates a new {@code MatchXpathCheck} instance.
+     */
+    public MatchXpathCheck() {
+        // no code by default
+    }
+
+    /**
+     * Setter to specify Xpath query.
+     *
+     * @param query Xpath query.
+     * @throws IllegalStateException if creation of xpath expression fails
+     * @since 8.39
+     */
+    public void setQuery(String query) {
+        this.query = query;
+        if (!query.isEmpty()) {
+            try {
+                final XPathEvaluator xpathEvaluator =
+                        new XPathEvaluator(Configuration.newConfiguration());
+                xpathExpression = xpathEvaluator.createExpression(query);
+            }
+            catch (XPathException exc) {
+                throw new IllegalStateException("Creating Xpath expression failed: " + query, exc);
+            }
+        }
+    }
+
+    @Override
+    public int[] getDefaultTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getAcceptableTokens() {
+        return getRequiredTokens();
+    }
+
+    @Override
+    public int[] getRequiredTokens() {
+        return CommonUtil.EMPTY_INT_ARRAY;
+    }
+
+    @Override
+    public boolean isCommentNodesRequired() {
+        return true;
+    }
+
+    @Override
+    public void beginTree(DetailAST rootAST) {
+        if (!query.isEmpty()) {
+            final List<DetailAST> matchingNodes = findMatchingNodesByXpathQuery(rootAST);
+            matchingNodes.forEach(node -> log(node, MSG_KEY));
+        }
+    }
+
+    /**
+     * Find nodes that match query.
+     *
+     * @param rootAST root node
+     * @return list of matching nodes
+     * @throws IllegalStateException if evaluation of xpath query fails
+     */
+    private List<DetailAST> findMatchingNodesByXpathQuery(DetailAST rootAST) {
+        try {
+            final RootNode rootNode = new RootNode(rootAST);
+            final XPathDynamicContext xpathDynamicContext =
+                    xpathExpression.createDynamicContext(rootNode);
+            final List<Item> matchingItems = xpathExpression.evaluate(xpathDynamicContext);
+            return matchingItems.stream()
+                    .map(item -> (DetailAST) ((AbstractNode) item).getUnderlyingNode())
+                    .toList();
+        }
+        catch (XPathException exc) {
+            throw new IllegalStateException("Evaluation of Xpath query failed: " + query, exc);
+        }
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/checks/coding/MissingCtorCheck.java SHA256 6f9681e0a2cd150fc52a869ca21fe238d464c32024b1f61fa5fb4d6dbab254ca
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle.checks.coding;
+
+import com.puppycrawl.tools.checkstyle.StatelessCheck;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+/**
+ * <div>
+ * Checks that classes (except abstrac

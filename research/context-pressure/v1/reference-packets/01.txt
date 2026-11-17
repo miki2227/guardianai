@@ -1,0 +1,4501 @@
+ublic License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.AutomaticBean;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
+/**
+ * Simple plain logger for text output.
+ * This is maybe not very suitable for a text output into a file since it
+ * does not need all 'audit finished' and so on stuff, but it looks good on
+ * stdout anyway. If there is really a problem this is what XMLLogger is for.
+ * It gives structure.
+ *
+ * @see XMLLogger
+ */
+public class DefaultLogger extends AbstractAutomaticBean implements AuditListener {
+
+    /**
+     * A key pointing to the add exception message in the "messages.properties" file.
+     */
+    public static final String ADD_EXCEPTION_MESSAGE = "DefaultLogger.addException";
+    /**
+     * A key pointing to the started audit message in the "messages.properties" file.
+     */
+    public static final String AUDIT_STARTED_MESSAGE = "DefaultLogger.auditStarted";
+    /**
+     * A key pointing to the finished audit message in the "messages.properties" file.
+     */
+    public static final String AUDIT_FINISHED_MESSAGE = "DefaultLogger.auditFinished";
+
+    /** Where to write info messages. */
+    private final PrintWriter infoWriter;
+    /** Close info stream after use. */
+    private final boolean closeInfo;
+
+    /** Where to write error messages. */
+    private final PrintWriter errorWriter;
+    /** Close error stream after use. */
+    private final boolean closeError;
+
+    /** Formatter for the log message. */
+    private final AuditEventFormatter formatter;
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     *
+     * @param outputStream where to log audit events
+     * @param outputStreamOptions if {@code CLOSE} that should be closed in auditFinished()
+     * @noinspection deprecation
+     * @noinspectionreason We are forced to keep AutomaticBean compatibility
+     *     because of maven-checkstyle-plugin. Until #12873.
+     */
+    public DefaultLogger(OutputStream outputStream,
+                         AutomaticBean.OutputStreamOptions outputStreamOptions) {
+        this(outputStream, OutputStreamOptions.valueOf(outputStreamOptions.name()));
+    }
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     *
+     * @param outputStream where to log audit events
+     * @param outputStreamOptions if {@code CLOSE} that should be closed in auditFinished()
+     */
+    public DefaultLogger(OutputStream outputStream, OutputStreamOptions outputStreamOptions) {
+        // no need to close oS twice
+        this(outputStream, outputStreamOptions, outputStream, OutputStreamOptions.NONE);
+    }
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     *
+     * @param infoStream the {@code OutputStream} for info messages.
+     * @param infoStreamOptions if {@code CLOSE} info should be closed in auditFinished()
+     * @param errorStream the {@code OutputStream} for error messages.
+     * @param errorStreamOptions if {@code CLOSE} error should be closed in auditFinished()
+     */
+    public DefaultLogger(OutputStream infoStream,
+                         OutputStreamOptions infoStreamOptions,
+                         OutputStream errorStream,
+                         OutputStreamOptions errorStreamOptions) {
+        this(infoStream, infoStreamOptions, errorStream, errorStreamOptions,
+                new AuditEventDefaultFormatter());
+    }
+
+    /**
+     * Creates a new {@code DefaultLogger} instance.
+     *
+     * @param infoStream the {@code OutputStream} for info messages
+     * @param infoStreamOptions if {@code CLOSE} info should be closed in auditFinished()
+     * @param errorStream the {@code OutputStream} for error messages
+     * @param errorStreamOptions if {@code CLOSE} error should be closed in auditFinished()
+     * @param messageFormatter formatter for the log message.
+     * @throws IllegalArgumentException if stream options are null
+     * @noinspection WeakerAccess
+     * @noinspectionreason WeakerAccess - we avoid 'protected' when possible
+     */
+    public DefaultLogger(OutputStream infoStream,
+                         OutputStreamOptions infoStreamOptions,
+                         OutputStream errorStream,
+                         OutputStreamOptions errorStreamOptions,
+                         AuditEventFormatter messageFormatter) {
+        if (infoStreamOptions == null) {
+            throw new IllegalArgumentException(getLocalizedMessage(
+                    DefaultLogger.class,
+                    "DefaultLogger.infoStreamException"));
+        }
+        closeInfo = infoStreamOptions == OutputStreamOptions.CLOSE;
+        if (errorStreamOptions == null) {
+            throw new IllegalArgumentException(getLocalizedMessage(
+                    DefaultLogger.class,
+                    "DefaultLogger.errorStreamException"));
+        }
+        closeError = errorStreamOptions == OutputStreamOptions.CLOSE;
+        final Writer infoStreamWriter = new OutputStreamWriter(infoStream, StandardCharsets.UTF_8);
+        infoWriter = new PrintWriter(infoStreamWriter);
+
+        if (infoStream == errorStream) {
+            errorWriter = infoWriter;
+        }
+        else {
+            final Writer errorStreamWriter = new OutputStreamWriter(errorStream,
+                    StandardCharsets.UTF_8);
+            errorWriter = new PrintWriter(errorStreamWriter);
+        }
+        formatter = messageFormatter;
+    }
+
+    @Override
+    protected void finishLocalSetup() {
+        // No code by default
+    }
+
+    /**
+     * Print an Emacs compliant line on the error stream.
+     * If the column number is non-zero, then also display it.
+     *
+     * @see AuditListener
+     */
+    @Override
+    public void addError(AuditEvent event) {
+        final SeverityLevel severityLevel = event.getSeverityLevel();
+        if (severityLevel != SeverityLevel.IGNORE) {
+            final String errorMessage = formatter.format(event);
+            errorWriter.println(errorMessage);
+        }
+    }
+
+    @Override
+    public void addException(AuditEvent event, Throwable throwable) {
+        errorWriter.println(getLocalizedMessage(
+                DefaultLogger.class,
+                ADD_EXCEPTION_MESSAGE,
+                event.getFileName()));
+        throwable.printStackTrace(errorWriter);
+    }
+
+    @Override
+    public void auditStarted(AuditEvent event) {
+        infoWriter.println(getLocalizedMessage(
+                DefaultLogger.class,
+                AUDIT_STARTED_MESSAGE));
+        infoWriter.flush();
+    }
+
+    @Override
+    public void auditFinished(AuditEvent event) {
+        infoWriter.println(getLocalizedMessage(
+                DefaultLogger.class,
+                AUDIT_FINISHED_MESSAGE));
+        closeStreams();
+    }
+
+    @Override
+    public void fileStarted(AuditEvent event) {
+        // No need to implement this method in this class
+    }
+
+    @Override
+    public void fileFinished(AuditEvent event) {
+        infoWriter.flush();
+    }
+
+    /**
+     * Flushes the output streams and closes them if needed.
+     */
+    private void closeStreams() {
+        infoWriter.flush();
+        if (closeInfo) {
+            infoWriter.close();
+        }
+
+        errorWriter.flush();
+        if (closeError) {
+            errorWriter.close();
+        }
+    }
+
+    /**
+     * Extracts localized messages from properties files.
+     *
+     * @param caller the {@link Class} used to resolve the resource bundle
+     * @param messageKey the key pointing to localized message in respective properties file.
+     * @param args the arguments of message in respective properties file.
+     * @return a string containing extracted localized message
+     */
+    private static String getLocalizedMessage(Class<?> caller,
+                                              String messageKey, Object... args) {
+        final LocalizedMessage localizedMessage = new LocalizedMessage(
+            Definitions.CHECKSTYLE_BUNDLE, caller,
+                    messageKey, args);
+
+        return localizedMessage.getMessage();
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/Definitions.java SHA256 88f94c0dac9068ab4f8a03b4546561a774b7b4d2c5810a389f77466496282534
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.Set;
+
+/**
+ * Contains constant definitions common to the package.
+ */
+public final class Definitions {
+
+    /** Name of resource bundle for Checkstyle. */
+    public static final String CHECKSTYLE_BUNDLE =
+            "com.puppycrawl.tools.checkstyle.messages";
+
+    /** Name of modules which are not checks, but are internal modules. */
+    public static final Set<String> INTERNAL_MODULES = Set.of();
+
+    /**
+     * Do no allow {@code Definitions} instances to be created.
+     */
+    private Definitions() {
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/DetailAstImpl.java SHA256 c311ff729587964463ab52e51570df2d02975bc5d2f47d58ff1e8ba2964dc581
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.BitSet;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
+import org.antlr.v4.runtime.Token;
+
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+import com.puppycrawl.tools.checkstyle.utils.UnmodifiableCollectionUtil;
+
+/**
+ * The implementation of {@link DetailAST}. This should only be directly used to
+ * create custom AST nodes and in 'JavaAstVisitor.java'.
+ *
+ * @noinspection FieldNotUsedInToString
+ * @noinspectionreason FieldNotUsedInToString - We require a specific string format for
+ *      printing to CLI.
+ */
+public final class DetailAstImpl implements DetailAST {
+
+    /** Constant to indicate if not calculated the child count. */
+    private static final int NOT_INITIALIZED = Integer.MIN_VALUE;
+
+    /** The line number. */
+    private int lineNo = NOT_INITIALIZED;
+    /** The column number. */
+    private int columnNo = NOT_INITIALIZED;
+
+    /** Number of children. */
+    private int childCount;
+    /** The parent token. */
+    private DetailAstImpl parent;
+    /** Previous sibling. */
+    private DetailAstImpl previousSibling;
+
+    /** First child of this DetailAST. */
+    private DetailAstImpl firstChild;
+
+    /** First sibling of this DetailAST.*/
+    private DetailAstImpl nextSibling;
+
+    /** Text of this DetailAST. */
+    private String text;
+
+    /** The type of this DetailAST. */
+    private int type;
+
+    /**
+     * All tokens on COMMENTS channel to the left of the current token up to the
+     * preceding token on the DEFAULT_TOKEN_CHANNEL.
+     */
+    private List<Token> hiddenBefore;
+
+    /**
+     * All tokens on COMMENTS channel to the right of the current token up to the
+     * next token on the DEFAULT_TOKEN_CHANNEL.
+     */
+    private List<Token> hiddenAfter;
+
+    /**
+     * All token types in this branch.
+     * Token 'x' (where x is an int) is in this branch if branchTokenTypes.get(x) is true.
+     */
+    private BitSet branchTokenTypes;
+
+    /**
+     * Creates a new {@code DetailAstImpl} instance.
+     */
+    public DetailAstImpl() {
+        // no code by default
+    }
+
+    /**
+     * Initializes this DetailAstImpl.
+     *
+     * @param token the token to generate this DetailAstImpl from
+     */
+    public void initialize(Token token) {
+        text = token.getText();
+        type = token.getType();
+        lineNo = token.getLine();
+        columnNo = token.getCharPositionInLine();
+    }
+
+    /**
+     * Initializes this DetailAstImpl.
+     *
+     * @param tokenType the type of this DetailAstImpl
+     * @param tokenText the text of this DetailAstImpl
+     */
+    public void initialize(int tokenType, String tokenText) {
+        type = tokenType;
+        text = tokenText;
+    }
+
+    /**
+     * Add previous sibling.
+     *
+     * @param ast
+     *        DetailAST object.
+     */
+    public void addPreviousSibling(DetailAST ast) {
+        clearBranchTokenTypes();
+        clearChildCountCache(parent);
+        if (ast != null) {
+            // parent is set in setNextSibling or parent.setFirstChild
+            final DetailAstImpl previousSiblingNode = previousSibling;
+            final DetailAstImpl astImpl = (DetailAstImpl) ast;
+
+            if (previousSiblingNode != null) {
+                previousSiblingNode.setNextSibling(astImpl);
+            }
+            else if (parent != null) {
+                parent.setFirstChild(astImpl);
+            }
+
+            astImpl.setNextSibling(this);
+        }
+    }
+
+    /**
+     * Add next sibling, pushes other siblings back.
+     *
+     * @param ast DetailAST object.
+     */
+    public void addNextSibling(DetailAST ast) {
+        clearBranchTokenTypes();
+        clearChildCountCache(parent);
+        if (ast != null) {
+            // parent is set in setNextSibling
+            final DetailAstImpl sibling = nextSibling;
+            final DetailAstImpl astImpl = (DetailAstImpl) ast;
+            astImpl.setNextSibling(sibling);
+
+            setNextSibling(astImpl);
+        }
+    }
+
+    /**
+     * Adds a new child to the current AST.
+     *
+     * @param child to DetailAST to add as child
+     */
+    public void addChild(DetailAST child) {
+        clearBranchTokenTypes();
+        clearChildCountCache(this);
+        if (child != null) {
+            final DetailAstImpl astImpl = (DetailAstImpl) child;
+            astImpl.setParent(this);
+        }
+        DetailAST temp = firstChild;
+        if (temp == null) {
+            firstChild = (DetailAstImpl) child;
+        }
+        else {
+            while (temp.getNextSibling() != null) {
+                temp = temp.getNextSibling();
+            }
+
+            ((DetailAstImpl) temp).setNextSibling(child);
+        }
+    }
+
+    @Override
+    public int getChildCount() {
+        // lazy init
+        if (childCount == NOT_INITIALIZED) {
+            childCount = 0;
+            DetailAST child = firstChild;
+
+            while (child != null) {
+                childCount += 1;
+                child = child.getNextSibling();
+            }
+        }
+        return childCount;
+    }
+
+    @Override
+    public int getChildCount(int tokenType) {
+        int count = 0;
+        for (DetailAST ast = firstChild; ast != null; ast = ast.getNextSibling()) {
+            if (ast.getType() == tokenType) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Set the parent token.
+     *
+     * @param parent the parent token
+     */
+    private void setParent(DetailAstImpl parent) {
+        DetailAstImpl instance = this;
+        do {
+            instance.clearBranchTokenTypes();
+            instance.parent = parent;
+            instance = instance.nextSibling;
+        } while (instance != null);
+    }
+
+    @Override
+    public DetailAST getParent() {
+        return parent;
+    }
+
+    @Override
+    public String getText() {
+        return text;
+    }
+
+    /**
+     * Sets the text for this DetailAstImpl.
+     *
+     * @param text the text field of this DetailAstImpl
+     */
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    @Override
+    public int getType() {
+        return type;
+    }
+
+    /**
+     * Sets the type of this AST.
+     *
+     * @param type the token type of this DetailAstImpl
+     */
+    public void setType(int type) {
+        this.type = type;
+    }
+
+    @Override
+    public int getLineNo() {
+        int resultNo = -1;
+
+        if (lineNo == NOT_INITIALIZED) {
+            // an inner AST that has been initialized
+            // with initialize(String text)
+            resultNo = findLineNo(firstChild);
+
+            if (resultNo == -1) {
+                resultNo = findLineNo(nextSibling);
+            }
+        }
+        if (resultNo == -1) {
+            resultNo = lineNo;
+        }
+        return resultNo;
+    }
+
+    /**
+     * Set line number.
+     *
+     * @param lineNo
+     *        line number.
+     */
+    public void setLineNo(int lineNo) {
+        this.lineNo = lineNo;
+    }
+
+    @Override
+    public int getColumnNo() {
+        int resultNo = -1;
+
+        if (columnNo == NOT_INITIALIZED) {
+            // an inner AST that has been initialized
+            // with initialize(String text)
+            resultNo = findColumnNo(firstChild);
+
+            if (resultNo == -1) {
+                resultNo = findColumnNo(nextSibling);
+            }
+        }
+        if (resultNo == -1) {
+            resultNo = columnNo;
+        }
+        return resultNo;
+    }
+
+    /**
+     * Set column number.
+     *
+     * @param columnNo
+     *        column number.
+     */
+    public void setColumnNo(int columnNo) {
+        this.columnNo = columnNo;
+    }
+
+    @Override
+    public DetailAST getLastChild() {
+        DetailAstImpl ast = firstChild;
+        while (ast != null && ast.nextSibling != null) {
+            ast = ast.nextSibling;
+        }
+        return ast;
+    }
+
+    /**
+     * Finds column number in the first non-comment node.
+     *
+     * @param ast DetailAST node.
+     * @return Column number if non-comment node exists, -1 otherwise.
+     */
+    private static int findColumnNo(DetailAST ast) {
+        int resultNo = -1;
+        DetailAST node = ast;
+        while (node != null) {
+            // comment node can't be start of any java statement/definition
+            if (TokenUtil.isCommentType(node.getType())) {
+                node = node.getNextSibling();
+            }
+            else {
+                resultNo = node.getColumnNo();
+                break;
+            }
+        }
+        return resultNo;
+    }
+
+    /**
+     * Finds line number in the first non-comment node.
+     *
+     * @param ast DetailAST node.
+     * @return Line number if non-comment node exists, -1 otherwise.
+     */
+    private static int findLineNo(DetailAST ast) {
+        int resultNo = -1;
+        DetailAST node = ast;
+        while (node != null) {
+            // comment node can't be start of any java statement/definition
+            if (TokenUtil.isCommentType(node.getType())) {
+                node = node.getNextSibling();
+            }
+            else {
+                resultNo = node.getLineNo();
+                break;
+            }
+        }
+        return resultNo;
+    }
+
+    /**
+     * Returns token type with branch.
+     *
+     * @return the token types that occur in the branch as a sorted set.
+     */
+    private BitSet getBranchTokenTypes() {
+        // lazy init
+        if (branchTokenTypes == null) {
+            branchTokenTypes = new BitSet();
+            branchTokenTypes.set(type);
+
+            // add union of all children
+            DetailAstImpl child = firstChild;
+            while (child != null) {
+                final BitSet childTypes = child.getBranchTokenTypes();
+                branchTokenTypes.or(childTypes);
+
+                child = child.nextSibling;
+            }
+        }
+        return branchTokenTypes;
+    }
+
+    @Override
+    public boolean branchContains(int tokenType) {
+        return getBranchTokenTypes().get(tokenType);
+    }
+
+    @Override
+    public DetailAST getPreviousSibling() {
+        return previousSibling;
+    }
+
+    @Nullable
+    @Override
+    public DetailAST findFirstToken(int tokenType) {
+        DetailAST returnValue = null;
+        for (DetailAST ast = firstChild; ast != null; ast = ast.getNextSibling()) {
+            if (ast.getType() == tokenType) {
+                returnValue = ast;
+                break;
+            }
+        }
+        return returnValue;
+    }
+
+    @Override
+    public String toString() {
+        return text + "[" + getLineNo() + "x" + getColumnNo() + "]";
+    }
+
+    @Override
+    public DetailAstImpl getNextSibling() {
+        return nextSibling;
+    }
+
+    @Override
+    public DetailAstImpl getFirstChild() {
+        return firstChild;
+    }
+
+    @Override
+    public int getNumberOfChildren() {
+        return getChildCount();
+    }
+
+    @Override
+    public boolean hasChildren() {
+        return firstChild != null;
+    }
+
+    /**
+     * Clears the child count for the ast instance.
+     *
+     * @param ast The ast to clear.
+     */
+    private static void clearChildCountCache(DetailAstImpl ast) {
+        if (ast != null) {
+            ast.childCount = NOT_INITIALIZED;
+        }
+    }
+
+    /**
+     * Clears branchTokenTypes cache for all parents of the current DetailAST instance, and the
+     * child count for the current DetailAST instance.
+     */
+    private void clearBranchTokenTypes() {
+        DetailAstImpl prevParent = parent;
+        while (prevParent != null) {
+            prevParent.branchTokenTypes = null;
+            prevParent = prevParent.parent;
+        }
+    }
+
+    /**
+     * Sets the next sibling of this AST.
+     *
+     * @param nextSibling the DetailAST to set as sibling
+     */
+    public void setNextSibling(DetailAST nextSibling) {
+        clearBranchTokenTypes();
+        clearChildCountCache(parent);
+        this.nextSibling = (DetailAstImpl) nextSibling;
+        if (nextSibling != null && parent != null) {
+            ((DetailAstImpl) nextSibling).setParent(parent);
+        }
+        if (nextSibling != null) {
+            ((DetailAstImpl) nextSibling).previousSibling = this;
+        }
+    }
+
+    /**
+     * Sets the first child of this AST.
+     *
+     * @param firstChild the DetailAST to set as first child
+     */
+    public void setFirstChild(DetailAST firstChild) {
+        clearBranchTokenTypes();
+        clearChildCountCache(this);
+        this.firstChild = (DetailAstImpl) firstChild;
+        if (firstChild != null) {
+            ((DetailAstImpl) firstChild).setParent(this);
+        }
+    }
+
+    /**
+     * Removes all children of this AST.
+     */
+    public void removeChildren() {
+        firstChild = null;
+    }
+
+    /**
+     * Get list of tokens on COMMENTS channel to the left of the
+     * current token up to the preceding token on the DEFAULT_TOKEN_CHANNEL.
+     *
+     * @return list of comment tokens
+     */
+    public List<Token> getHiddenBefore() {
+        List<Token> returnList = null;
+        if (hiddenBefore != null) {
+            returnList = UnmodifiableCollectionUtil.unmodifiableList(hiddenBefore);
+        }
+        return returnList;
+    }
+
+    /**
+     * Get list tokens on COMMENTS channel to the right of the current
+     * token up to the next token on the DEFAULT_TOKEN_CHANNEL.
+     *
+     * @return list of comment tokens
+     */
+    public List<Token> getHiddenAfter() {
+        List<Token> returnList = null;
+        if (hiddenAfter != null) {
+            returnList = UnmodifiableCollectionUtil.unmodifiableList(hiddenAfter);
+        }
+        return returnList;
+    }
+
+    /**
+     * Sets the hiddenBefore token field.
+     *
+     * @param hiddenBefore comment token preceding this DetailAstImpl
+     */
+    public void setHiddenBefore(List<Token> hiddenBefore) {
+        this.hiddenBefore = UnmodifiableCollectionUtil.unmodifiableList(hiddenBefore);
+    }
+
+    /**
+     * Sets the hiddenAfter token field.
+     *
+     * @param hiddenAfter comment token following this DetailAstImpl
+     */
+    public void setHiddenAfter(List<Token> hiddenAfter) {
+        this.hiddenAfter = UnmodifiableCollectionUtil.unmodifiableList(hiddenAfter);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/DetailNodeTreeStringPrinter.java SHA256 ed38509096737e337008a18f1398f42dde36a53c457b12e38e5f8987994b5fac
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+
+import com.puppycrawl.tools.checkstyle.JavadocDetailNodeParser.ParseErrorMessage;
+import com.puppycrawl.tools.checkstyle.JavadocDetailNodeParser.ParseStatus;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.DetailNode;
+import com.puppycrawl.tools.checkstyle.api.FileText;
+import com.puppycrawl.tools.checkstyle.api.JavadocCommentsTokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+import com.puppycrawl.tools.checkstyle.utils.ParserUtil;
+
+/**
+ * Parses file as javadoc DetailNode tree and prints to system output stream.
+ */
+public final class DetailNodeTreeStringPrinter {
+
+    /** OS specific line separator. */
+    private static final String LINE_SEPARATOR = System.lineSeparator();
+
+    /** Prevent instances. */
+    private DetailNodeTreeStringPrinter() {
+        // no code
+    }
+
+    /**
+     * Parse a file and print the parse tree.
+     *
+     * @param file the file to print.
+     * @return parse tree as a string
+     * @throws IOException if the file could not be read.
+     */
+    public static String printFileAst(File file) throws IOException {
+        return printTree(parseFile(file), "", "");
+    }
+
+    /**
+     * Parse block comment DetailAST as Javadoc DetailNode tree.
+     *
+     * @param blockComment DetailAST
+     * @return DetailNode tree
+     * @throws IllegalArgumentException if there is an error parsing the Javadoc.
+     */
+    public static DetailNode parseJavadocAsDetailNode(DetailAST blockComment) {
+        final JavadocDetailNodeParser parser = new JavadocDetailNodeParser();
+        final ParseStatus status = parser.parseJavadocComment(blockComment);
+        final ParseErrorMessage parseErrorMessage = status.getParseErrorMessage();
+        if (parseErrorMessage != null) {
+            throw new IllegalArgumentException(getParseErrorMessage(parseErrorMessage));
+        }
+        return status.getTree();
+    }
+
+    /**
+     * Builds violation base on ParseErrorMessage's violation key, its arguments, etc.
+     *
+     * @param parseErrorMessage ParseErrorMessage
+     * @return error violation
+     */
+    private static String getParseErrorMessage(ParseErrorMessage parseErrorMessage) {
+        final LocalizedMessage message = new LocalizedMessage(
+                "com.puppycrawl.tools.checkstyle.checks.javadoc.messages",
+                DetailNodeTreeStringPrinter.class,
+                parseErrorMessage.getMessageKey(),
+                parseErrorMessage.getMessageArguments());
+        return "[ERROR:" + parseErrorMessage.getLineNumber() + "] " + message.getMessage();
+    }
+
+    /**
+     * Print AST.
+     *
+     * @param ast the root AST node.
+     * @param rootPrefix prefix for the root node
+     * @param prefix prefix for other nodes
+     * @return string AST.
+     */
+    public static String printTree(DetailNode ast, String rootPrefix, String prefix) {
+        final StringBuilder messageBuilder = new StringBuilder(1024);
+        DetailNode node = ast;
+        while (node != null) {
+            if (node.getType() == JavadocCommentsTokenTypes.JAVADOC_CONTENT) {
+                messageBuilder.append(rootPrefix);
+            }
+            else {
+                messageBuilder.append(prefix);
+            }
+            messageBuilder.append(getIndentation(node))
+                    .append(JavadocUtil.getTokenName(node.getType())).append(" -> ")
+                    .append(JavadocUtil.escapeAllControlChars(node.getText())).append(" [")
+                    .append(node.getLineNumber()).append(':').append(node.getColumnNumber() + 1)
+                    .append(']').append(LINE_SEPARATOR)
+                    .append(printTree(node.getFirstChild(), rootPrefix, prefix));
+            node = node.getNextSibling();
+        }
+        return messageBuilder.toString();
+    }
+
+    /**
+     * Get indentation for a node.
+     *
+     * @param node the DetailNode to get the indentation for.
+     * @return the indentation in String format.
+     */
+    private static String getIndentation(DetailNode node) {
+        final boolean isLastChild = node.getNextSibling() == null;
+        DetailNode currentNode = node;
+        final StringBuilder indentation = new StringBuilder(1024);
+        DetailNode parent = currentNode.getParent();
+        while (parent != null) {
+            currentNode = parent;
+            parent = currentNode.getParent();
+            if (parent == null) {
+                if (isLastChild) {
+                    // only ASCII symbols must be used due to
+                    // problems with running tests on Windows
+                    indentation.append("`--");
+                }
+                else {
+                    indentation.append("|--");
+                }
+            }
+            else {
+                if (currentNode.getNextSibling() == null) {
+                    indentation.insert(0, "    ");
+                }
+                else {
+                    indentation.insert(0, "|   ");
+                }
+            }
+        }
+        return indentation.toString();
+    }
+
+    /**
+     * Parse a file and return the parse tree.
+     *
+     * @param file the file to parse.
+     * @return the root node of the parse tree.
+     * @throws IOException if the file could not be read.
+     */
+    private static DetailNode parseFile(File file) throws IOException {
+        final FileText text = new FileText(file, Charset.defaultCharset().name());
+        final DetailAST comment = ParserUtil.createBlockCommentNode(text.getFullText().toString());
+        return parseJavadocAsDetailNode(comment);
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/FileStatefulCheck.java SHA256 619d2d39782da1ee1a5ec4535a2de55a15b3399bace49d39c35a3723898179a7
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * This annotation means that the check contains file-related context and therefore
+ * cannot be used from the others threads at the same time.
+ * This annotation should be used when the check holds a thread-unsafe state.
+ * Checker guarantees that the whole file processed inside the same thread.
+ * Checker guarantees that the whole file processed with the same check instance.
+ * Checker guarantees that each check instance processes only one file at the same time.
+ * Checker guarantees that all check instances have equal (but not the same) configuration.
+ * It means, that if a check holds a property of type "array of strings",
+ * the property value will not be shared across check instances.
+ * Instead, each check instance will hold its own array instance.
+ * Checker does not guarantee that each file will have its own thread -
+ * there might be a list of files, which will be executed on the same thread.
+ * Checker does not guarantee that each file will have its own check instance -
+ * there might be a list of files, which will be checked by the same instance.
+ * Note: Checks with such annotation will be executed in mode how all Checks worked
+ * before MT mode is introduced.
+ *
+ * @noinspection ClassIndependentOfModule
+ * @noinspectionreason ClassIndependentOfModule - we keep this annotation at top level by design
+ */
+@Inherited
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface FileStatefulCheck {
+
+    // this annotation does not have properties
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/GlobalStatefulCheck.java SHA256 3b6e4ceb47f574cdc458d10e5509271c3b8058f901758c94bc5ff64461d674f6
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * This annotation means that the check contains global context,
+ * which will be updated while Checkstyle processes files. This also means,
+ * that all files will be processed by the same check instance.
+ * This annotation should be used, if a check accumulates some information during the audit,
+ * and processed only once at the end of the audit (however, the check still
+ * can produce some messages, while collecting information).
+ * The check methods and fields should be thread safe, because they may be accessed from others
+ * threads at the same time.
+ * Checker guarantees that there will be exactly one check instance
+ * This is similar to multi-file validation, which checkstyle does not support fully yet.
+ * Please refer to <a href="https://github.com/checkstyle/checkstyle/issues/3540">#3540</a>
+ * for details.
+ *
+ * @noinspection ClassIndependentOfModule, ClassOnlyUsedInOnePackage
+ * @noinspectionreason ClassIndependentOfModule - we keep this annotation at top level by design
+ * @noinspectionreason ClassOnlyUsedInOnePackage - checks live in one package by design
+ */
+@Inherited
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface GlobalStatefulCheck {
+
+    // this annotation does not have properties
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/JavaAstVisitor.java SHA256 56ea88908f7e2cf592f3e5b4129afa147326f72ef99d81012cb42870869f4b77
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.stream.Collectors;
+
+import org.antlr.v4.runtime.BufferedTokenStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
+
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.grammar.java.JavaLanguageLexer;
+import com.puppycrawl.tools.checkstyle.grammar.java.JavaLanguageParser;
+import com.puppycrawl.tools.checkstyle.grammar.java.JavaLanguageParserBaseVisitor;
+import com.puppycrawl.tools.checkstyle.utils.TokenUtil;
+
+/**
+ * Visitor class used to build Checkstyle's Java AST from the parse tree produced by
+ * {@link JavaLanguageParser}. In each {@code visit...} method, we visit the children of a node
+ * (which correspond to subrules) or create terminal nodes (tokens), and return a subtree as a
+ * result.
+ *
+ * <p>Example:</p>
+ *
+ * <p>The following package declaration:</p>
+ * {@snippet lang="text" :
+ * package com.puppycrawl.tools.checkstyle;
+ * }
+ *
+ * <p>
+ * Will be parsed by the {@code packageDeclaration} rule from {@code JavaLanguageParser.g4}:
+ * </p>
+ * {@snippet lang="text" :
+ * packageDeclaration
+ *     : annotations[true] LITERAL_PACKAGE qualifiedName SEMI
+ *     ;
+ * }
+ *
+ * <p>
+ * We override the {@code visitPackageDeclaration} method generated by ANTLR in
+ * {@code JavaLanguageParser} at
+ * {@link JavaAstVisitor#visitPackageDeclaration(JavaLanguageParser.PackageDeclarationContext)}
+ * to create a subtree based on the subrules and tokens found in the {@code packageDeclaration}
+ * subrule accordingly, thus producing the following AST:
+ * </p>
+ * {@snippet lang="text" :
+ * PACKAGE_DEF -> package
+ * |--ANNOTATIONS -> ANNOTATIONS
+ * |--DOT -> .
+ * |   |--DOT -> .
+ * |   |   |--DOT -> .
+ * |   |   |   |--IDENT -> com
+ * |   |   |   `--IDENT -> puppycrawl
+ * |   |   `--IDENT -> tools
+ * |   `--IDENT -> checkstyle
+ * `--SEMI -> ;
+ * }
+ *
+ * <p>
+ * See <a href="https://github.com/checkstyle/checkstyle/pull/10434">#10434</a>
+ * for a good example of how to make changes to Checkstyle's grammar and AST.
+ * </p>
+ *
+ * <p>
+ * The order of {@code visit...} methods in {@code JavaAstVisitor.java} and production rules in
+ * {@code JavaLanguageParser.g4} should be consistent to ease maintenance.
+ * </p>
+ *
+ * @noinspection JavadocReference
+ * @noinspectionreason JavadocReference - References are valid in project context
+ */
+public final class JavaAstVisitor extends JavaLanguageParserBaseVisitor<DetailAstImpl> {
+
+    /** String representation of the left shift operator. */
+    private static final String LEFT_SHIFT = "<<";
+
+    /** String representation of the unsigned right shift operator. */
+    private static final String UNSIGNED_RIGHT_SHIFT = ">>>";
+
+    /** String representation of the right shift operator. */
+    private static final String RIGHT_SHIFT = ">>";
+
+    /**
+     * The tokens here are technically expressions, but should
+     * not return an EXPR token as their root.
+     */
+    private static final int[] EXPRESSIONS_WITH_NO_EXPR_ROOT = {
+        TokenTypes.CTOR_CALL,
+        TokenTypes.SUPER_CTOR_CALL,
+        TokenTypes.LAMBDA,
+    };
+
+    /** Token stream to check for hidden tokens. */
+    private final BufferedTokenStream tokens;
+
+    /**
+     * Constructs a JavaAstVisitor with given token stream.
+     *
+     * @param tokenStream the token stream to check for hidden tokens
+     */
+    public JavaAstVisitor(CommonTokenStream tokenStream) {
+        tokens = tokenStream;
+    }
+
+    @Override
+    public DetailAstImpl visitCompilationUnit(JavaLanguageParser.CompilationUnitContext ctx) {
+        final DetailAstImpl root;
+        // 'EOF' token is always present; therefore if we only have one child, we have an empty file
+        final boolean isEmptyFile = ctx.children.size() == 1;
+        if (isEmptyFile) {
+            root = null;
+        }
+        else {
+            // last child is 'EOF', we do not include this token in AST
+            final List<ParseTree> children = ctx.children.subList(0, ctx.children.size() - 1);
+
+            final boolean isCompactSourceFile = children.stream()
+                    .anyMatch(JavaAstVisitor::isCompactMemberDeclaration);
+
+            if (isCompactSourceFile) {
+                root = createImaginary(TokenTypes.COMPACT_COMPILATION_UNIT);
+            }
+            else {
+                root = createImaginary(TokenTypes.COMPILATION_UNIT);
+            }
+            processChildren(root, children);
+        }
+        return root;
+    }
+
+    /**
+     * Checks whether the given parse-tree node is a compact member declaration.
+     *
+     * @param child a parse-tree child of the compilation unit
+     * @return true if the node is a compact member declaration
+     */
+    private static boolean isCompactMemberDeclaration(ParseTree child) {
+        return child instanceof JavaLanguageParser.CompactMemberDeclarationContext;
+    }
+
+    @Override
+    public DetailAstImpl visitPackageDeclaration(
+            JavaLanguageParser.PackageDeclarationContext ctx) {
+        final DetailAstImpl packageDeclaration =
+                create(TokenTypes.PACKAGE_DEF, (Token) ctx.LITERAL_PACKAGE().getPayload());
+        packageDeclaration.addChild(visit(ctx.annotations()));
+        packageDeclaration.addChild(visit(ctx.qualifiedName()));
+        packageDeclaration.addChild(create(ctx.SEMI()));
+        return packageDeclaration;
+    }
+
+    @Override
+    public DetailAstImpl visitImportDec(JavaLanguageParser.ImportDecContext ctx) {
+        final DetailAstImpl importRoot = create(ctx.start);
+
+        // Static import
+        final TerminalNode literalStaticNode = ctx.LITERAL_STATIC();
+        if (literalStaticNode != null) {
+            importRoot.setType(TokenTypes.STATIC_IMPORT);
+            importRoot.addChild(create(literalStaticNode));
+        }
+
+        // Module import
+        final TerminalNode literalModuleNode = ctx.LITERAL_MODULE();
+        if (literalModuleNode != null) {
+            importRoot.setType(TokenTypes.MODULE_IMPORT);
+            importRoot.addChild(create(literalModuleNode));
+        }
+
+        // Handle star imports
+        final boolean isStarImport = ctx.STAR() != null;
+        if (isStarImport) {
+            final DetailAstImpl dot = create(ctx.DOT());
+            dot.addChild(visit(ctx.qualifiedName()));
+            dot.addChild(create(ctx.STAR()));
+            importRoot.addChild(dot);
+        }
+        else {
+            importRoot.addChild(visit(ctx.qualifiedName()));
+        }
+
+        importRoot.addChild(create(ctx.SEMI()));
+        return importRoot;
+    }
+
+    @Override
+    public DetailAstImpl visitSingleSemiImport(JavaLanguageParser.SingleSemiImportContext ctx) {
+        return create(ctx.SEMI());
+    }
+
+    @Override
+    public DetailAstImpl visitModuleDeclaration(
+            JavaLanguageParser.ModuleDeclarationContext ctx) {
+        final DetailAstImpl moduleDeclaration = createImaginary(TokenTypes.MODULE_DEF);
+        processChildren(moduleDeclaration, ctx.children);
+        return moduleDeclaration;
+    }
+
+    @Override
+    public DetailAstImpl visitDirectiveBlock(JavaLanguageParser.DirectiveBlockContext ctx) {
+        final DetailAstImpl directiveBlock = createImaginary(TokenTypes.DIRECTIVE_BLOCK);
+        processChildren(directiveBlock, ctx.children);
+        return directiveBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitRequiresDirective(
+            JavaLanguageParser.RequiresDirectiveContext ctx) {
+        return createNodeFromFirstToken(TokenTypes.REQUIRES, ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitExportsDirective(
+            JavaLanguageParser.ExportsDirectiveContext ctx) {
+        return createNodeFromFirstToken(TokenTypes.EXPORTS, ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitOpensDirective(JavaLanguageParser.OpensDirectiveContext ctx) {
+        return createNodeFromFirstToken(TokenTypes.OPENS, ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitUsesDirective(JavaLanguageParser.UsesDirectiveContext ctx) {
+        return createNodeFromFirstToken(TokenTypes.USES, ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitProvidesDirective(
+            JavaLanguageParser.ProvidesDirectiveContext ctx) {
+        return createNodeFromFirstToken(TokenTypes.PROVIDES, ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitRequiresModifier(
+            JavaLanguageParser.RequiresModifierContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitToClause(JavaLanguageParser.ToClauseContext ctx) {
+        return createNodeFromFirstToken(TokenTypes.TO, ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitWithClause(JavaLanguageParser.WithClauseContext ctx) {
+        return createNodeFromFirstToken(TokenTypes.WITH, ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitTypeDeclaration(JavaLanguageParser.TypeDeclarationContext ctx) {
+        final DetailAstImpl typeDeclaration;
+        if (ctx.type == null) {
+            typeDeclaration = create(ctx.semi.getFirst());
+            ctx.semi.subList(1, ctx.semi.size())
+                    .forEach(semi -> addLastSibling(typeDeclaration, create(semi)));
+        }
+        else {
+            typeDeclaration = visit(ctx.type);
+        }
+        return typeDeclaration;
+    }
+
+    @Override
+    public DetailAstImpl visitModifier(JavaLanguageParser.ModifierContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitVariableModifier(JavaLanguageParser.VariableModifierContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitClassDeclaration(JavaLanguageParser.ClassDeclarationContext ctx) {
+        return createTypeDeclaration(ctx, TokenTypes.CLASS_DEF, ctx.mods);
+    }
+
+    @Override
+    public DetailAstImpl visitRecordDeclaration(JavaLanguageParser.RecordDeclarationContext ctx) {
+        return createTypeDeclaration(ctx, TokenTypes.RECORD_DEF, ctx.mods);
+    }
+
+    @Override
+    public DetailAstImpl visitRecordComponentsList(
+            JavaLanguageParser.RecordComponentsListContext ctx) {
+        final DetailAstImpl lparen = create(ctx.LPAREN());
+
+        // We make a "RECORD_COMPONENTS" node whether components exist or not
+        if (ctx.recordComponents() == null) {
+            addLastSibling(lparen, createImaginary(TokenTypes.RECORD_COMPONENTS));
+        }
+        else {
+            addLastSibling(lparen, visit(ctx.recordComponents()));
+        }
+        addLastSibling(lparen, create(ctx.RPAREN()));
+        return lparen;
+    }
+
+    @Override
+    public DetailAstImpl visitRecordComponents(JavaLanguageParser.RecordComponentsContext ctx) {
+        final DetailAstImpl recordComponents = createImaginary(TokenTypes.RECORD_COMPONENTS);
+        processChildren(recordComponents, ctx.children);
+        return recordComponents;
+    }
+
+    @Override
+    public DetailAstImpl visitRecordComponent(JavaLanguageParser.RecordComponentContext ctx) {
+        final DetailAstImpl recordComponent = createImaginary(TokenTypes.RECORD_COMPONENT_DEF);
+        processChildren(recordComponent, ctx.children);
+        return recordComponent;
+    }
+
+    @Override
+    public DetailAstImpl visitLastRecordComponent(
+            JavaLanguageParser.LastRecordComponentContext ctx) {
+        final DetailAstImpl recordComponent = createImaginary(TokenTypes.RECORD_COMPONENT_DEF);
+        processChildren(recordComponent, ctx.children);
+        return recordComponent;
+    }
+
+    @Override
+    public DetailAstImpl visitRecordBody(JavaLanguageParser.RecordBodyContext ctx) {
+        final DetailAstImpl objBlock = createImaginary(TokenTypes.OBJBLOCK);
+        processChildren(objBlock, ctx.children);
+        return objBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitCompactConstructorDeclaration(
+            JavaLanguageParser.CompactConstructorDeclarationContext ctx) {
+        final DetailAstImpl compactConstructor = createImaginary(TokenTypes.COMPACT_CTOR_DEF);
+        compactConstructor.addChild(createModifiers(ctx.mods));
+        compactConstructor.addChild(visit(ctx.id()));
+        compactConstructor.addChild(visit(ctx.constructorBlock()));
+        return compactConstructor;
+    }
+
+    @Override
+    public DetailAstImpl visitClassExtends(JavaLanguageParser.ClassExtendsContext ctx) {
+        final DetailAstImpl classExtends = create(ctx.EXTENDS_CLAUSE());
+        classExtends.addChild(visit(ctx.type));
+        return classExtends;
+    }
+
+    @Override
+    public DetailAstImpl visitImplementsClause(JavaLanguageParser.ImplementsClauseContext ctx) {
+        final DetailAstImpl classImplements = create(TokenTypes.IMPLEMENTS_CLAUSE,
+                (Token) ctx.LITERAL_IMPLEMENTS().getPayload());
+        classImplements.addChild(visit(ctx.typeList()));
+        return classImplements;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeParameters(JavaLanguageParser.TypeParametersContext ctx) {
+        final DetailAstImpl typeParameters = createImaginary(TokenTypes.TYPE_PARAMETERS);
+        typeParameters.addChild(create(TokenTypes.GENERIC_START, (Token) ctx.LT().getPayload()));
+        // Exclude '<' and '>'
+        processChildren(typeParameters, ctx.children.subList(1, ctx.children.size() - 1));
+        typeParameters.addChild(create(TokenTypes.GENERIC_END, (Token) ctx.GT().getPayload()));
+        return typeParameters;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeParameter(JavaLanguageParser.TypeParameterContext ctx) {
+        final DetailAstImpl typeParameter = createImaginary(TokenTypes.TYPE_PARAMETER);
+        processChildren(typeParameter, ctx.children);
+        return typeParameter;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeUpperBounds(JavaLanguageParser.TypeUpperBoundsContext ctx) {
+        // In this case, we call 'extends` TYPE_UPPER_BOUNDS
+        final DetailAstImpl typeUpperBounds = create(TokenTypes.TYPE_UPPER_BOUNDS,
+                (Token) ctx.EXTENDS_CLAUSE().getPayload());
+        // 'extends' is child[0]
+        processChildren(typeUpperBounds, ctx.children.subList(1, ctx.children.size()));
+        return typeUpperBounds;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeBound(JavaLanguageParser.TypeBoundContext ctx) {
+        final DetailAstImpl typeBoundType = visit(ctx.typeBoundType(0));
+        final Iterator<JavaLanguageParser.TypeBoundTypeContext> typeBoundTypeIterator =
+                ctx.typeBoundType().listIterator(1);
+        ctx.BAND().forEach(band -> {
+            addLastSibling(typeBoundType, create(TokenTypes.TYPE_EXTENSION_AND,
+                                (Token) band.getPayload()));
+            addLastSibling(typeBoundType, visit(typeBoundTypeIterator.next()));
+        });
+        return typeBoundType;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeBoundType(JavaLanguageParser.TypeBoundTypeContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitEnumDeclaration(JavaLanguageParser.EnumDeclarationContext ctx) {
+        return createTypeDeclaration(ctx, TokenTypes.ENUM_DEF, ctx.mods);
+    }
+
+    @Override
+    public DetailAstImpl visitEnumBody(JavaLanguageParser.EnumBodyContext ctx) {
+        final DetailAstImpl objBlock = createImaginary(TokenTypes.OBJBLOCK);
+        processChildren(objBlock, ctx.children);
+        return objBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitEnumConstants(JavaLanguageParser.EnumConstantsContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitEnumConstant(JavaLanguageParser.EnumConstantContext ctx) {
+        final DetailAstImpl enumConstant =
+                createImaginary(TokenTypes.ENUM_CONSTANT_DEF);
+        processChildren(enumConstant, ctx.children);
+        return enumConstant;
+    }
+
+    @Override
+    public DetailAstImpl visitEnumBodyDeclarations(
+            JavaLanguageParser.EnumBodyDeclarationsContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitInterfaceDeclaration(
+            JavaLanguageParser.InterfaceDeclarationContext ctx) {
+        return createTypeDeclaration(ctx, TokenTypes.INTERFACE_DEF, ctx.mods);
+    }
+
+    @Override
+    public DetailAstImpl visitInterfaceExtends(JavaLanguageParser.InterfaceExtendsContext ctx) {
+        final DetailAstImpl interfaceExtends = create(ctx.EXTENDS_CLAUSE());
+        interfaceExtends.addChild(visit(ctx.typeList()));
+        return interfaceExtends;
+    }
+
+    @Override
+    public DetailAstImpl visitClassBody(JavaLanguageParser.ClassBodyContext ctx) {
+        final DetailAstImpl objBlock = createImaginary(TokenTypes.OBJBLOCK);
+        processChildren(objBlock, ctx.children);
+        return objBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitInterfaceBody(JavaLanguageParser.InterfaceBodyContext ctx) {
+        final DetailAstImpl objBlock = createImaginary(TokenTypes.OBJBLOCK);
+        processChildren(objBlock, ctx.children);
+        return objBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitEmptyClass(JavaLanguageParser.EmptyClassContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitClassBlock(JavaLanguageParser.ClassBlockContext ctx) {
+        final DetailAstImpl classBlock;
+        if (ctx.LITERAL_STATIC() == null) {
+            // We call it an INSTANCE_INIT
+            classBlock = createImaginary(TokenTypes.INSTANCE_INIT);
+        }
+        else {
+            classBlock = create(TokenTypes.STATIC_INIT, (Token) ctx.LITERAL_STATIC().getPayload());
+            classBlock.setText(TokenUtil.getTokenName(TokenTypes.STATIC_INIT));
+        }
+        classBlock.addChild(visit(ctx.block()));
+        return classBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitMethodDeclaration(JavaLanguageParser.MethodDeclarationContext ctx) {
+        final DetailAstImpl methodDef = createImaginary(TokenTypes.METHOD_DEF);
+        methodDef.addChild(createModifiers(ctx.mods));
+
+        // Process all children except C style array declarators
+        processChildren(methodDef, ctx.children.stream()
+                .filter(child -> !(child instanceof JavaLanguageParser.ArrayDeclaratorContext))
+                .toList());
+
+        // We add C style array declarator brackets to TYPE ast
+        final DetailAstImpl typeAst = (DetailAstImpl) methodDef.findFirstToken(TokenTypes.TYPE);
+        ctx.cStyleArrDec.forEach(child -> typeAst.addChild(visit(child)));
+
+        return methodDef;
+    }
+
+    @Override
+    public DetailAstImpl visitMethodBody(JavaLanguageParser.MethodBodyContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitThrowsList(JavaLanguageParser.ThrowsListContext ctx) {
+        final DetailAstImpl throwsRoot = create(ctx.LITERAL_THROWS());
+        throwsRoot.addChild(visit(ctx.qualifiedNameList()));
+        return throwsRoot;
+    }
+
+    @Override
+    public DetailAstImpl visitConstructorDeclaration(
+            JavaLanguageParser.ConstructorDeclarationContext ctx) {
+        final DetailAstImpl constructorDeclaration = createImaginary(TokenTypes.CTOR_DEF);
+        constructorDeclaration.addChild(createModifiers(ctx.mods));
+        processChildren(constructorDeclaration, ctx.children);
+        return constructorDeclaration;
+    }
+
+    @Override
+    public DetailAstImpl visitFieldDeclaration(JavaLanguageParser.FieldDeclarationContext ctx) {
+        final DetailAstImpl dummyNode = new DetailAstImpl();
+        // Since the TYPE AST is built by visitVariableDeclarator(), we skip it here (child [0])
+        // We also append the SEMI token to the first child [size() - 1],
+        // until https://github.com/checkstyle/checkstyle/issues/3151
+        processChildren(dummyNode, ctx.children.subList(1, ctx.children.size() - 1));
+        dummyNode.getFirstChild().addChild(create(ctx.SEMI()));
+        return dummyNode.getFirstChild();
+    }
+
+    @Override
+    public DetailAstImpl visitInterfaceBodyDeclaration(
+            JavaLanguageParser.InterfaceBodyDeclarationContext ctx) {
+        final DetailAstImpl returnTree;
+        if (ctx.SEMI() == null) {
+            returnTree = visit(ctx.interfaceMemberDeclaration());
+        }
+        else {
+            returnTree = create(ctx.SEMI());
+        }
+        return returnTree;
+    }
+
+    @Override
+    public DetailAstImpl visitInterfaceMethodDeclaration(
+            JavaLanguageParser.InterfaceMethodDeclarationContext ctx) {
+        final DetailAstImpl methodDef = createImaginary(TokenTypes.METHOD_DEF);
+        methodDef.addChild(createModifiers(ctx.mods));
+
+        // Process all children except C style array declarators and modifiers
+        final List<ParseTree> children = ctx.children
+                .stream()
+                .filter(child -> !(child instanceof JavaLanguageParser.ArrayDeclaratorContext))
+                .toList();
+        processChildren(methodDef, children);
+
+        // We add C style array declarator brackets to TYPE ast
+        final DetailAstImpl typeAst = (DetailAstImpl) methodDef.findFirstToken(TokenTypes.TYPE);
+        ctx.cStyleArrDec.forEach(child -> typeAst.addChild(visit(child)));
+
+        return methodDef;
+    }
+
+    @Override
+    public DetailAstImpl visitVariableDeclarators(
+            JavaLanguageParser.VariableDeclaratorsContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitVariableDeclarator(
+            JavaLanguageParser.VariableDeclaratorContext ctx) {
+        final DetailAstImpl variableDef = createImaginary(TokenTypes.VARIABLE_DEF);
+        variableDef.addChild(createModifiers(ctx.mods));
+
+        final DetailAstImpl type = visit(ctx.type);
+        variableDef.addChild(type);
+        variableDef.addChild(visit(ctx.id()));
+
+        // Add C style array declarator brackets to TYPE ast
+        ctx.arrayDeclarator().forEach(child -> type.addChild(visit(child)));
+
+        // If this is an assignment statement, ASSIGN becomes the parent of EXPR
+        final TerminalNode assignNode = ctx.ASSIGN();
+        if (assignNode != null) {
+            final DetailAstImpl assign = create(assignNode);
+            variableDef.addChild(assign);
+            assign.addChild(visit(ctx.variableInitializer()));
+        }
+        return variableDef;
+    }
+
+    @Override
+    public DetailAstImpl visitVariableDeclaratorId(
+            JavaLanguageParser.VariableDeclaratorIdContext ctx) {
+        final DetailAstImpl root = new DetailAstImpl();
+        root.addChild(createModifiers(ctx.mods));
+        final DetailAstImpl type = visit(ctx.type);
+        root.addChild(type);
+
+        final DetailAstImpl declaratorId;
+        if (ctx.LITERAL_THIS() == null) {
+            declaratorId = visit(ctx.qualifiedName());
+        }
+        else if (ctx.DOT() == null) {
+            declaratorId = create(ctx.LITERAL_THIS());
+        }
+        else {
+            declaratorId = create(ctx.DOT());
+            declaratorId.addChild(visit(ctx.qualifiedName()));
+            declaratorId.addChild(create(ctx.LITERAL_THIS()));
+        }
+
+        root.addChild(declaratorId);
+        ctx.arrayDeclarator().forEach(child -> type.addChild(visit(child)));
+
+        return root.getFirstChild();
+    }
+
+    @Override
+    public DetailAstImpl visitArrayInitializer(JavaLanguageParser.ArrayInitializerContext ctx) {
+        final DetailAstImpl arrayInitializer = create(TokenTypes.ARRAY_INIT, ctx.start);
+        // ARRAY_INIT was child[0]
+        processChildren(arrayInitializer, ctx.children.subList(1, ctx.children.size()));
+        return arrayInitializer;
+    }
+
+    @Override
+    public DetailAstImpl visitClassOrInterfaceType(
+            JavaLanguageParser.ClassOrInterfaceTypeContext ctx) {
+        final DetailAstPair currentAST = new DetailAstPair();
+        DetailAstPair.addAstChild(currentAST, visit(ctx.id()));
+        DetailAstPair.addAstChild(currentAST, visit(ctx.typeArguments()));
+
+        // This is how we build the annotations/ qualified name/ type parameters tree
+        for (ParserRuleContext extendedContext : ctx.extended) {
+            final DetailAstImpl dot = create(extendedContext.start);
+            DetailAstPair.makeAstRoot(currentAST, dot);
+            extendedContext.children
+                .forEach(child -> DetailAstPair.addAstChild(currentAST, visit(child)));
+        }
+
+        // Create imaginary 'TYPE' parent if specified
+        final DetailAstImpl returnTree;
+        if (ctx.createImaginaryNode) {
+            returnTree = createImaginary(TokenTypes.TYPE);
+            returnTree.addChild(currentAST.root);
+        }
+        else {
+            returnTree = currentAST.root;
+        }
+        return returnTree;
+    }
+
+    @Override
+    public DetailAstImpl visitSimpleTypeArgument(
+            JavaLanguageParser.SimpleTypeArgumentContext ctx) {
+        final DetailAstImpl typeArgument =
+                createImaginary(TokenTypes.TYPE_ARGUMENT);
+        typeArgument.addChild(visit(ctx.typeType()));
+        return typeArgument;
+    }
+
+    @Override
+    public DetailAstImpl visitWildCardTypeArgument(
+            JavaLanguageParser.WildCardTypeArgumentContext ctx) {
+        final DetailAstImpl typeArgument = createImaginary(TokenTypes.TYPE_ARGUMENT);
+        typeArgument.addChild(visit(ctx.annotations()));
+        typeArgument.addChild(create(TokenTypes.WILDCARD_TYPE,
+                (Token) ctx.QUESTION().getPayload()));
+
+        if (ctx.upperBound != null) {
+            final DetailAstImpl upperBound = create(TokenTypes.TYPE_UPPER_BOUNDS, ctx.upperBound);
+            upperBound.addChild(visit(ctx.typeType()));
+            typeArgument.addChild(upperBound);
+        }
+        else if (ctx.lowerBound != null) {
+            final DetailAstImpl lowerBound = create(TokenTypes.TYPE_LOWER_BOUNDS, ctx.lowerBound);
+            lowerBound.addChild(visit(ctx.typeType()));
+            typeArgument.addChild(lowerBound);
+        }
+
+        return typeArgument;
+    }
+
+    @Override
+    public DetailAstImpl visitQualifiedNameList(JavaLanguageParser.QualifiedNameListContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitFormalParameters(JavaLanguageParser.FormalParametersContext ctx) {
+        final DetailAstImpl lparen = create(ctx.LPAREN());
+
+        // We make a "PARAMETERS" node whether parameters exist or not
+        if (ctx.formalParameterList() == null) {
+            addLastSibling(lparen, createImaginary(TokenTypes.PARAMETERS));
+        }
+        else {
+            addLastSibling(lparen, visit(ctx.formalParameterList()));
+        }
+        addLastSibling(lparen, create(ctx.RPAREN()));
+        return lparen;
+    }
+
+    @Override
+    public DetailAstImpl visitFormalParameterList(
+            JavaLanguageParser.FormalParameterListContext ctx) {
+        final DetailAstImpl parameters = createImaginary(TokenTypes.PARAMETERS);
+        processChildren(parameters, ctx.children);
+        return parameters;
+    }
+
+    @Override
+    public DetailAstImpl visitFormalParameter(JavaLanguageParser.FormalParameterContext ctx) {
+        final DetailAstImpl variableDeclaratorId =
+                visitVariableDeclaratorId(ctx.variableDeclaratorId());
+        final DetailAstImpl parameterDef = createImaginary(TokenTypes.PARAMETER_DEF);
+        parameterDef.addChild(variableDeclaratorId);
+        return parameterDef;
+    }
+
+    @Override
+    public DetailAstImpl visitLastFormalParameter(
+            JavaLanguageParser.LastFormalParameterContext ctx) {
+        final DetailAstImpl parameterDef =
+                createImaginary(TokenTypes.PARAMETER_DEF);
+        parameterDef.addChild(visit(ctx.variableDeclaratorId()));
+        final DetailAstImpl ident = (DetailAstImpl) parameterDef.findFirstToken(TokenTypes.IDENT);
+        ident.addPreviousSibling(create(ctx.ELLIPSIS()));
+        // We attach annotations on ellipses in varargs to the 'TYPE' ast
+        final DetailAstImpl type = (DetailAstImpl) parameterDef.findFirstToken(TokenTypes.TYPE);
+        type.addChild(visit(ctx.annotations()));
+        return parameterDef;
+    }
+
+    @Override
+    public DetailAstImpl visitQualifiedName(JavaLanguageParser.QualifiedNameContext ctx) {
+        final DetailAstImpl ast = visit(ctx.id());
+        final DetailAstPair currentAst = new DetailAstPair();
+        DetailAstPair.addAstChild(currentAst, ast);
+
+        for (ParserRuleContext extendedContext : ctx.extended) {
+            final DetailAstImpl dot = create(extendedContext.start);
+            DetailAstPair.makeAstRoot(currentAst, dot);
+            final List<ParseTree> childList = extendedContext
+                    .children.subList(1, extendedContext.children.size());
+            processChildren(dot, childList);
+        }
+        return currentAst.getRoot();
+    }
+
+    @Override
+    public DetailAstImpl visitLiteral(JavaLanguageParser.LiteralContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitIntegerLiteral(JavaLanguageParser.IntegerLiteralContext ctx) {
+        final int[] longTypes = {
+            JavaLanguageLexer.DECIMAL_LITERAL_LONG,
+            JavaLanguageLexer.HEX_LITERAL_LONG,
+            JavaLanguageLexer.OCT_LITERAL_LONG,
+            JavaLanguageLexer.BINARY_LITERAL_LONG,
+        };
+
+        final int tokenType;
+        if (TokenUtil.isOfType(ctx.start.getType(), longTypes)) {
+            tokenType = TokenTypes.NUM_LONG;
+        }
+        else {
+            tokenType = TokenTypes.NUM_INT;
+        }
+
+        return create(tokenType, ctx.start);
+    }
+
+    @Override
+    public DetailAstImpl visitFloatLiteral(JavaLanguageParser.FloatLiteralContext ctx) {
+        final DetailAstImpl floatLiteral;
+        if (TokenUtil.isOfType(ctx.start.getType(),
+                JavaLanguageLexer.DOUBLE_LITERAL, JavaLanguageLexer.HEX_DOUBLE_LITERAL)) {
+            floatLiteral = create(TokenTypes.NUM_DOUBLE, ctx.start);
+        }
+        else {
+            floatLiteral = create(TokenTypes.NUM_FLOAT, ctx.start);
+        }
+        return floatLiteral;
+    }
+
+    @Override
+    public DetailAstImpl visitTextBlockLiteral(JavaLanguageParser.TextBlockLiteralContext ctx) {
+        final DetailAstImpl textBlockLiteralBegin = create(ctx.TEXT_BLOCK_LITERAL_BEGIN());
+        textBlockLiteralBegin.addChild(create(ctx.TEXT_BLOCK_CONTENT()));
+        textBlockLiteralBegin.addChild(create(ctx.TEXT_BLOCK_LITERAL_END()));
+        return textBlockLiteralBegin;
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotations(JavaLanguageParser.AnnotationsContext ctx) {
+        final DetailAstImpl annotations;
+
+        if (!ctx.createImaginaryNode && ctx.anno.isEmpty()) {
+            // There are no annotations, and we don't want to create the empty node
+            annotations = null;
+        }
+        else {
+            // There are annotations, or we just want the empty node
+            annotations = createImaginary(TokenTypes.ANNOTATIONS);
+            processChildren(annotations, ctx.anno);
+        }
+
+        return annotations;
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotation(JavaLanguageParser.AnnotationContext ctx) {
+        final DetailAstImpl annotation = createImaginary(TokenTypes.ANNOTATION);
+        processChildren(annotation, ctx.children);
+        return annotation;
+    }
+
+    @Override
+    public DetailAstImpl visitElementValuePairs(JavaLanguageParser.ElementValuePairsContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitElementValuePair(JavaLanguageParser.ElementValuePairContext ctx) {
+        final DetailAstImpl elementValuePair =
+                createImaginary(TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR);
+        processChildren(elementValuePair, ctx.children);
+        return elementValuePair;
+    }
+
+    @Override
+    public DetailAstImpl visitElementValue(JavaLanguageParser.ElementValueContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitElementValueArrayInitializer(
+            JavaLanguageParser.ElementValueArrayInitializerContext ctx) {
+        final DetailAstImpl arrayInit =
+                create(TokenTypes.ANNOTATION_ARRAY_INIT, (Token) ctx.LCURLY().getPayload());
+        processChildren(arrayInit, ctx.children.subList(1, ctx.children.size()));
+        return arrayInit;
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotationTypeDeclaration(
+            JavaLanguageParser.AnnotationTypeDeclarationContext ctx) {
+        return createTypeDeclaration(ctx, TokenTypes.ANNOTATION_DEF, ctx.mods);
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotationTypeBody(
+            JavaLanguageParser.AnnotationTypeBodyContext ctx) {
+        final DetailAstImpl objBlock = createImaginary(TokenTypes.OBJBLOCK);
+        processChildren(objBlock, ctx.children);
+        return objBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotationTypeElementDeclaration(
+            JavaLanguageParser.AnnotationTypeElementDeclarationContext ctx) {
+        final DetailAstImpl returnTree;
+        if (ctx.SEMI() == null) {
+            returnTree = visit(ctx.annotationTypeElementRest());
+        }
+        else {
+            returnTree = create(ctx.SEMI());
+        }
+        return returnTree;
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotationField(JavaLanguageParser.AnnotationFieldContext ctx) {
+        final DetailAstImpl dummyNode = new DetailAstImpl();
+        // Since the TYPE AST is built by visitAnnotationMethodOrConstantRest(), we skip it
+        // here (child [0])
+        processChildren(dummyNode, List.of(ctx.children.get(1)));
+        // We also append the SEMI token to the first child [size() - 1],
+        // until https://github.com/checkstyle/checkstyle/issues/3151
+        dummyNode.getFirstChild().addChild(create(ctx.SEMI()));
+        return dummyNode.getFirstChild();
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotationType(JavaLanguageParser.AnnotationTypeContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitAnnotationMethodRest(
+            JavaLanguageParser.AnnotationMethodRestContext ctx) {
+        final DetailAstImpl annotationFieldDef =
+                createImaginary(TokenTypes.ANNOTATION_FIELD_DEF);
+        annotationFieldDef.addChild(createModifiers(ctx.mods));
+        annotationFieldDef.addChild(visit(ctx.type));
+
+        // Process all children except C style array declarators
+        processChildren(annotationFieldDef, ctx.children.stream()
+                .filter(child -> !(child instanceof JavaLanguageParser.ArrayDeclaratorContext))
+                .toList());
+
+        // We add C style array declarator brackets to TYPE ast
+        final DetailAstImpl typeAst =
+                (DetailAstImpl) annotationFieldDef.findFirstToken(TokenTypes.TYPE);
+        ctx.cStyleArrDec.forEach(child -> typeAst.addChild(visit(child)));
+
+        return annotationFieldDef;
+    }
+
+    @Override
+    public DetailAstImpl visitDefaultValue(JavaLanguageParser.DefaultValueContext ctx) {
+        final DetailAstImpl defaultValue = create(ctx.LITERAL_DEFAULT());
+        defaultValue.addChild(visit(ctx.elementValue()));
+        return defaultValue;
+    }
+
+    @Override
+    public DetailAstImpl visitConstructorBlock(JavaLanguageParser.ConstructorBlockContext ctx) {
+        final DetailAstImpl slist = create(TokenTypes.SLIST, ctx.start);
+        // SLIST was child [0]
+        processChildren(slist, ctx.children.subList(1, ctx.children.size()));
+        return slist;
+    }
+
+    @Override
+    public DetailAstImpl visitExplicitCtorCall(JavaLanguageParser.ExplicitCtorCallContext ctx) {
+        final DetailAstImpl root;
+        if (ctx.LITERAL_THIS() == null) {
+            root = create(TokenTypes.SUPER_CTOR_CALL, (Token) ctx.LITERAL_SUPER().getPayload());
+        }
+        else {
+            root = create(TokenTypes.CTOR_CALL, (Token) ctx.LITERAL_THIS().getPayload());
+        }
+        root.addChild(visit(ctx.typeArguments()));
+        root.addChild(visit(ctx.arguments()));
+        root.addChild(create(ctx.SEMI()));
+        return root;
+    }
+
+    @Override
+    public DetailAstImpl visitPrimaryCtorCall(JavaLanguageParser.PrimaryCtorCallContext ctx) {
+        final DetailAstImpl primaryCtorCall = create(TokenTypes.SUPER_CTOR_CALL,
+                (Token) ctx.LITERAL_SUPER().getPayload());
+        // filter 'LITERAL_SUPER'
+        processChildren(primaryCtorCall, ctx.children.stream()
+                   .filter(child -> !child.equals(ctx.LITERAL_SUPER()))
+                   .toList());
+        return primaryCtorCall;
+    }
+
+    @Override
+    public DetailAstImpl visitBlock(JavaLanguageParser.BlockContext ctx) {
+        final DetailAstImpl slist = create(TokenTypes.SLIST, ctx.start);
+        // SLIST was child [0]
+        processChildren(slist, ctx.children.subList(1, ctx.children.size()));
+        return slist;
+    }
+
+    @Override
+    public DetailAstImpl visitLocalVar(JavaLanguageParser.LocalVarContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitBlockStat(JavaLanguageParser.BlockStatContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitAssertExp(JavaLanguageParser.AssertExpContext ctx) {
+        final DetailAstImpl assertExp = create(ctx.ASSERT());
+        // child[0] is 'ASSERT'
+        processChildren(assertExp, ctx.children.subList(1, ctx.children.size()));
+        return assertExp;
+    }
+
+    @Override
+    public DetailAstImpl visitIfStat(JavaLanguageParser.IfStatContext ctx) {
+        final DetailAstImpl ifStat = create(ctx.LITERAL_IF());
+        // child[0] is 'LITERAL_IF'
+        processChildren(ifStat, ctx.children.subList(1, ctx.children.size()));
+        return ifStat;
+    }
+
+    @Override
+    public DetailAstImpl visitForStat(JavaLanguageParser.ForStatContext ctx) {
+        final DetailAstImpl forInit = create(ctx.start);
+        // child[0] is LITERAL_FOR
+        processChildren(forInit, ctx.children.subList(1, ctx.children.size()));
+        return forInit;
+    }
+
+    @Override
+    public DetailAstImpl visitWhileStat(JavaLanguageParser.WhileStatContext ctx) {
+        final DetailAstImpl whileStatement = create(ctx.start);
+        // 'LITERAL_WHILE' is child[0]
+        processChildren(whileStatement, ctx.children.subList(1, ctx.children.size()));
+        return whileStatement;
+    }
+
+    @Override
+    public DetailAstImpl visitDoStat(JavaLanguageParser.DoStatContext ctx) {
+        final DetailAstImpl doStatement = create(ctx.start);
+        // 'LITERAL_DO' is child[0]
+        doStatement.addChild(visit(ctx.statement()));
+        // We make 'LITERAL_WHILE' into 'DO_WHILE'
+        doStatement.addChild(create(TokenTypes.DO_WHILE, (Token) ctx.LITERAL_WHILE().getPayload()));
+        doStatement.addChild(visit(ctx.parExpression()));
+        doStatement.addChild(create(ctx.SEMI()));
+        return doStatement;
+    }
+
+    @Override
+    public DetailAstImpl visitTryStat(JavaLanguageParser.TryStatContext ctx) {
+        final DetailAstImpl tryStat = create(ctx.start);
+        // child[0] is 'LITERAL_TRY'
+        processChildren(tryStat, ctx.children.subList(1, ctx.children.size()));
+        return tryStat;
+    }
+
+    @Override
+    public DetailAstImpl visitTryWithResourceStat(
+            JavaLanguageParser.TryWithResourceStatContext ctx) {
+        final DetailAstImpl tryWithResources = create(ctx.LITERAL_TRY());
+        // child[0] is 'LITERAL_TRY'
+        processChildren(tryWithResources, ctx.children.subList(1, ctx.children.size()));
+        return tryWithResources;
+    }
+
+    @Override
+    public DetailAstImpl visitYieldStat(JavaLanguageParser.YieldStatContext ctx) {
+        final DetailAstImpl yieldParent = create(ctx.LITERAL_YIELD());
+        // LITERAL_YIELD is child[0]
+        processChildren(yieldParent, ctx.children.subList(1, ctx.children.size()));
+        return yieldParent;
+    }
+
+    @Override
+    public DetailAstImpl visitSyncStat(JavaLanguageParser.SyncStatContext ctx) {
+        final DetailAstImpl syncStatement = create(ctx.start);
+        // child[0] is 'LITERAL_SYNCHRONIZED'
+        processChildren(syncStatement, ctx.children.subList(1, ctx.children.size()));
+        return syncStatement;
+    }
+
+    @Override
+    public DetailAstImpl visitReturnStat(JavaLanguageParser.ReturnStatContext ctx) {
+        final DetailAstImpl returnStat = create(ctx.LITERAL_RETURN());
+        // child[0] is 'LITERAL_RETURN'
+        processChildren(returnStat, ctx.children.subList(1, ctx.children.size()));
+        return returnStat;
+    }
+
+    @Override
+    public DetailAstImpl visitThrowStat(JavaLanguageParser.ThrowStatContext ctx) {
+        final DetailAstImpl throwStat = create(ctx.LITERAL_THROW());
+        // child[0] is 'LITERAL_THROW'
+        processChildren(throwStat, ctx.children.subList(1, ctx.children.size()));
+        return throwStat;
+    }
+
+    @Override
+    public DetailAstImpl visitBreakStat(JavaLanguageParser.BreakStatContext ctx) {
+        final DetailAstImpl literalBreak = create(ctx.LITERAL_BREAK());
+        // child[0] is 'LITERAL_BREAK'
+        processChildren(literalBreak, ctx.children.subList(1, ctx.children.size()));
+        return literalBreak;
+    }
+
+    @Override
+    public DetailAstImpl visitContinueStat(JavaLanguageParser.ContinueStatContext ctx) {
+        final DetailAstImpl continueStat = create(ctx.LITERAL_CONTINUE());
+        // child[0] is 'LITERAL_CONTINUE'
+        processChildren(continueStat, ctx.children.subList(1, ctx.children.size()));
+        return continueStat;
+    }
+
+    @Override
+    public DetailAstImpl visitEmptyStat(JavaLanguageParser.EmptyStatContext ctx) {
+        return create(TokenTypes.EMPTY_STAT, ctx.start);
+    }
+
+    @Override
+    public DetailAstImpl visitExpStat(JavaLanguageParser.ExpStatContext ctx) {
+        final DetailAstImpl expStatRoot = visit(ctx.statementExpression);
+        addLastSibling(expStatRoot, create(ctx.SEMI()));
+        return expStatRoot;
+    }
+
+    @Override
+    public DetailAstImpl visitLabelStat(JavaLanguageParser.LabelStatContext ctx) {
+        final DetailAstImpl labelStat = create(TokenTypes.LABELED_STAT,
+                (Token) ctx.COLON().getPayload());
+        labelStat.addChild(visit(ctx.id()));
+        labelStat.addChild(visit(ctx.statement()));
+        return labelStat;
+    }
+
+    @Override
+    public DetailAstImpl visitSwitchExpressionOrStatement(
+            JavaLanguageParser.SwitchExpressionOrStatementContext ctx) {
+        final DetailAstImpl switchStat = create(ctx.LITERAL_SWITCH());
+        switchStat.addChild(visit(ctx.parExpression()));
+        switchStat.addChild(create(ctx.LCURLY()));
+        switchStat.addChild(visit(ctx.switchBlock()));
+        switchStat.addChild(create(ctx.RCURLY()));
+        return switchStat;
+    }
+
+    @Override
+    public DetailAstImpl visitSwitchRules(JavaLanguageParser.SwitchRulesContext ctx) {
+        final DetailAstImpl dummyRoot = new DetailAstImpl();
+        ctx.switchLabeledRule().forEach(switchLabeledRuleContext -> {
+            final DetailAstImpl switchRule = visit(switchLabeledRuleContext);
+            final DetailAstImpl switchRuleParent = createImaginary(TokenTypes.SWITCH_RULE);
+            switchRuleParent.addChild(switchRule);
+            dummyRoot.addChild(switchRuleParent);
+        });
+        return dummyRoot.getFirstChild();
+    }
+
+    @Override
+    public DetailAstImpl visitSwitchBlocks(JavaLanguageParser.SwitchBlocksContext ctx) {
+        final DetailAstImpl dummyRoot = new DetailAstImpl();
+        ctx.groups.forEach(group -> dummyRoot.addChild(visit(group)));
+
+        // Add any empty switch labels to end of statement in one 'CASE_GROUP'
+        if (!ctx.emptyLabels.isEmpty()) {
+            final DetailAstImpl emptyLabelParent =
+                    createImaginary(TokenTypes.CASE_GROUP);
+            ctx.emptyLabels.forEach(label -> emptyLabelParent.addChild(visit(label)));
+            dummyRoot.addChild(emptyLabelParent);
+        }
+        return dummyRoot.getFirstChild();
+    }
+
+    @Override
+    public DetailAstImpl visitSwitchLabeledExpression(
+            JavaLanguageParser.SwitchLabeledExpressionContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitSwitchLabeledBlock(
+            JavaLanguageParser.SwitchLabeledBlockContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitSwitchLabeledThrow(
+            JavaLanguageParser.SwitchLabeledThrowContext ctx) {
+        final DetailAstImpl switchLabel = visit(ctx.switchLabel());
+        addLastSibling(switchLabel, create(ctx.LAMBDA()));
+        final DetailAstImpl literalThrow = create(ctx.LITERAL_THROW());
+        literalThrow.addChild(visit(ctx.expression()));
+        literalThrow.addChild(create(ctx.SEMI()));
+        addLastSibling(switchLabel, literalThrow);
+        return switchLabel;
+    }
+
+    @Override
+    public DetailAstImpl visitElseStat(JavaLanguageParser.ElseStatContext ctx) {
+        final DetailAstImpl elseStat = create(ctx.LITERAL_ELSE());
+        // child[0] is 'LITERAL_ELSE'
+        processChildren(elseStat, ctx.children.subList(1, ctx.children.size()));
+        return elseStat;
+    }
+
+    @Override
+    public DetailAstImpl visitCatchClause(JavaLanguageParser.CatchClauseContext ctx) {
+        final DetailAstImpl catchClause = create(TokenTypes.LITERAL_CATCH,
+                (Token) ctx.LITERAL_CATCH().getPayload());
+        // 'LITERAL_CATCH' is child[0]
+        processChildren(catchClause, ctx.children.subList(1, ctx.children.size()));
+        return catchClause;
+    }
+
+    @Override
+    public DetailAstImpl visitCatchParameter(JavaLanguageParser.CatchParameterContext ctx) {
+        final DetailAstImpl catchParameterDef = createImaginary(TokenTypes.PARAMETER_DEF);
+        catchParameterDef.addChild(createModifiers(ctx.mods));
+        // filter mods
+        processChildren(catchParameterDef, ctx.children.stream()
+                .filter(child -> !(child instanceof JavaLanguageParser.VariableModifierContext))
+                .toList());
+        return catchParameterDef;
+    }
+
+    @Override
+    public DetailAstImpl visitCatchType(JavaLanguageParser.CatchTypeContext ctx) {
+        final DetailAstImpl type = createImaginary(TokenTypes.TYPE);
+        processChildren(type, ctx.children);
+        return type;
+    }
+
+    @Override
+    public DetailAstImpl visitFinallyBlock(JavaLanguageParser.FinallyBlockContext ctx) {
+        final DetailAstImpl finallyBlock = create(ctx.LITERAL_FINALLY());
+        // child[0] is 'LITERAL_FINALLY'
+        processChildren(finallyBlock, ctx.children.subList(1, ctx.children.size()));
+        return finallyBlock;
+    }
+
+    @Override
+    public DetailAstImpl visitResourceSpecification(
+            JavaLanguageParser.ResourceSpecificationContext ctx) {
+        final DetailAstImpl resourceSpecification =
+                createImaginary(TokenTypes.RESOURCE_SPECIFICATION);
+        processChildren(resourceSpecification, ctx.children);
+        return resourceSpecification;
+    }
+
+    @Override
+    public DetailAstImpl visitResources(JavaLanguageParser.ResourcesContext ctx) {
+        final DetailAstImpl firstResource = visit(ctx.resource(0));
+        final DetailAstImpl resources = createImaginary(TokenTypes.RESOURCES);
+        resources.addChild(firstResource);
+        processChildren(resources, ctx.children.subList(1, ctx.children.size()));
+        return resources;
+    }
+
+    @Override
+    public DetailAstImpl visitResourceDeclaration(
+            JavaLanguageParser.ResourceDeclarationContext ctx) {
+        final DetailAstImpl resource = createImaginary(TokenTypes.RESOURCE);
+        resource.addChild(visit(ctx.variableDeclaratorId()));
+
+        final DetailAstImpl assign = create(ctx.ASSIGN());
+        resource.addChild(assign);
+        assign.addChild(visit(ctx.expression()));
+        return resource;
+    }
+
+    @Override
+    public DetailAstImpl visitVariableAccess(JavaLanguageParser.VariableAccessContext ctx) {
+        final DetailAstImpl resource = createImaginary(TokenTypes.RESOURCE);
+
+        final DetailAstImpl childNode;
+        if (ctx.LITERAL_THIS() == null) {
+            childNode = visit(ctx.id());
+        }
+        else {
+            childNode = create(ctx.LITERAL_THIS());
+        }
+
+        if (ctx.accessList.isEmpty()) {
+            resource.addChild(childNode);
+        }
+        else {
+            final DetailAstPair currentAst = new DetailAstPair();
+            ctx.accessList.forEach(fieldAccess -> {
+                DetailAstPair.addAstChild(currentAst, visit(fieldAccess.expr()));
+                DetailAstPair.makeAstRoot(currentAst, create(fieldAccess.DOT()));
+            });
+            resource.addChild(currentAst.getRoot());
+            resource.getFirstChild().addChild(childNode);
+        }
+        return resource;
+    }
+
+    @Override
+    public DetailAstImpl visitSwitchBlockStatementGroup(
+            JavaLanguageParser.SwitchBlockStatementGroupContext ctx) {
+        final DetailAstImpl caseGroup = createImaginary(TokenTypes.CASE_GROUP);
+        processChildren(caseGroup, ctx.switchLabel());
+        final DetailAstImpl sList = createImaginary(TokenTypes.SLIST);
+        processChildren(sList, ctx.slists);
+        caseGroup.addChild(sList);
+        return caseGroup;
+    }
+
+    @Override
+    public DetailAstImpl visitCaseLabel(JavaLanguageParser.CaseLabelContext ctx) {
+        final DetailAstImpl caseLabel = create(ctx.LITERAL_CASE());
+        // child [0] is 'LITERAL_CASE'
+        processChildren(caseLabel, ctx.children.subList(1, ctx.children.size()));
+        return caseLabel;
+    }
+
+    @Override
+    public DetailAstImpl visitDefaultLabel(JavaLanguageParser.DefaultLabelContext ctx) {
+        final DetailAstImpl defaultLabel = create(ctx.LITERAL_DEFAULT());
+        if (ctx.COLON() != null) {
+            defaultLabel.addChild(create(ctx.COLON()));
+        }
+        return defaultLabel;
+    }
+
+    @Override
+    public DetailAstImpl visitCaseConstants(JavaLanguageParser.CaseConstantsContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitCaseConstant(JavaLanguageParser.CaseConstantContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitEnhancedFor(JavaLanguageParser.EnhancedForContext ctx) {
+        final DetailAstImpl leftParen = create(ctx.LPAREN());
+        final DetailAstImpl enhancedForControl =
+                 visit(ctx.getChild(1));
+        final DetailAstImpl forEachClause = createImaginary(TokenTypes.FOR_EACH_CLAUSE);
+        forEachClause.addChild(enhancedForControl);
+        addLastSibling(leftParen, forEachClause);
+        addLastSibling(leftParen, create(ctx.RPAREN()));
+        return leftParen;
+    }
+
+    @Override
+    public DetailAstImpl visitForFor(JavaLanguageParser.ForForContext ctx) {
+        final DetailAstImpl dummyRoot = new DetailAstImpl();
+        dummyRoot.addChild(create(ctx.LPAREN()));
+
+        if (ctx.forInit() == null) {
+            final DetailAstImpl imaginaryForInitParent =
+                    createImaginary(TokenTypes.FOR_INIT);
+            dummyRoot.addChild(imaginaryForInitParent);
+        }
+        else {
+            dummyRoot.addChild(visit(ctx.forInit()));
+        }
+
+        dummyRoot.addChild(create(ctx.SEMI(0)));
+
+        final DetailAstImpl forCondParent = createImaginary(TokenTypes.FOR_CONDITION);
+        forCondParent.addChild(visit(ctx.forCond));
+        dummyRoot.addChild(forCondParent);
+        dummyRoot.addChild(create(ctx.SEMI(1)));
+
+        final DetailAstImpl forItParent = createImaginary(TokenTypes.FOR_ITERATOR);
+        forItParent.addChild(visit(ctx.forUpdate));
+        dummyRoot.addChild(forItParent);
+
+        dummyRoot.addChild(create(ctx.RPAREN()));
+
+        return dummyRoot.getFirstChild();
+    }
+
+    @Override
+    public DetailAstImpl visitForInit(JavaLanguageParser.ForInitContext ctx) {
+        final DetailAstImpl forInit = createImaginary(TokenTypes.FOR_INIT);
+        processChildren(forInit, ctx.children);
+        return forInit;
+    }
+
+    @Override
+    public DetailAstImpl visitEnhancedForControl(
+            JavaLanguageParser.EnhancedForControlContext ctx) {
+        final DetailAstImpl variableDeclaratorId =
+                 visit(ctx.variableDeclaratorId());
+        final DetailAstImpl variableDef = createImaginary(TokenTypes.VARIABLE_DEF);
+        variableDef.addChild(variableDeclaratorId);
+
+        addLastSibling(variableDef, create(ctx.COLON()));
+        addLastSibling(variableDef, visit(ctx.expression()));
+        return variableDef;
+    }
+
+    @Override
+    public DetailAstImpl visitEnhancedForControlWithRecordPattern(
+            JavaLanguageParser.EnhancedForControlWithRecordPatternContext ctx) {
+        final DetailAstImpl recordPattern =
+                 visit(ctx.pattern());
+        addLastSibling(recordPattern, create(ctx.COLON()));
+        addLastSibling(recordPattern, visit(ctx.expression()));
+        return recordPattern;
+    }
+
+    @Override
+    public DetailAstImpl visitParExpression(JavaLanguageParser.ParExpressionContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitExpressionList(JavaLanguageParser.ExpressionListContext ctx) {
+        final DetailAstImpl elist = createImaginary(TokenTypes.ELIST);
+        processChildren(elist, ctx.children);
+        return elist;
+    }
+
+    @Override
+    public DetailAstImpl visitExpression(JavaLanguageParser.ExpressionContext ctx) {
+        return buildExpressionNode(ctx.expr());
+    }
+
+    @Override
+    public DetailAstImpl visitRefOp(JavaLanguageParser.RefOpContext ctx) {
+        final DetailAstImpl bop = create(ctx.bop);
+        final DetailAstImpl leftChild = visit(ctx.expr());
+        final DetailAstImpl rightChild = create(TokenTypes.IDENT, ctx.stop);
+        bop.addChild(leftChild);
+        bop.addChild(rightChild);
+        return bop;
+    }
+
+    @Override
+    public DetailAstImpl visitSuperExp(JavaLanguageParser.SuperExpContext ctx) {
+        final DetailAstImpl bop = create(ctx.bop);
+        bop.addChild(visit(ctx.expr()));
+        bop.addChild(create(ctx.LITERAL_SUPER()));
+        DetailAstImpl superSuffixParent = visit(ctx.superSuffix());
+
+        if (superSuffixParent == null) {
+            superSuffixParent = bop;
+        }
+        else {
+            DetailAstImpl firstChild = superSuffixParent;
+            while (firstChild.getFirstChild() != null) {
+                firstChild = firstChild.getFirstChild();
+            }
+            firstChild.addPreviousSibling(bop);
+        }
+
+        return superSuffixParent;
+    }
+
+    @Override
+    public DetailAstImpl visitInstanceOfExp(JavaLanguageParser.InstanceOfExpContext ctx) {
+        final DetailAstImpl literalInstanceOf = create(ctx.LITERAL_INSTANCEOF());
+        literalInstanceOf.addChild(visit(ctx.expr()));
+        final ParseTree patternOrType = ctx.getChild(2);
+        final DetailAstImpl patternDef = visit(patternOrType);
+        literalInstanceOf.addChild(patternDef);
+        return literalInstanceOf;
+    }
+
+    @Override
+    public DetailAstImpl visitBitShift(JavaLanguageParser.BitShiftContext ctx) {
+        final DetailAstImpl shiftOperation;
+
+        // We determine the type of shift operation in the parser, instead of the
+        // lexer as in older grammars. This makes it easier to parse type parameters
+        // and less than/ greater than operators in general.
+        if (ctx.LT().size() == LEFT_SHIFT.length()) {
+            shiftOperation = create(TokenTypes.SL, (Token) ctx.LT(0).getPayload());
+            shiftOperation.setText(LEFT_SHIFT);
+        }
+        else if (ctx.GT().size() == UNSIGNED_RIGHT_SHIFT.length()) {
+            shiftOperation = create(TokenTypes.BSR, (Token) ctx.GT(0).getPayload());
+            shiftOperation.setText(UNSIGNED_RIGHT_SHIFT);
+        }
+        else {
+            shiftOperation = create(TokenTypes.SR, (Token) ctx.GT(0).getPayload());
+            shiftOperation.setText(RIGHT_SHIFT);
+        }
+
+        shiftOperation.addChild(visit(ctx.expr(0)));
+        shiftOperation.addChild(visit(ctx.expr(1)));
+        return shiftOperation;
+    }
+
+    @Override
+    public DetailAstImpl visitNewExp(JavaLanguageParser.NewExpContext ctx) {
+        final DetailAstImpl newExp = create(ctx.LITERAL_NEW());
+        // child [0] is LITERAL_NEW
+        processChildren(newExp, ctx.children.subList(1, ctx.children.size()));
+        return newExp;
+    }
+
+    @Override
+    public DetailAstImpl visitPrefix(JavaLanguageParser.PrefixContext ctx) {
+        final int tokenType = switch (ctx.prefix.getType()) {
+            case JavaLanguageLexer.PLUS -> TokenTypes.UNARY_PLUS;
+            case JavaLanguageLexer.MINUS -> TokenTypes.UNARY_MINUS;
+            default -> ctx.prefix.getType();
+        };
+        final DetailAstImpl prefix = create(tokenType, ctx.prefix);
+        prefix.addChild(visit(ctx.expr()));
+        return prefix;
+    }
+
+    @Override
+    public DetailAstImpl visitCastExp(JavaLanguageParser.CastExpContext ctx) {
+        final DetailAstImpl cast = create(TokenTypes.TYPECAST, (Token) ctx.LPAREN().getPayload());
+        // child [0] is LPAREN
+        processChildren(cast, ctx.children.subList(1, ctx.children.size()));
+        return cast;
+    }
+
+    @Override
+    public DetailAstImpl visitIndexOp(JavaLanguageParser.IndexOpContext ctx) {
+        // LBRACK -> INDEX_OP is root of this AST
+        final DetailAstImpl indexOp = create(TokenTypes.INDEX_OP,
+                (Token) ctx.LBRACK().getPayload());
+
+        // add expression(IDENT) on LHS
+        indexOp.addChild(visit(ctx.expr(0)));
+
+        // create imaginary node for expression on RHS
+        final DetailAstImpl expr = visit(ctx.expr(1));
+        final DetailAstImpl imaginaryExpr = createImaginary(TokenTypes.EXPR);
+        imaginaryExpr.addChild(expr);
+        indexOp.addChild(imaginaryExpr);
+
+        // complete AST by adding RBRACK
+        indexOp.addChild(create(ctx.RBRACK()));
+        return indexOp;
+    }
+
+    @Override
+    public DetailAstImpl visitInvOp(JavaLanguageParser.InvOpContext ctx) {
+        final DetailAstPair currentAst = new DetailAstPair();
+
+        final DetailAstImpl returnAst = visit(ctx.expr());
+        DetailAstPair.addAstChild(currentAst, returnAst);
+        DetailAstPair.makeAstRoot(currentAst, create(ctx.bop));
+
+        DetailAstPair.addAstChild(currentAst,
+                 visit(ctx.nonWildcardTypeArguments()));
+        DetailAstPair.addAstChild(currentAst, visit(ctx.id()));
+        final DetailAstImpl lparen = create(TokenTypes.METHOD_CALL,
+                (Token) ctx.LPAREN().getPayload());
+        DetailAstPair.makeAstRoot(currentAst, lparen);
+
+        // We always add an 'ELIST' node
+        final DetailAstImpl expressionList = Optional.ofNullable(visit(ctx.expressionList()))
+                .orElseGet(() -> createImaginary(TokenTypes.ELIST));
+
+        DetailAstPair.addAstChild(currentAst, expressionList);
+        DetailAstPair.addAstChild(currentAst, create(ctx.RPAREN()));
+
+        return currentAst.root;
+    }
+
+    @Override
+    public DetailAstImpl visitInitExp(JavaLanguageParser.InitExpContext ctx) {
+        final DetailAstImpl dot = create(ctx.bop);
+        dot.addChild(visit(ctx.expr()));
+        final DetailAstImpl literalNew = create(ctx.LITERAL_NEW());
+        literalNew.addChild(visit(ctx.nonWildcardTypeArguments()));
+        literalNew.addChild(visit(ctx.innerCreator()));
+        dot.addChild(literalNew);
+        return dot;
+    }
+
+    @Override
+    public DetailAstImpl visitSimpleMethodCall(JavaLanguageParser.SimpleMethodCallContext ctx) {
+        final DetailAstImpl methodCall = create(TokenTypes.METHOD_CALL,
+                (Token) ctx.LPAREN().getPayload());
+        methodCall.addChild(visit(ctx.id()));
+        // We always add an 'ELIST' node
+        final DetailAstImpl expressionList = Optional.ofNullable(visit(ctx.expressionList()))
+                .orElseGet(() -> createImaginary(TokenTypes.ELIST));
+
+        methodCall.addChild(expressionList);
+        methodCall.addChild(create((Token) ctx.RPAREN().getPayload()));
+        return methodCall;
+    }
+
+    @Override
+    public DetailAstImpl visitLambdaExp(JavaLanguageParser.LambdaExpContext ctx) {
+        final DetailAstImpl lambda = create(ctx.LAMBDA());
+        lambda.addChild(visit(ctx.lambdaParameters()));
+
+        final JavaLanguageParser.BlockContext blockContext = ctx.block();
+        final DetailAstImpl rightHandLambdaChild;
+        if (blockContext != null) {
+            rightHandLambdaChild = visit(blockContext);
+        }
+        else {
+            // Lambda expression child is built the same way that we build
+            // the initial expression node in visitExpression, i.e. with
+            // an imaginary EXPR node. This results in nested EXPR nodes
+            // in the AST.
+            rightHandLambdaChild = buildExpressionNode(ctx.expr());
+        }
+        lambda.addChild(rightHandLambdaChild);
+        return lambda;
+    }
+
+    @Override
+    public DetailAstImpl visitThisExp(JavaLanguageParser.ThisExpContext ctx) {
+        final DetailAstImpl bop = create(ctx.bop);
+        bop.addChild(visit(ctx.expr()));
+        bop.addChild(create(ctx.LITERAL_THIS()));
+        return bop;
+    }
+
+    @Override
+    public DetailAstImpl visitPrimaryExp(JavaLanguageParser.PrimaryExpContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitPostfix(JavaLanguageParser.PostfixContext ctx) {
+        final DetailAstImpl postfix;
+        if (ctx.postfix.getType() == JavaLanguageLexer.INC) {
+            postfix = create(TokenTypes.POST_INC, ctx.postfix);
+        }
+        else {
+            postfix = create(TokenTypes.POST_DEC, ctx.postfix);
+        }
+        postfix.addChild(visit(ctx.expr()));
+        return postfix;
+    }
+
+    @Override
+    public DetailAstImpl visitMethodRef(JavaLanguageParser.MethodRefContext ctx) {
+        final DetailAstImpl doubleColon = create(TokenTypes.METHOD_REF,
+                (Token) ctx.DOUBLE_COLON().getPayload());
+        final List<ParseTree> children = ctx.children.stream()
+                .filter(child -> !child.equals(ctx.DOUBLE_COLON()))
+                .toList();
+        processChildren(doubleColon, children);
+        return doubleColon;
+    }
+
+    @Override
+    public DetailAstImpl visitTernaryOp(JavaLanguageParser.TernaryOpContext ctx) {
+        final DetailAstImpl root = create(ctx.QUESTION());
+        processChildren(root, ctx.children.stream()
+                .filter(child -> !child.equals(ctx.QUESTION()))
+                .toList());
+        return root;
+    }
+
+    @Override
+    public DetailAstImpl visitBinOp(JavaLanguageParser.BinOpContext ctx) {
+        final DetailAstImpl bop = create(ctx.bop);
+
+        // To improve performance, we iterate through binary operations
+        // since they are frequently deeply nested.
+        final List<JavaLanguageParser.BinOpContext> binOpList = new ArrayList<>();
+        ParseTree firstExpression = ctx.expr(0);
+        while (firstExpression instanceof JavaLanguageParser.BinOpContext) {
+            // Get all nested binOps
+            binOpList.add((JavaLanguageParser.BinOpContext) firstExpression);
+            firstExpression = ((JavaLanguageParser.BinOpContext) firstExpression).expr(0);
+        }
+
+        if (binOpList.isEmpty()) {
+            final DetailAstImpl leftChild = visit(ctx.children.getFirst());
+            bop.addChild(leftChild);
+        }
+        else {
+            // Map all descendants to individual AST's since we can parallelize this
+            // operation
+            final Queue<DetailAstImpl> descendantList = binOpList.parallelStream()
+                    .map(this::getInnerBopAst)
+                    .collect(Collectors.toCollection(ArrayDeque::new));
+
+            bop.addChild(descendantList.poll());
+            DetailAstImpl pointer = bop.getFirstChild();
+            // Build tree
+            for (DetailAstImpl descendant : descendantList) {
+                pointer.getFirstChild().addPreviousSibling(descendant);
+                pointer = descendant;
+            }
+        }
+
+        bop.addChild(visit(ctx.children.get(2)));
+        return bop;
+    }
+
+    /**
+     * Builds the binary operation (binOp) AST.
+     *
+     * @param descendant the BinOpContext to build AST from
+     * @return binOp AST
+     */
+    private DetailAstImpl getInnerBopAst(JavaLanguageParser.BinOpContext descendant) {
+        final DetailAstImpl innerBop = create(descendant.bop);
+        final JavaLanguageParser.ExprContext expr = descendant.expr(0);
+        if (!(expr instanceof JavaLanguageParser.BinOpContext)) {
+            innerBop.addChild(visit(expr));
+        }
+        innerBop.addChild(visit(descendant.expr(1)));
+        return innerBop;
+    }
+
+    @Override
+    public DetailAstImpl visitMethodCall(JavaLanguageParser.MethodCallContext ctx) {
+        final DetailAstImpl methodCall = create(TokenTypes.METHOD_CALL,
+                (Token) ctx.LPAREN().getPayload());
+        // We always add an 'ELIST' node
+        final DetailAstImpl expressionList = Optional.ofNullable(visit(ctx.expressionList()))
+                .orElseGet(() -> createImaginary(TokenTypes.ELIST));
+
+        final DetailAstImpl dot = create(ctx.DOT());
+        dot.addChild(visit(ctx.expr()));
+        dot.addChild(visit(ctx.id()));
+        methodCall.addChild(dot);
+        methodCall.addChild(expressionList);
+        methodCall.addChild(create((Token) ctx.RPAREN().getPayload()));
+        return methodCall;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeCastParameters(
+            JavaLanguageParser.TypeCastParametersContext ctx) {
+        final DetailAstImpl typeType = visit(ctx.typeType(0));
+        for (int index = 0; index < ctx.BAND().size(); index++) {
+            addLastSibling(typeType, create(TokenTypes.TYPE_EXTENSION_AND,
+                                (Token) ctx.BAND(index).getPayload()));
+            addLastSibling(typeType, visit(ctx.typeType(index + 1)));
+        }
+        return typeType;
+    }
+
+    @Override
+    public DetailAstImpl visitSingleLambdaParam(JavaLanguageParser.SingleLambdaParamContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitFormalLambdaParam(JavaLanguageParser.FormalLambdaParamContext ctx) {
+        final DetailAstImpl lparen = create(ctx.LPAREN());
+
+        // We add an 'PARAMETERS' node here whether it exists or not
+        final DetailAstImpl parameters = Optional.ofNullable(visit(ctx.formalParameterList()))
+                .orElseGet(() -> createImaginary(TokenTypes.PARAMETERS));
+        addLastSibling(lparen, parameters);
+        addLastSibling(lparen, create(ctx.RPAREN()));
+        return lparen;
+    }
+
+    @Override
+    public DetailAstImpl visitMultiLambdaParam(JavaLanguageParser.MultiLambdaParamContext ctx) {
+        final DetailAstImpl lparen = create(ctx.LPAREN());
+        addLastSibling(lparen, visit(ctx.multiLambdaParams()));
+        addLastSibling(lparen, create(ctx.RPAREN()));
+        return lparen;
+    }
+
+    @Override
+    public DetailAstImpl visitMultiLambdaParams(JavaLanguageParser.MultiLambdaParamsContext ctx) {
+        final DetailAstImpl parameters = createImaginary(TokenTypes.PARAMETERS);
+        parameters.addChild(createLambdaParameter(ctx.id(0)));
+
+        for (int index = 0; index < ctx.COMMA().size(); index++) {
+            parameters.addChild(create(ctx.COMMA(index)));
+            parameters.addChild(createLambdaParameter(ctx.id(index + 1)));
+        }
+        return parameters;
+    }
+
+    /**
+     * Creates a 'PARAMETER_DEF' node for a lambda expression, with
+     * imaginary modifier and type nodes.
+     *
+     * @param ctx the IdContext to create imaginary nodes for
+     * @return DetailAstImpl of lambda parameter
+     */
+    private DetailAstImpl createLambdaParameter(JavaLanguageParser.IdContext ctx) {
+        final DetailAstImpl ident = visitId(ctx);
+        final DetailAstImpl parameter = createImaginary(TokenTypes.PARAMETER_DEF);
+        final DetailAstImpl modifiers = createImaginary(TokenTypes.MODIFIERS);
+        final DetailAstImpl type = createImaginary(TokenTypes.TYPE);
+        parameter.addChild(modifiers);
+        parameter.addChild(type);
+        parameter.addChild(ident);
+        return parameter;
+    }
+
+    @Override
+    public DetailAstImpl visitParenPrimary(JavaLanguageParser.ParenPrimaryContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitTokenPrimary(JavaLanguageParser.TokenPrimaryContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitClassRefPrimary(JavaLanguageParser.ClassRefPrimaryContext ctx) {
+        final DetailAstImpl dot = create(ctx.DOT());
+        final DetailAstImpl primaryTypeNoArray = visit(ctx.type);
+        dot.addChild(primaryTypeNoArray);
+        if (TokenUtil.isOfType(primaryTypeNoArray, TokenTypes.DOT)) {
+            // We append '[]' to the qualified name 'TYPE' `ast
+            ctx.arrayDeclarator()
+                    .forEach(child -> primaryTypeNoArray.addChild(visit(child)));
+        }
+        else {
+            ctx.arrayDeclarator()
+                    .forEach(child -> addLastSibling(primaryTypeNoArray, visit(child)));
+        }
+        dot.addChild(create(ctx.LITERAL_CLASS()));
+        return dot;
+    }
+
+    @Override
+    public DetailAstImpl visitPrimitivePrimary(JavaLanguageParser.PrimitivePrimaryContext ctx) {
+        final DetailAstImpl dot = create(ctx.DOT());
+        final DetailAstImpl primaryTypeNoArray = visit(ctx.type);
+        dot.addChild(primaryTypeNoArray);
+        ctx.arrayDeclarator().forEach(child -> dot.addChild(visit(child)));
+        dot.addChild(create(ctx.LITERAL_CLASS()));
+        return dot;
+    }
+
+    @Override
+    public DetailAstImpl visitCreator(JavaLanguageParser.CreatorContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitCreatedNameObject(JavaLanguageParser.CreatedNameObjectContext ctx) {
+        final DetailAstPair currentAST = new DetailAstPair();
+        DetailAstPair.addAstChild(currentAST, visit(ctx.annotations()));
+        DetailAstPair.addAstChild(currentAST, visit(ctx.id()));
+        DetailAstPair.addAstChild(currentAST, visit(ctx.typeArgumentsOrDiamond()));
+
+        // This is how we build the type arguments/ qualified name tree
+        for (ParserRuleContext extendedContext : ctx.extended) {
+            final DetailAstImpl dot = create(extendedContext.start);
+            DetailAstPair.makeAstRoot(currentAST, dot);
+            final List<ParseTree> childList = extendedContext
+                    .children.subList(1, extendedContext.children.size());
+            processChildren(dot, childList);
+        }
+
+        return currentAST.root;
+    }
+
+    @Override
+    public DetailAstImpl visitCreatedNamePrimitive(
+            JavaLanguageParser.CreatedNamePrimitiveContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitInnerCreator(JavaLanguageParser.InnerCreatorContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitArrayCreatorRest(JavaLanguageParser.ArrayCreatorRestContext ctx) {
+        final DetailAstImpl arrayDeclarator = create(TokenTypes.ARRAY_DECLARATOR,
+                (Token) ctx.LBRACK().getPayload());
+        final JavaLanguageParser.ExpressionContext expression = ctx.expression();
+        final TerminalNode rbrack = ctx.RBRACK();
+        // child[0] is LBRACK
+        for (int index = 1; index < ctx.children.size(); index++) {
+            if (ctx.children.get(index) == rbrack) {
+                arrayDeclarator.addChild(create(rbrack));
+            }
+            else if (ctx.children.get(index) == expression) {
+                // Handle '[8]', etc.
+                arrayDeclarator.addChild(visit(expression));
+            }
+            else {
+                addLastSibling(arrayDeclarator, visit(ctx.children.get(index)));
+            }
+        }
+        return arrayDeclarator;
+    }
+
+    @Override
+    public DetailAstImpl visitBracketsWithExp(JavaLanguageParser.BracketsWithExpContext ctx) {
+        final DetailAstImpl dummyRoot = new DetailAstImpl();
+        dummyRoot.addChild(visit(ctx.annotations()));
+        final DetailAstImpl arrayDeclarator =
+                create(TokenTypes.ARRAY_DECLARATOR, (Token) ctx.LBRACK().getPayload());
+        arrayDeclarator.addChild(visit(ctx.expression()));
+        arrayDeclarator.addChild(create(ctx.stop));
+        dummyRoot.addChild(arrayDeclarator);
+        return dummyRoot.getFirstChild();
+    }
+
+    @Override
+    public DetailAstImpl visitClassCreatorRest(JavaLanguageParser.ClassCreatorRestContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitDiamond(JavaLanguageParser.DiamondContext ctx) {
+        final DetailAstImpl typeArguments =
+                createImaginary(TokenTypes.TYPE_ARGUMENTS);
+        typeArguments.addChild(create(TokenTypes.GENERIC_START,
+                (Token) ctx.LT().getPayload()));
+        typeArguments.addChild(create(TokenTypes.GENERIC_END,
+                (Token) ctx.GT().getPayload()));
+        return typeArguments;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeArgs(JavaLanguageParser.TypeArgsContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitNonWildcardDiamond(
+            JavaLanguageParser.NonWildcardDiamondContext ctx) {
+        final DetailAstImpl typeArguments =
+                createImaginary(TokenTypes.TYPE_ARGUMENTS);
+        typeArguments.addChild(create(TokenTypes.GENERIC_START,
+                (Token) ctx.LT().getPayload()));
+        typeArguments.addChild(create(TokenTypes.GENERIC_END,
+                (Token) ctx.GT().getPayload()));
+        return typeArguments;
+    }
+
+    @Override
+    public DetailAstImpl visitNonWildcardTypeArguments(
+            JavaLanguageParser.NonWildcardTypeArgumentsContext ctx) {
+        final DetailAstImpl typeArguments = createImaginary(TokenTypes.TYPE_ARGUMENTS);
+        typeArguments.addChild(create(TokenTypes.GENERIC_START, (Token) ctx.LT().getPayload()));
+        typeArguments.addChild(visit(ctx.typeArgumentsTypeList()));
+        typeArguments.addChild(create(TokenTypes.GENERIC_END, (Token) ctx.GT().getPayload()));
+        return typeArguments;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeArgumentsTypeList(
+            JavaLanguageParser.TypeArgumentsTypeListContext ctx) {
+        final DetailAstImpl firstIdent = visit(ctx.typeType(0));
+        final DetailAstImpl firstTypeArgument = createImaginary(TokenTypes.TYPE_ARGUMENT);
+        firstTypeArgument.addChild(firstIdent);
+
+        for (int index = 0; index < ctx.COMMA().size(); index++) {
+            addLastSibling(firstTypeArgument, create(ctx.COMMA(index)));
+            final DetailAstImpl ident = visit(ctx.typeType(index + 1));
+            final DetailAstImpl typeArgument = createImaginary(TokenTypes.TYPE_ARGUMENT);
+            typeArgument.addChild(ident);
+            addLastSibling(firstTypeArgument, typeArgument);
+        }
+        return firstTypeArgument;
+    }
+
+    @Override
+    public DetailAstImpl visitTypeList(JavaLanguageParser.TypeListContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitTypeType(JavaLanguageParser.TypeTypeContext ctx) {
+        final DetailAstImpl type = createImaginary(TokenTypes.TYPE);
+        processChildren(type, ctx.children);
+
+        final DetailAstImpl returnTree;
+        if (ctx.createImaginaryNode) {
+            returnTree = type;
+        }
+        else {
+            returnTree = type.getFirstChild();
+        }
+        return returnTree;
+    }
+
+    @Override
+    public DetailAstImpl visitArrayDeclarator(JavaLanguageParser.ArrayDeclaratorContext ctx) {
+        final DetailAstImpl arrayDeclarator = create(TokenTypes.ARRAY_DECLARATOR,
+                (Token) ctx.LBRACK().getPayload());
+        arrayDeclarator.addChild(create(ctx.RBRACK()));
+
+        final DetailAstImpl returnTree;
+        final DetailAstImpl annotations = visit(ctx.anno);
+        if (annotations == null) {
+            returnTree = arrayDeclarator;
+        }
+        else {
+            returnTree = annotations;
+            addLastSibling(returnTree, arrayDeclarator);
+        }
+        return returnTree;
+    }
+
+    @Override
+    public DetailAstImpl visitPrimitiveType(JavaLanguageParser.PrimitiveTypeContext ctx) {
+        return create(ctx.start);
+    }
+
+    @Override
+    public DetailAstImpl visitTypeArguments(JavaLanguageParser.TypeArgumentsContext ctx) {
+        final DetailAstImpl typeArguments = createImaginary(TokenTypes.TYPE_ARGUMENTS);
+        typeArguments.addChild(create(TokenTypes.GENERIC_START, (Token) ctx.LT().getPayload()));
+        // Exclude '<' and '>'
+        processChildren(typeArguments, ctx.children.subList(1, ctx.children.size() - 1));
+        typeArguments.addChild(create(TokenTypes.GENERIC_END, (Token) ctx.GT().getPayload()));
+        return typeArguments;
+    }
+
+    @Override
+    public DetailAstImpl visitSuperSuffixDot(JavaLanguageParser.SuperSuffixDotContext ctx) {
+        final DetailAstImpl root;
+        if (ctx.LPAREN() == null) {
+            root = create(ctx.DOT());
+            root.addChild(visit(ctx.id()));
+        }
+        else {
+            root = create(TokenTypes.METHOD_CALL, (Token) ctx.LPAREN().getPayload());
+
+            final DetailAstImpl dot = create(ctx.DOT());
+            dot.addChild(visit(ctx.id()));
+            root.addChild(dot);
+
+            final DetailAstImpl expressionList = Optional.ofNullable(visit(ctx.expressionList()))
+                    .orElseGet(() -> createImaginary(TokenTypes.ELIST));
+            root.addChild(expressionList);
+
+            root.addChild(create(ctx.RPAREN()));
+        }
+
+        return root;
+    }
+
+    @Override
+    public DetailAstImpl visitArguments(JavaLanguageParser.ArgumentsContext ctx) {
+        final DetailAstImpl lparen = create(ctx.LPAREN());
+
+        // We always add an 'ELIST' node
+        final DetailAstImpl expressionList = Optional.ofNullable(visit(ctx.expressionList()))
+                .orElseGet(() -> createImaginary(TokenTypes.ELIST));
+        addLastSibling(lparen, expressionList);
+        addLastSibling(lparen, create(ctx.RPAREN()));
+        return lparen;
+    }
+
+    @Override
+    public DetailAstImpl visitPattern(JavaLanguageParser.PatternContext ctx) {
+        final JavaLanguageParser.InnerPatternContext innerPattern = ctx.innerPattern();
+        final ParserRuleContext primaryPattern = innerPattern.primaryPattern();
+        final ParserRuleContext recordPattern = innerPattern.recordPattern();
+
+        final DetailAstImpl pattern;
+
+        if (recordPattern != null) {
+            pattern = visit(recordPattern);
+        }
+        else if (primaryPattern != null) {
+            // For simple type pattern like 'Integer i`, we do not add `PATTERN_DEF` parent
+            pattern = visit(primaryPattern);
+        }
+        else {
+            pattern = createImaginary(TokenTypes.PATTERN_DEF);
+            pattern.addChild(visit(ctx.getChild(0)));
+        }
+        return pattern;
+    }
+
+    @Override
+    public DetailAstImpl visitInnerPattern(JavaLanguageParser.InnerPatternContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitGuardedPattern(JavaLanguageParser.GuardedPatternContext ctx) {
+        final DetailAstImpl guardAstNode = flattenedTree(ctx.guard());
+        guardAstNode.addChild(visit(ctx.primaryPattern()));
+        guardAstNode.addChild(visit(ctx.expression()));
+        return guardAstNode;
+    }
+
+    @Override
+    public DetailAstImpl visitRecordPatternDef(JavaLanguageParser.RecordPatternDefContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public DetailAstImpl visitTypePatternDef(
+            JavaLanguageParser.TypePatternDefContext ctx) {
+        final DetailAstImpl type = visit(ctx.type);
+        final DetailAstImpl patternVariableDef = createImaginary(TokenTypes.PATTERN_VARIABLE_DEF);
+        patternVariableDef.addChild(createModifiers(ctx.mods));
+        patternVariableDef.addChild(type);
+        patternVariableDef.addChild(visit(ctx.id()));
+        return patternVariableDef;
+    }
+
+    @Override
+    public DetailAstImpl visitUnnamedPatternDef(JavaLanguageParser.UnnamedPatternDefContext ctx) {
+        return create(TokenTypes.UNNAMED_PATTERN_DEF, ctx.start);
+    }
+
+    @Override
+    public DetailAstImpl visitRecordPattern(JavaLanguageParser.RecordPatternContext ctx) {
+        final DetailAstImpl recordPattern = createImaginary(TokenTypes.RECORD_PATTERN_DEF);
+        recordPattern.addChild(createModifiers(ctx.mods));
+        processChildren(recordPattern,
+                ctx.children.subList(ctx.mods.size(), ctx.children.size()));
+        return recordPattern;
+    }
+
+    @Override
+    public DetailAstImpl visitRecordComponentPatternList(
+            JavaLanguageParser.RecordComponentPatternListContext ctx) {
+        final DetailAstImpl recordComponents =
+                createImaginary(TokenTypes.RECORD_PATTERN_COMPONENTS);
+        processChildren(recordComponents, ctx.children);
+        return recordComponents;
+    }
+
+    @Override
+    public DetailAstImpl visitPermittedSubclassesAndInterfaces(
+            JavaLanguageParser.PermittedSubclassesAndInterfacesContext ctx) {
+        final DetailAstImpl literalPermits =
+                create(TokenTypes.PERMITS_CLAUSE, (Token) ctx.LITERAL_PERMITS().getPayload());
+        // 'LITERAL_PERMITS' is child[0]
+        processChildren(literalPermits, ctx.children.subList(1, ctx.children.size()));
+        return literalPermits;
+    }
+
+    @Override
+    public DetailAstImpl visitId(JavaLanguageParser.IdContext ctx) {
+        return create(TokenTypes.IDENT, ctx.start);
+    }
+
+    /**
+     * Builds the AST for a particular node, then returns a "flattened" tree
+     * of siblings. This method should be used in rule contexts such as
+     * {@code variableDeclarators}, where we have both terminals and non-terminals.
+     *
+     * @param ctx the ParserRuleContext to base tree on
+     * @return flattened DetailAstImpl
+     */
+    private DetailAstImpl flattenedTree(ParserRuleContext ctx) {
+        final DetailAstImpl dummyNode = new DetailAstImpl();
+        processChildren(dummyNode, ctx.children);
+        return dummyNode.getFirstChild();
+    }
+
+    /**
+     * Adds all the children from the given ParseTree or JavaParserContext
+     * list to the parent DetailAstImpl.
+     *
+     * @param parent the DetailAstImpl to add children to
+     * @param children the list of children to add
+     */
+    private void processChildren(DetailAstImpl parent, List<? extends ParseTree> children) {
+        children.forEach(child -> {
+            if (child instanceof final TerminalNode node) {
+                // Child is a token, create a new DetailAstImpl and add it to parent
+                parent.addChild(create(node));
+            }
+            else {
+                // Child is another rule context; visit it, create token, and add to parent
+                parent.addChild(visit(child));
+            }
+        });
+    }
+
+    /**
+     * Create a DetailAstImpl from a given token and token type. This method
+     * should be used for imaginary nodes only, i.e. {@literal 'OBJBLOCK -> OBJBLOCK'},
+     * where the text on the RHS matches the text on the LHS.
+     *
+     * @param tokenType the token type of this DetailAstImpl
+     * @return new DetailAstImpl of given type
+     */
+    private static DetailAstImpl createImaginary(int tokenType) {
+        final DetailAstImpl detailAst = new DetailAstImpl();
+        detailAst.setType(tokenType);
+        detailAst.setText(TokenUtil.getTokenName(tokenType));
+        return detailAst;
+    }
+
+    /**
+     * Create a DetailAstImpl from a given token. This method should be
+     * used for terminal nodes, i.e. {@code LCURLY}, when we are building
+     * an AST for a specific token, regardless of position.
+     *
+     * @param token the token to build the DetailAstImpl from
+     * @return new DetailAstImpl of given type
+     */
+    private DetailAstImpl create(Token token) {
+        final int tokenIndex = token.getTokenIndex();
+        final List<Token> tokensToLeft =
+                tokens.getHiddenTokensToLeft(tokenIndex, JavaLanguageLexer.COMMENTS);
+        final List<Token> tokensToRight =
+                tokens.getHiddenTokensToRight(tokenIndex, JavaLanguageLexer.COMMENTS);
+
+        final DetailAstImpl detailAst = new DetailAstImpl();
+        detailAst.initialize(token);
+        if (tokensToLeft != null) {
+            detailAst.setHiddenBefore(tokensToLeft);
+        }
+        if (tokensToRight != null) {
+            detailAst.setHiddenAfter(tokensToRight);
+        }
+        return detailAst;
+    }
+
+    /**
+     * Create a DetailAstImpl from a given TerminalNode. This method should be
+     * used for terminal nodes, i.e. {@code @}.
+     *
+     * @param node the TerminalNode to build the DetailAstImpl from
+     * @return new DetailAstImpl of given type
+     */
+    private DetailAstImpl create(TerminalNode node) {
+        return create((Token) node.getPayload());
+    }
+
+    /**
+     * Create a DetailAstImpl from a given token and token type. This method
+     * should be used for literal nodes only, i.e. {@literal 'PACKAGE_DEF -> package'}.
+     *
+     * @param tokenType the token type of this DetailAstImpl
+     * @param startToken the first token that appears in this DetailAstImpl.
+     * @return new DetailAstImpl of given type
+     */
+    private DetailAstImpl create(int tokenType, Token startToken) {
+        final DetailAstImpl ast = create(startToken);
+        ast.setType(tokenType);
+        return ast;
+    }
+
+    /**
+     * Creates a type declaration DetailAstImpl from a given rule context.
+     *
+     * @param ctx ParserRuleContext we are in
+     * @param type the type declaration to create
+     * @param modifierList respective modifiers
+     * @return type declaration DetailAstImpl
+     */
+    private DetailAstImpl createTypeDeclaration(ParserRuleContext ctx, int type,
+                                                List<? extends ParseTree> modifierList) {
+        final DetailAstImpl typeDeclaration = createImaginary(type);
+        typeDeclaration.addChild(createModifiers(modifierList));
+        processChildren(typeDeclaration, ctx.children);
+        return typeDeclaration;
+    }
+
+    /**
+     * Builds the modifiers AST.
+     *
+     * @param modifierList the list of modifier contexts
+     * @return "MODIFIERS" ast
+     */
+    private DetailAstImpl createModifiers(List<? extends ParseTree> modifierList) {
+        final DetailAstImpl mods = createImaginary(TokenTypes.MODIFIERS);
+        processChildren(mods, modifierList);
+        return mods;
+    }
+
+    /**
+     * Creates a node rooted at the first token of the given context, i.e. the
+     * first token becomes the node (with the given token type) and all remaining
+     * children are added to it. This is used for module directives and clauses,
+     * where the leading keyword token becomes the node, e.g.
+     * {@literal 'requires' -> REQUIRES}.
+     *
+     * @param tokenType the token type of the resulting DetailAstImpl
+     * @param ctx the ParserRuleContext whose first token roots the node
+     * @return the resulting DetailAstImpl
+     */
+    private DetailAstImpl createNodeFromFirstToken(int tokenType, ParserRuleContext ctx) {
+        final DetailAstImpl node = create(tokenType, ctx.start);
+        processChildren(node, ctx.children.subList(1, ctx.children.size()));
+        return node;
+    }
+
+    /**
+     * Add new sibling to the end of existing siblings.
+     *
+     * @param self DetailAstImpl to add last sibling to
+     * @param sibling DetailAstImpl sibling to add
+     */
+    private static void addLastSibling(DetailAstImpl self, DetailAstImpl sibling) {
+        DetailAstImpl nextSibling = self;
+        if (nextSibling != null) {
+            while (nextSibling.getNextSibling() != null) {
+                nextSibling = nextSibling.getNextSibling();
+            }
+            nextSibling.setNextSibling(sibling);
+        }
+    }
+
+    @Override
+    public DetailAstImpl visit(ParseTree tree) {
+        DetailAstImpl ast = null;
+        if (tree != null) {
+            ast = tree.accept(this);
+        }
+        return ast;
+    }
+
+    /**
+     * Builds an expression node. This is used to build the root of an expression with
+     * an imaginary {@code EXPR} node.
+     *
+     * @param exprNode expression to build node for
+     * @return expression DetailAstImpl node
+     */
+    private DetailAstImpl buildExpressionNode(ParseTree exprNode) {
+        final DetailAstImpl expression = visit(exprNode);
+
+        final DetailAstImpl exprRoot;
+        if (TokenUtil.isOfType(expression, EXPRESSIONS_WITH_NO_EXPR_ROOT)) {
+            exprRoot = expression;
+        }
+        else {
+            // create imaginary 'EXPR' node as root of expression
+            exprRoot = createImaginary(TokenTypes.EXPR);
+            exprRoot.addChild(expression);
+        }
+        return exprRoot;
+    }
+
+    /**
+     * Used to swap and organize DetailAstImpl subtrees.
+     */
+    private static final class DetailAstPair {
+
+        /** The root DetailAstImpl of this pair. */
+        private DetailAstImpl root;
+
+        /** The child (potentially with siblings) of this pair. */
+        private DetailAstImpl child;
+
+        /**
+         * Creates a new {@code DetailAstPair} instance.
+         */
+        private DetailAstPair() {
+            // no code by default
+        }
+
+        /**
+         * Moves child reference to the last child.
+         */
+        private void advanceChildToEnd() {
+            while (child.getNextSibling() != null) {
+                child = child.getNextSibling();
+            }
+        }
+
+        /**
+         * Returns the root node.
+         *
+         * @return the root node
+         */
+        private DetailAstImpl getRoot() {
+            return root;
+        }
+
+        /**
+         * This method is used to replace the {@code ^} (set as root node) ANTLR2 operator.
+         *
+         * @param pair the DetailAstPair to use for swapping nodes
+         * @param ast the new root
+         */
+        private static void makeAstRoot(DetailAstPair pair, DetailAstImpl ast) {
+            ast.addChild(pair.root);
+            pair.child = pair.root;
+            pair.advanceChildToEnd();
+            pair.root = ast;
+        }
+
+        /**
+         * Adds a child (or new root) to the given DetailAstPair.
+         *
+         * @param pair the DetailAstPair to add child to
+         * @param ast the child to add
+         */
+        private static void addAstChild(DetailAstPair pair, DetailAstImpl ast) {
+            if (ast != null) {
+                if (pair.root == null) {
+                    pair.root = ast;
+                }
+                else {
+                    pair.child.setNextSibling(ast);
+                }
+                pair.child = ast;
+            }
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/JavaParser.java SHA256 9d305a7adeabf17635aa073a061e911d813348c785ea6837c0af3b76b4d3dad2
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Locale;
+
+import org.antlr.v4.runtime.BaseErrorListener;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonToken;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.Token;
+
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FileContents;
+import com.puppycrawl.tools.checkstyle.api.FileText;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.grammar.java.JavaLanguageLexer;
+import com.puppycrawl.tools.checkstyle.grammar.java.JavaLanguageParser;
+import com.puppycrawl.tools.checkstyle.utils.ParserUtil;
+
+/**
+ * Helper methods to parse java source files.
+ *
+ */
+// -@cs[ClassDataAbstractionCoupling] No way to split up class usage.
+public final class JavaParser {
+
+    /**
+     * Enum to be used for test if comments should be used.
+     */
+    public enum Options {
+
+        /**
+         * Comments nodes should be processed.
+         */
+        WITH_COMMENTS,
+
+        /**
+         * Comments nodes should be ignored.
+         */
+        WITHOUT_COMMENTS,
+
+    }
+
+    /** Stop instances being created. */
+    private JavaParser() {
+    }
+
+    /**
+     * Static helper method to parses a Java source file.
+     *
+     * @param contents contains the contents of the file
+     * @return the root of the AST
+     * @throws CheckstyleException if the contents is not a valid Java source
+     */
+    public static DetailAST parse(FileContents contents)
+            throws CheckstyleException {
+        final String fullText = contents.getText().getFullText().toString();
+        final CharStream codePointCharStream = CharStreams.fromString(fullText);
+        final JavaLanguageLexer lexer = new JavaLanguageLexer(codePointCharStream, true);
+        lexer.setCommentListener(contents);
+
+        final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+        final JavaLanguageParser parser =
+                new JavaLanguageParser(tokenStream, JavaLanguageParser.CLEAR_DFA_LIMIT);
+        parser.setErrorHandler(new CheckstyleParserErrorStrategy());
+        parser.removeErrorListeners();
+        parser.addErrorListener(new CheckstyleErrorListener());
+
+        final JavaLanguageParser.CompilationUnitContext compilationUnit;
+        try {
+            compilationUnit = parser.compilationUnit();
+        }
+        catch (IllegalStateException exc) {
+            final String exceptionMsg = String.format(Locale.ROOT,
+                "%s occurred while parsing file %s.",
+                exc.getClass().getSimpleName(), contents.getFileName());
+            throw new CheckstyleException(exceptionMsg, exc);
+        }
+
+        return new JavaAstVisitor(tokenStream).visit(compilationUnit);
+    }
+
+    /**
+     * Parse a text and return the parse tree.
+     *
+     * @param text the text to parse
+     * @param options {@link Options} to control inclusion of comment nodes
+     * @return the root node of the parse tree
+     * @throws CheckstyleException if the text is not a valid Java source
+     */
+    public static DetailAST parseFileText(FileText text, Options options)
+            throws CheckstyleException {
+        final FileContents contents = new FileContents(text);
+        final DetailAST ast = parse(contents);
+        if (options == Options.WITH_COMMENTS) {
+            appendHiddenCommentNodes(ast);
+        }
+        return ast;
+    }
+
+    /**
+     * Parses Java source file.
+     *
+     * @param file the file to parse
+     * @param options {@link Options} to control inclusion of comment nodes
+     * @return DetailAST tree
+     * @throws CheckstyleException if the file is not a valid Java source file
+     * @throws IOException if the file could not be read
+     */
+    public static DetailAST parseFile(File file, Options options)
+            throws IOException, CheckstyleException {
+        final FileText text = new FileText(file,
+            StandardCharsets.UTF_8.name());
+        return parseFileText(text, options);
+    }
+
+    /**
+     * Appends comment nodes to existing AST.
+     * It traverses each node in AST, looks for hidden comment tokens
+     * and appends found comment tokens as nodes in AST.
+     *
+     * @param root of AST
+     * @return root of AST with comment nodes
+     */
+    public static DetailAST appendHiddenCommentNodes(DetailAST root) {
+        DetailAST curNode = root;
+        DetailAST lastNode = root;
+
+        while (curNode != null) {
+            lastNode = curNode;
+
+            final List<Token> hiddenBefore = ((DetailAstImpl) curNode).getHiddenBefore();
+            if (hiddenBefore != null) {
+                DetailAST currentSibling = curNode;
+
+                final ListIterator<Token> reverseCommentsIterator =
+                        hiddenBefore.listIterator(hiddenBefore.size());
+
+                while (reverseCommentsIterator.hasPrevious()) {
+                    final DetailAST newCommentNode =
+                            createCommentAstFromToken((CommonToken)
+                                    reverseCommentsIterator.previous());
+                    ((DetailAstImpl) currentSibling).addPreviousSibling(newCommentNode);
+
+                    currentSibling = newCommentNode;
+                }
+            }
+
+            DetailAST toVisit = curNode.getFirstChild();
+            while (curNode != null && toVisit == null) {
+                toVisit = curNode.getNextSibling();
+                curNode = curNode.getParent();
+            }
+            curNode = toVisit;
+        }
+        if (lastNode != null) {
+            final List<Token> hiddenAfter = ((DetailAstImpl) lastNode).getHiddenAfter();
+            if (hiddenAfter != null) {
+                DetailAST currentSibling = lastNode;
+                for (Token token : hiddenAfter) {
+                    final DetailAST newCommentNode =
+                            createCommentAstFromToken((CommonToken) token);
+
+                    ((DetailAstImpl) currentSibling).addNextSibling(newCommentNode);
+
+                    currentSibling = newCommentNode;
+                }
+            }
+        }
+        return root;
+    }
+
+    /**
+     * Create comment AST from token. Depending on token type
+     * SINGLE_LINE_COMMENT or BLOCK_COMMENT_BEGIN is created.
+     *
+     * @param token to create the AST
+     * @return DetailAST of comment node
+     */
+    private static DetailAST createCommentAstFromToken(CommonToken token) {
+        final DetailAST commentAst;
+        if (token.getType() == TokenTypes.SINGLE_LINE_COMMENT) {
+            commentAst = createSlCommentNode(token);
+        }
+        else {
+            commentAst = ParserUtil.createBlockCommentNode(token);
+        }
+        return commentAst;
+    }
+
+    /**
+     * Create single-line comment from token.
+     *
+     * @param token to create the AST
+     * @return DetailAST with SINGLE_LINE_COMMENT type
+     */
+    private static DetailAST createSlCommentNode(Token token) {
+        final DetailAstImpl slComment = new DetailAstImpl();
+        slComment.setType(TokenTypes.SINGLE_LINE_COMMENT);
+        slComment.setText("//");
+
+        slComment.setColumnNo(token.getCharPositionInLine());
+        slComment.setLineNo(token.getLine());
+
+        final DetailAstImpl slCommentContent = new DetailAstImpl();
+        slCommentContent.setType(TokenTypes.COMMENT_CONTENT);
+
+        // plus length of '//'
+        slCommentContent.setColumnNo(token.getCharPositionInLine() + 2);
+        slCommentContent.setLineNo(token.getLine());
+        slCommentContent.setText(token.getText());
+
+        slComment.addChild(slCommentContent);
+        return slComment;
+    }
+
+    /**
+     * Custom error listener to provide detailed exception message.
+     */
+    private static final class CheckstyleErrorListener extends BaseErrorListener {
+
+        /**
+         * Creates a new {@code CheckstyleErrorListener} instance.
+         */
+        private CheckstyleErrorListener() {
+            // no code by default
+        }
+
+        @Override
+        public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol,
+                                int line, int charPositionInLine,
+                                String msg, RecognitionException ex) {
+            final String message = line + ":" + charPositionInLine + ": " + msg;
+            throw new IllegalStateException(message, ex);
+        }
+
+    }
+
+}
+
+REFERENCE FILE src/main/java/com/puppycrawl/tools/checkstyle/JavadocCommentsAstVisitor.java SHA256 00b2ea305c76b4cdb9e129e58f88a139950f13697fa2adfbeb171ebbd047950c
+///////////////////////////////////////////////////////////////////////////////////////////////
+// checkstyle: Checks Java source code and other text files for adherence to a set of rules.
+// Copyright (C) 2001-2026 the original author or authors.
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+package com.puppycrawl.tools.checkstyle;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.antlr.v4.runtime.BufferedTokenStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
+
+import com.puppycrawl.tools.checkstyle.api.DetailNode;
+import com.puppycrawl.tools.checkstyle.api.JavadocCommentsTokenTypes;
+import com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocNodeImpl;
+import com.puppycrawl.tools.checkstyle.grammar.javadoc.JavadocCommentsLexer;
+import com.puppycrawl.tools.checkstyle.grammar.javadoc.JavadocCommentsParser;
+import com.puppycrawl.tools.checkstyle.grammar.javadoc.JavadocCommentsParserBaseVisitor;
+import com.puppycrawl.tools.checkstyle.utils.JavadocUtil;
+
+/**
+ * Visitor class used to build Checkstyle's Javadoc AST from the parse tree
+ * produced by {@link JavadocCommentsParser}. Each overridden {@code visit...}
+ * method visits children of a parse tree node (subrules) or creates terminal
+ * nodes (tokens), and returns a {@link JavadocNodeImpl} subtree as the result.
+ *
+ * <p>
+ * The order of {@code visit...} methods in {@code JavaAstVisitor.java} and production rules in
+ * {@code JavaLanguageParser.g4} should be consistent to ease maintenance.
+ * </p>
+ *
+ * @see JavadocCommentsLexer
+ * @see JavadocCommentsParser
+ * @see JavadocNodeImpl
+ * @see JavaAstVisitor
+ * @noinspection JavadocReference
+ * @noinspectionreason JavadocReference - References are valid
+ */
+public class JavadocCommentsAstVisitor extends JavadocCommentsParserBaseVisitor<JavadocNodeImpl> {
+
+    /**
+     * All Javadoc tag token types.
+     */
+    private static final Set<Integer> JAVADOC_TAG_TYPES = Set.of(
+        JavadocCommentsLexer.CODE,
+        JavadocCommentsLexer.LINK,
+        JavadocCommentsLexer.LINKPLAIN,
+        JavadocCommentsLexer.VALUE,
+        JavadocCommentsLexer.INHERIT_DOC,
+        JavadocCommentsLexer.SUMMARY,
+        JavadocCommentsLexer.SYSTEM_PROPERTY,
+        JavadocCommentsLexer.INDEX,
+        JavadocCommentsLexer.RETURN,
+        JavadocCommentsLexer.LITERAL,
+        JavadocCommentsLexer.SNIPPET,
+        JavadocCommentsLexer.CUSTOM_NAME,
+        JavadocCommentsLexer.AUTHOR,
+        JavadocCommentsLexer.DEPRECATED,
+        JavadocCommentsLexer.PARAM,
+        JavadocCommentsLexer.THROWS,
+        JavadocCommentsLexer.EXCEPTION,
+        JavadocCommentsLexer.SINCE,
+        JavadocCommentsLexer.VERSION,
+        JavadocCommentsLexer.SEE,
+        JavadocCommentsLexer.LITERAL_HIDDEN,
+        JavadocCommentsLexer.USES,
+        JavadocCommentsLexer.PROVIDES,
+        JavadocCommentsLexer.SERIAL,
+        JavadocCommentsLexer.SERIAL_DATA,
+        JavadocCommentsLexer.SERIAL_FIELD
+    );
+
+    /**
+     * Line number of the Block comment AST that is being parsed.
+     */
+    private final int blockCommentLineNumber;
+
+    /**
+     * Javadoc Ident.
+     */
+    private final int javadocColumnNumber;
+
+    /**
+     * Token stream to check for hidden tokens.
+     */
+    private final BufferedTokenStream tokens;
+
+    /**
+     * A set of token indices used to track which tokens have already had their
+     * hidden tokens added to the AST.
+     */
+    private final Set<Integer> processedTokenIndices = new HashSet<>();
+
+    /**
+     * Accumulator for consecutive TEXT tokens.
+     * This is used to merge multiple TEXT tokens into a single node.
+     */
+    private final TextAccumulator accumulator = new TextAccumulator();
+
+    /**
+     * The first non-tight HTML tag encountered in the Javadoc comment, if any.
+     */
+    private DetailNode firstNonTightHtmlTag;
+
+    /**
+     * Constructs a JavaAstVisitor with given token stream, line number, and column number.
+     *
+     * @param tokens the token stream to check for hidden tokens
+     * @param blockCommentLineNumber the line number of the block comment being parsed
+     * @param javadocColumnNumber the column number of the javadoc indent
+     */
+    public JavadocCommentsAstVisitor(CommonTokenStream tokens,
+                                     int blockCommentLineNumber, int javadocColumnNumber) {
+        this.tokens = tokens;
+        this.blockCommentLineNumber = blockCommentLineNumber;
+        this.javadocColumnNumber = javadocColumnNumber;
+    }
+
+    @Override
+    public JavadocNodeImpl visitJavadoc(JavadocCommentsParser.JavadocContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.JAVADOC_CONTENT, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitMainDescription(JavadocCommentsParser.MainDescriptionContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitBlockTag(JavadocCommentsParser.BlockTagContext ctx) {
+        final JavadocNodeImpl blockTagNode =
+                createImaginary(JavadocCommentsTokenTypes.JAVADOC_BLOCK_TAG);
+        final ParseTree tag = ctx.getChild(0);
+        final Token tagName = (Token) tag.getChild(1).getPayload();
+        final int tokenType = tagName.getType();
+        final JavadocNodeImpl specificTagNode = switch (tokenType) {
+            case JavadocCommentsLexer.AUTHOR ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.AUTHOR_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.DEPRECATED ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.DEPRECATED_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.RETURN ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.RETURN_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.PARAM ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.PARAM_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.THROWS ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.THROWS_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.EXCEPTION ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.EXCEPTION_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.SINCE ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SINCE_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.VERSION ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.VERSION_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.SEE ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SEE_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.LITERAL_HIDDEN ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.HIDDEN_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.USES ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.USES_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.PROVIDES ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.PROVIDES_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.SERIAL ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SERIAL_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.SERIAL_DATA ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SERIAL_DATA_BLOCK_TAG, ctx);
+            case JavadocCommentsLexer.SERIAL_FIELD ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SERIAL_FIELD_BLOCK_TAG, ctx);
+            default ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.CUSTOM_BLOCK_TAG, ctx);
+        };
+        blockTagNode.addChild(specificTagNode);
+
+        return blockTagNode;
+    }
+
+    @Override
+    public JavadocNodeImpl visitAuthorTag(JavadocCommentsParser.AuthorTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitDeprecatedTag(JavadocCommentsParser.DeprecatedTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitReturnTag(JavadocCommentsParser.ReturnTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitParameterTag(JavadocCommentsParser.ParameterTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitThrowsTag(JavadocCommentsParser.ThrowsTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitExceptionTag(JavadocCommentsParser.ExceptionTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSinceTag(JavadocCommentsParser.SinceTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitVersionTag(JavadocCommentsParser.VersionTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSeeTag(JavadocCommentsParser.SeeTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitHiddenTag(JavadocCommentsParser.HiddenTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitUsesTag(JavadocCommentsParser.UsesTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitProvidesTag(JavadocCommentsParser.ProvidesTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSerialTag(JavadocCommentsParser.SerialTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSerialDataTag(JavadocCommentsParser.SerialDataTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSerialFieldTag(JavadocCommentsParser.SerialFieldTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitCustomBlockTag(JavadocCommentsParser.CustomBlockTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitInlineTag(JavadocCommentsParser.InlineTagContext ctx) {
+        final JavadocNodeImpl inlineTagNode =
+                createImaginary(JavadocCommentsTokenTypes.JAVADOC_INLINE_TAG);
+        final ParseTree tagContent = ctx.inlineTagContent().getChild(0);
+        final Token tagName = (Token) tagContent.getChild(0).getPayload();
+        final int tokenType = tagName.getType();
+        final JavadocNodeImpl specificTagNode = switch (tokenType) {
+            case JavadocCommentsLexer.CODE ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.CODE_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.LINK ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.LINK_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.LINKPLAIN ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.LINKPLAIN_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.VALUE ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.VALUE_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.INHERIT_DOC ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.INHERIT_DOC_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.SUMMARY ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SUMMARY_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.SYSTEM_PROPERTY ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SYSTEM_PROPERTY_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.INDEX ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.INDEX_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.RETURN ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.RETURN_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.LITERAL ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.LITERAL_INLINE_TAG, ctx);
+            case JavadocCommentsLexer.SNIPPET ->
+                buildImaginaryNode(JavadocCommentsTokenTypes.SNIPPET_INLINE_TAG, ctx);
+            default -> buildImaginaryNode(JavadocCommentsTokenTypes.CUSTOM_INLINE_TAG, ctx);
+        };
+        inlineTagNode.addChild(specificTagNode);
+
+        return inlineTagNode;
+    }
+
+    @Override
+    public JavadocNodeImpl visitInlineTagContent(
+            JavadocCommentsParser.InlineTagContentContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitCodeInlineTag(JavadocCommentsParser.CodeInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitLinkPlainInlineTag(
+            JavadocCommentsParser.LinkPlainInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitLinkInlineTag(JavadocCommentsParser.LinkInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitValueInlineTag(JavadocCommentsParser.ValueInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitInheritDocInlineTag(
+            JavadocCommentsParser.InheritDocInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSummaryInlineTag(
+            JavadocCommentsParser.SummaryInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSystemPropertyInlineTag(
+            JavadocCommentsParser.SystemPropertyInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitIndexInlineTag(JavadocCommentsParser.IndexInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitReturnInlineTag(JavadocCommentsParser.ReturnInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitLiteralInlineTag(
+            JavadocCommentsParser.LiteralInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSnippetInlineTag(
+            JavadocCommentsParser.SnippetInlineTagContext ctx) {
+        final JavadocNodeImpl dummyRoot = new JavadocNodeImpl();
+        if (!ctx.snippetAttributes.isEmpty()) {
+            final JavadocNodeImpl snippetAttributes =
+                    createImaginary(JavadocCommentsTokenTypes.SNIPPET_ATTRIBUTES);
+            ctx.snippetAttributes.forEach(snippetAttributeContext -> {
+                final JavadocNodeImpl snippetAttribute = visit(snippetAttributeContext);
+                snippetAttributes.addChild(snippetAttribute);
+            });
+            dummyRoot.addChild(snippetAttributes);
+        }
+        final TerminalNode colon = ctx.COLON();
+        if (colon != null) {
+            dummyRoot.addChild(create((Token) colon.getPayload()));
+        }
+        final JavadocCommentsParser.SnippetBodyContext snippetBody = ctx.snippetBody();
+        if (snippetBody != null) {
+            dummyRoot.addChild(visit(snippetBody));
+        }
+        return dummyRoot.getFirstChild();
+    }
+
+    @Override
+    public JavadocNodeImpl visitCustomInlineTag(JavadocCommentsParser.CustomInlineTagContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitReference(JavadocCommentsParser.ReferenceContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.REFERENCE, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitTypeName(JavadocCommentsParser.TypeNameContext ctx) {
+        return flattenedTree(ctx);
+
+    }
+
+    @Override
+    public JavadocNodeImpl visitQualifiedName(JavadocCommentsParser.QualifiedNameContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitTypeArguments(JavadocCommentsParser.TypeArgumentsContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.TYPE_ARGUMENTS, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitTypeArgument(JavadocCommentsParser.TypeArgumentContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.TYPE_ARGUMENT, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitMemberReference(JavadocCommentsParser.MemberReferenceContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.MEMBER_REFERENCE, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitMethodReferenceWithoutHash(
+            JavadocCommentsParser.MethodReferenceWithoutHashContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.MEMBER_REFERENCE, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitParameterTypeList(
+            JavadocCommentsParser.ParameterTypeListContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.PARAMETER_TYPE_LIST, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitDescription(JavadocCommentsParser.DescriptionContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.DESCRIPTION, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSnippetAttribute(
+            JavadocCommentsParser.SnippetAttributeContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.SNIPPET_ATTRIBUTE, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSnippetBody(JavadocCommentsParser.SnippetBodyContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.SNIPPET_BODY, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitHtmlElement(JavadocCommentsParser.HtmlElementContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.HTML_ELEMENT, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitVoidElement(JavadocCommentsParser.VoidElementContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.VOID_ELEMENT, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitTightElement(JavadocCommentsParser.TightElementContext ctx) {
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitNonTightElement(JavadocCommentsParser.NonTightElementContext ctx) {
+        if (firstNonTightHtmlTag == null) {
+            final ParseTree htmlTagStart = ctx.getChild(0);
+            final ParseTree tagNameToken = htmlTagStart.getChild(1);
+            firstNonTightHtmlTag = create((Token) tagNameToken.getPayload());
+        }
+        return flattenedTree(ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitSelfClosingElement(
+            JavadocCommentsParser.SelfClosingElementContext ctx) {
+        final JavadocNodeImpl javadocNode =
+                createImaginary(JavadocCommentsTokenTypes.VOID_ELEMENT);
+        javadocNode.addChild(create((Token) ctx.TAG_OPEN().getPayload()));
+        javadocNode.addChild(create((Token) ctx.TAG_NAME().getPayload()));
+        if (!ctx.htmlAttributes.isEmpty()) {
+            final JavadocNodeImpl htmlAttributes =
+                    createImaginary(JavadocCommentsTokenTypes.HTML_ATTRIBUTES);
+            ctx.htmlAttributes.forEach(htmlAttributeContext -> {
+                final JavadocNodeImpl htmlAttribute = visit(htmlAttributeContext);
+                htmlAttributes.addChild(htmlAttribute);
+            });
+            javadocNode.addChild(htmlAttributes);
+        }
+
+        javadocNode.addChild(create((Token) ctx.TAG_SLASH_CLOSE().getPayload()));
+        return javadocNode;
+    }
+
+    @Override
+    public JavadocNodeImpl visitHtmlTagStart(JavadocCommentsParser.HtmlTagStartContext ctx) {
+        final JavadocNodeImpl javadocNode =
+                createImaginary(JavadocCommentsTokenTypes.HTML_TAG_START);
+        javadocNode.addChild(create((Token) ctx.TAG_OPEN().getPayload()));
+        javadocNode.addChild(create((Token) ctx.TAG_NAME().getPayload()));
+        if (!ctx.htmlAttributes.isEmpty()) {
+            final JavadocNodeImpl htmlAttributes =
+                    createImaginary(JavadocCommentsTokenTypes.HTML_ATTRIBUTES);
+            ctx.htmlAttributes.forEach(htmlAttributeContext -> {
+                final JavadocNodeImpl htmlAttribute = visit(htmlAttributeContext);
+                htmlAttributes.addChild(htmlAttribute);
+            });
+            javadocNode.addChild(htmlAttributes);
+        }
+
+        final Token tagClose = (Token) ctx.TAG_CLOSE().getPayload();
+        addHiddenTokensToTheLeft(tagClose, javadocNode);
+        javadocNode.addChild(create(tagClose));
+        return javadocNode;
+    }
+
+    @Override
+    public JavadocNodeImpl visitHtmlTagEnd(JavadocCommentsParser.HtmlTagEndContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.HTML_TAG_END, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitHtmlAttribute(JavadocCommentsParser.HtmlAttributeContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.HTML_ATTRIBUTE, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitHtmlContent(JavadocCommentsParser.HtmlContentContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.HTML_CONTENT, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitNonTightHtmlContent(
+            JavadocCommentsParser.NonTightHtmlContentContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.HTML_CONTENT, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitHtmlComment(JavadocCommentsParser.HtmlCommentContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.HTML_COMMENT, ctx);
+    }
+
+    @Override
+    public JavadocNodeImpl visitHtmlCommentContent(
+            JavadocCommentsParser.HtmlCommentContentContext ctx) {
+        return buildImaginaryNode(JavadocCommentsTokenTypes.HTML_COMMENT_CONTENT, ctx);
+    }
+
+    /**
+     * Creates an imaginary JavadocNodeImpl of the given token type and
+     * processes all children of the given ParserRuleContext.
+     *
+     * @param tokenType the token type of this JavadocNodeImpl
+     * @param ctx the ParserRuleContext whose children are to be processed
+     * @return new JavadocNodeImpl of given type with processed children
+     */
+    private JavadocNodeImpl buildImaginaryNode(int tokenType, ParserRuleContext ctx) {
+        final JavadocNodeImpl javadocNode = createImaginary(tokenType);
+        processChildren(javadocNode, ctx.children);
+        return javadocNode;
+    }
+
+    /**
+     * Builds the AST for a particular node, then returns a "flattened" tree of siblings.
+     *
+     * @param ctx the ParserRuleContext to base tree on
+     * @return flattened DetailAstImpl
+     */
+    private JavadocNodeImpl flattenedTree(ParserRuleContext ctx) {
+        final JavadocNodeImpl dummyNode = new JavadocNodeImpl();
+        processChildren(dummyNode, ctx.children);
+        return dummyNode.getFirstChild();
+    }
+
+    /**
+     * Adds all the children from the given ParseTree or ParserRuleContext
+     * list to the parent JavadocNodeImpl.
+     *
+     * @param parent   the JavadocNodeImpl to add children to
+     * @param children the list of children to add
+     */
+    private void processChildren(JavadocNodeImpl parent, List<? extends ParseTree> children) {
+        for (ParseTree child : children) {
+            if (child instanceof final TerminalNode terminalNode) {
+                final Token token = (Token) terminalNode.getPayload();
+
+                // Add hidden tokens before this token
+                addHiddenTokensToTheLeft(token, parent);
+
+                if (isTextToken(token)) {
+                    accumulator.append(token);
+                }
+                else if (token.getType() != Token.EOF) {
+                    parent.addChild(create(token));
+                }
+            }
+            else {
+                accumulator.flushTo(parent);
+                final Token token = ((ParserRuleContext) child).getStart();
+                addHiddenTokensToTheLeft(token, parent);
+                parent.addChild(visit(child));
+            }
+        }
+
+        accumulator.flushTo(parent);
+    }
+
+    /**
+     * Checks whether a token is a Javadoc text token.
+     *
+     * @param token the token to check
+     * @return true if the token is a text token, false otherwise
+     */
+    private static boolean isTextToken(Token token) {
+        return token.getType() == JavadocCommentsTokenTypes.TEXT;
+    }
+
+    /**
+     * Checks whether a token is a formatting token with multiple leading asterisks.
+     *
+     * @param token the token to check
+     * @return true if the token contains multiple leading asterisks
+     */
+    private static boolean isMultipleLeadingAsterisks(Token token) {
+        boolean result = false;
+
+        if (isLeadingAsterisk(token)) {
+            final String leadingAsterisks = getLeadingAsterisksText(token);
+            result = leadingAsterisks.length() > 1;
+        }
+
+        return result;
+    }
+
+    /**
+     * Checks whether a token is a leading asterisk formatting token.
+     *
+     * @param token the token to check
+     * @return true if the token is a leading asterisk token
+     */
+    private static boolean isLeadingAsterisk(Token token) {
+        return token.getType() == JavadocCommentsLexer.LEADING_ASTERISK;
+    }
+
+    /**
+     * Returns only leading asterisks from the token text, without indentation.
+     *
+     * @param token the token to process
+     * @return token text starting at the first asterisk
+     */
+    private static String getLeadingAsterisksText(Token token) {
+        return token.getText().substring(token.getText().indexOf('*'));
+    }
+
+    /**
+     * Adds hidden tokens to the left of the given token to the parent node.
+     * Ensures text accumulation is flushed before adding hidden tokens.
+     * Hidden tokens are only added once per unique token index.
+     *
+     * @param token      the token whose hidden tokens should be added
+     * @param parent     the parent node to which hidden tokens are added
+     */
+    private void addHiddenTokensToTheLeft(Token token, JavadocNodeImpl parent) {
+        final boolean alreadyProcessed = !processedTokenIndices.add(token.getTokenIndex());
+
+        if (!alreadyProcessed) {
+            final int tokenIndex = token.getTokenIndex();
+            final List<Token> hiddenTokens = tokens.getHiddenTokensToLeft(tokenIndex);
+            if (hiddenTokens != null) {
+                accumulator.flushTo(parent);
+                for (Token hiddenToken : hiddenTokens) {
+                    parent.addChild(create(hiddenToken));
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates a JavadocNodeImpl from the given token.
+     *
+     * @param token the token to create the JavadocNodeImpl from
+     * @return a new JavadocNodeImpl initialized with the token
+     */
+    private JavadocNodeImpl create(Token token) {
+        final JavadocNodeImpl node = new JavadocNodeImpl();
+        node.initialize(token);
+
+        // adjust line number to the position of the block comment
+        node.setLineNumber(node.getLineNumber() + blockCommentLineNumber);
+
+        // adjust first line to indent of /**
+        if (node.getLineNumber() == blockCommentLineNumber) {
+            node.setColumnNumber(node.getColumnNumber() + javadocColumnNumber);
+        }
+
+        final int tokenType = token.getType();
+        if (isLeadingAsterisk(token)) {
+            final String leadingAsterisks = getLeadingAsterisksText(token);
+            node.setColumnNumber(node.getColumnNumber() + token.getText().indexOf('*'));
+            node.setText(leadingAsterisks);
+        }
+        if (isJavadocTag(tokenType)) {
+            node.setType(JavadocCommentsTokenTypes.TAG_NAME);
+        }
+        if (tokenType == JavadocCommentsLexer.WS) {
+            node.setType(JavadocCommentsTokenTypes.TEXT);
+        }
+        if (isMultipleLeadingAsterisks(token)) {
+            node.setType(JavadocCommentsTokenTypes.LEADING_ASTERISKS);
+        }
+
+        return node;
+    }
+
+    /**
+     * Checks if the given token type is a Javadoc tag.
+     *
+     * @param type the token type to check
+     * @return true if the token type is a Javadoc tag, false otherwise
+     */
+    private

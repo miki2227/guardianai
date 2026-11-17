@@ -1,0 +1,81 @@
+XL 169 PF 397
+X83|    @Override
+X84|    public InputSource resolveEntity(String publicId, String systemId) {
+X85|        InputSource inputSource = null;
+X86|        if (publicId != null) {
+X87|            final String dtdResourceName = publicIdToResourceNameMap.get(publicId);
+X88|
+X89|            if (dtdResourceName != null) {
+X90|                final ClassLoader loader = getClass().getClassLoader();
+X91|                final InputStream dtdIs = loader.getResourceAsStream(dtdResourceName);
+X92|                inputSource = new InputSource(dtdIs);
+X93|            }
+X94|        }
+X95|        return inputSource;
+X111|    private static XMLReader createXmlReader(DefaultHandler handler)
+X112|            throws SAXException, ParserConfigurationException {
+X113|        final SAXParserFactory factory = SAXParserFactory.newInstance();
+X114|        LoadExternalDtdFeatureProvider.setFeaturesBySystemProperty(factory);
+X115|        factory.setValidating(true);
+X116|        final XMLReader xmlReader = factory.newSAXParser().getXMLReader();
+X117|        xmlReader.setContentHandler(handler);
+X118|        xmlReader.setEntityResolver(handler);
+X119|        xmlReader.setErrorHandler(handler);
+X120|        return xmlReader;
+X146|        /**
+X147|         * Configures SAXParserFactory with features required
+X148|         * to use external DTD file loading, this is not activated by default to no allow
+X149|         * usage of schema files that checkstyle do not know
+X150|         * it is even security problem to allow files from outside.
+X151|         *
+X152|         * @param factory factory to be configured with special features
+X153|         * @throws ParserConfigurationException if an error occurs
+X154|         * @throws SAXException if an error occurs
+X155|         */
+X156|        public static void setFeaturesBySystemProperty(SAXParserFactory factory)
+X157|                throws SAXException, ParserConfigurationException {
+X158|
+X159|            final boolean enableExternalDtdLoad = Boolean.parseBoolean(
+X160|                System.getProperty(ENABLE_EXTERNAL_DTD_LOAD, "false"));
+X161|
+X162|            factory.setFeature(LOAD_EXTERNAL_DTD, enableExternalDtdLoad);
+X163|            factory.setFeature(EXTERNAL_GENERAL_ENTITIES, enableExternalDtdLoad);
+X164|            factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, enableExternalDtdLoad);
+P75|    private static final byte[] BUFFER = new byte[BUFFER_SIZE];
+P141|    public void persist() throws IOException {
+P142|        final Path path = Path.of(fileName);
+P143|        final Path directory = path.getParent();
+P144|
+P145|        if (directory != null) {
+P146|            OsSpecificUtil.updateDirectory(directory);
+P147|        }
+P148|        try (OutputStream out = Files.newOutputStream(path)) {
+P149|            details.store(out, null);
+P150|        }
+P304|    private static byte[] loadExternalResource(String location)
+P305|            throws IOException, CheckstyleException {
+P306|        final URI uri = CommonUtil.getUriByFilename(location);
+P307|
+P308|        try (InputStream is = uri.toURL().openStream()) {
+P309|            return toByteArray(is);
+P310|        }
+P311|    }
+P312|
+P313|    /**
+P314|     * Reads all the contents of an input stream and returns it as a byte array.
+P315|     *
+P316|     * @param stream The input stream to read from.
+P317|     * @return The resulting byte array of the stream.
+P318|     * @throws IOException if there is an error reading the input stream.
+P319|     */
+P320|    private static byte[] toByteArray(InputStream stream) throws IOException {
+P321|        final ByteArrayOutputStream content = new ByteArrayOutputStream();
+P322|
+P323|        while (true) {
+P324|            final int size = stream.read(BUFFER);
+P325|            if (size == -1) {
+P326|                break;
+P327|            }
+P328|
+P329|            content.write(BUFFER, 0, size);
+P330|        }

@@ -1,0 +1,244 @@
+"""Launch one existing Grok CLI with only MCP tools and stop it on scope revocation."""
+import argparse
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import subprocess
+import time
+import uuid
+
+from agent_observer import AgentObserver
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate JSON key')
+        result[key] = value
+    return result
+
+
+def observe_message(observer, item):
+    """Observe exposed CLI content; tool replies have already reached the client."""
+    blocks = item.get('message', {}).get('content', [])
+    if item.get('type') == 'assistant':
+        exposed = [{key: block[key] for key in ('type', 'text', 'thinking', 'name', 'input') if key in block}
+                   for block in blocks if block.get('type') in ('text', 'thinking', 'tool_use')]
+        return not exposed or observer.observe('emitted_assistant_message', exposed)
+    if item.get('type') == 'user':
+        exposed = [block for block in blocks if block.get('type') == 'tool_result']
+        exposed = [decode_tool_result(block) for block in exposed]
+        return not exposed or observer.observe('delivered_tool_result', exposed)
+    return True
+
+
+def decode_tool_result(block):
+    """Decode known CLI JSON envelopes; raw bytes remain in the captured JSONL."""
+    raw = block.get('content')
+    if not isinstance(raw, str):
+        return block
+    try:
+        content = json.loads(raw, object_pairs_hook=unique_object)
+    except ValueError:
+        return block
+    if not isinstance(content, dict) or content.get('type') != 'MCP' or not isinstance(content.get('output'), dict):
+        return block
+    content = dict(content)
+    content['output'] = dict(content['output'])
+    for name in ('OkayOutput', 'Error'):
+        value = content['output'].get(name)
+        if isinstance(value, str):
+            try:
+                content['output'][name] = json.loads(value, object_pairs_hook=unique_object)
+            except ValueError:
+                pass
+    return {**block, 'content': content, 'cli_content_sha256': hashlib.sha256(raw.encode()).hexdigest(),
+            'cli_content_encoding': 'Decoded MCP JSON envelope; exact original string retained in stdout.jsonl.'}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ('grok', 'client', 'prompt', 'report', 'evidence'):
+        parser.add_argument('--' + name, required=True)
+    parser.add_argument('--resume', help='Resume an existing Grok conversation under a new GuardianAI scope')
+    parser.add_argument('--history-root', help='Trusted evidence root containing this and earlier launcher evidence; never an agent mount')
+    parser.add_argument('--require-binding', action='store_true', help='Verify resumed CLI identity before approving MCP commands')
+    parser.add_argument('--task-file', help='Trusted task/permissions, separate from a large prompt containing reference data')
+    parser.add_argument('--max-turns', type=int, default=12, help='Trusted model-round limit, from 1 to 100')
+    parser.add_argument('--deadline-seconds', type=float, default=600, help='Trusted invocation deadline, at most 7200 seconds')
+    args = parser.parse_args()
+    if not 1 <= args.max_turns <= 100 or not math.isfinite(args.deadline_seconds) or not 0 < args.deadline_seconds <= 7200:
+        parser.error('Use bounded positive turn and invocation limits')
+    if args.require_binding and not args.resume:
+        parser.error('--require-binding requires --resume')
+    evidence = Path(args.evidence)
+    evidence.mkdir(parents=True, exist_ok=False)
+    report = Path(args.report)
+    if report.exists():
+        raise ValueError('Use a new coding session report')
+    stop_result = None
+    def stop_scope(reason='host_content_observer_stop'):
+        nonlocal stop_result
+        if stop_result is not None:
+            return stop_result
+        stop_result = {'request_sent': False, 'acknowledged': False}
+        if report.parent.is_dir():
+            request_id = str(uuid.uuid4())
+            marker = report.parent / 'external-stop.json'
+            temporary = report.parent / 'external-stop.tmp'
+            temporary.write_text(json.dumps({'request_id': request_id, 'reason': reason}) + '\n')
+            temporary.replace(marker)
+            stop_result.update(request_sent=True, request_id=request_id)
+            started_wait = time.monotonic()
+            while time.monotonic() - started_wait < 2:
+                try:
+                    acknowledgement = json.loads((report.parent / 'external-stop-ack.json').read_text())
+                    if acknowledgement.get('request_id') == request_id and acknowledgement.get('scope_stopped') is True:
+                        stop_result.update(acknowledged=True, broker_acknowledgement=acknowledgement)
+                        break
+                except (OSError, ValueError):
+                    pass
+                time.sleep(.05)
+            stop_result['ack_wait_seconds'] = time.monotonic() - started_wait
+        (evidence / 'stop-control.json').write_text(json.dumps(stop_result, indent=2) + '\n')
+        return stop_result
+
+    def execution_context():
+        if not report.exists():
+            return {'status': 'tool_session_not_yet_available'}
+        state = json.loads(report.read_text())
+        return {'scope_stopped': state['scope_stopped'], 'closed': state['closed'],
+                'information_flow': state.get('information_flow', {'mode': 'untracked'}),
+                'identity_at_start': state.get('identity_at_start'),
+                'client_binding': state.get('client_binding'),
+                'runtime_alias': state.get('runtime_alias'),
+                'recent_calls': [{key: call[key] for key in ('execution', 'verdict', 'returncode', 'reason') if key in call}
+                                 for call in state['calls'][-4:]],
+                'earlier_calls_omitted': max(0, len(state['calls']) - 4)}
+
+    observer = AgentObserver(Path(args.task_file or args.prompt).read_text(), evidence / 'agent-content',
+                             context=execution_context, stop=stop_scope, memory_root=args.history_root)
+    if not observer.observe('host_supplied_prompt', Path(args.prompt).read_text()):
+        (evidence / 'launcher.json').write_text(json.dumps({'launched': False, 'reason': 'prompt_observer_stop'}) + '\n')
+        return 77
+    command = [args.grok, '--cwd', args.client, '--model', 'grok-4.7', '--reasoning-effort', 'low',
+               '--tools', 'search_tool,use_tool', '--no-subagents', '--disable-web-search',
+               '--permission-mode', 'dontAsk', '--allow', 'MCPTool(guardianai__run)',
+               '--max-turns', str(args.max_turns), '--output-format', 'streaming-messages-json',
+               '--prompt-file', args.prompt]
+    if args.resume:
+        command += ['--resume', args.resume]
+    (evidence / 'command.json').write_text(json.dumps(command, indent=2) + '\n')
+    stopped = False
+    initialized_session, binding_written = None, False
+    def publish_binding():
+        nonlocal binding_written
+        if not args.require_binding or binding_written or initialized_session is None or not report.exists():
+            return
+        binding = json.loads(report.read_text()).get('client_binding', {})
+        if binding.get('expected_conversation') != args.resume or binding.get('status') != 'pending':
+            raise ValueError('MCP binding does not match the resumed client')
+        approval = {'request_id': binding['request_id'], 'session_id': initialized_session,
+                    'source': 'grok_cli_system_init'}
+        temporary = report.parent / 'client-binding.tmp'
+        temporary.write_text(json.dumps(approval) + '\n')
+        temporary.replace(report.parent / 'client-binding.json')
+        (evidence / 'client-binding.json').write_text(json.dumps(approval, indent=2) + '\n')
+        binding_written = True
+    started = time.monotonic()
+    environment = dict(os.environ)
+    environment.update(GROK_WORKFLOWS='0', GROK_MEMORY='0', GROK_DISABLE_EXPERIMENTS='1')
+    for source in ('CLAUDE', 'CURSOR'):
+        for kind in ('AGENTS', 'HOOKS', 'MCPS', 'RULES', 'SKILLS'):
+            environment[f'GROK_{source}_{kind}_ENABLED'] = '0'
+    forwarded = [item for item in environment.get('WSLENV', '').split(':')
+                 if item and item.split('/')[0] != 'TYPESAFE_API_KEY']
+    environment['WSLENV'] = ':'.join(forwarded + ['TYPESAFE_API_KEY/u'])
+    with (evidence / 'stdout.jsonl').open('wb') as stdout, (evidence / 'stderr.txt').open('wb') as stderr, \
+            (evidence / 'stdout.jsonl').open('rb') as captured:
+        process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr, env=environment)
+        pending = b''
+        terminal_result = None
+        try:
+            while True:
+                try:
+                    publish_binding()
+                except (ValueError, OSError):
+                    stop_scope('client_binding_failed')
+                    stopped = True
+                    break
+                exited = process.poll() is not None
+                incoming = captured.read(1024 * 1024)
+                pending += incoming
+                while b'\n' in pending:
+                    line, pending = pending.split(b'\n', 1)
+                    try:
+                        item = json.loads(line)
+                        if args.require_binding:
+                            if item.get('session_id') not in (None, args.resume):
+                                raise ValueError('CLI conversation changed')
+                            if item.get('type') == 'system' and item.get('subtype') == 'init':
+                                if item.get('session_id') != args.resume:
+                                    raise ValueError('Missing resumed CLI identity')
+                                initialized_session = item['session_id']
+                            publish_binding()
+                        if item.get('type') == 'result':
+                            terminal_result = item
+                        if not observe_message(observer, item):
+                            stopped = True
+                            break
+                    except (ValueError, TypeError, AttributeError):
+                        stop_scope()
+                        stopped = True
+                        break
+                if len(pending) > 1024 * 1024 or (exited and not incoming and pending.strip()):
+                    stop_scope()
+                    stopped = True
+                if stopped:
+                    if process.poll() is None:
+                        process.terminate()
+                    break
+                if exited and not incoming:
+                    break
+                try:
+                    state = json.loads(report.read_text())
+                except (OSError, ValueError):
+                    state = None
+                if state and state['scope_stopped'] and (not state['closed'] or any(
+                        call['verdict'] != 'no_observed_violation' for call in state['calls'])):
+                    stopped = True
+                    stop_scope()
+                    process.terminate()
+                    break
+                if time.monotonic() - started > args.deadline_seconds:
+                    stop_scope()
+                    process.terminate()
+                    raise TimeoutError('Coding-agent workflow deadline')
+                time.sleep(.2)
+            process.wait(timeout=10)
+            if args.require_binding and not binding_written:
+                stop_scope('client_binding_missing')
+                stopped = True
+        finally:
+            if process.poll() is None:
+                stop_scope()
+                process.kill()
+                process.wait()
+    result = {'returncode': process.returncode, 'terminated_on_scope_stop': stopped,
+              'max_turns': args.max_turns, 'deadline_seconds': args.deadline_seconds,
+              'stop_control': stop_result,
+              'binding_required': args.require_binding, 'binding_approval_written': binding_written,
+              'client_result_subtype': terminal_result.get('subtype') if terminal_result else None,
+              'client_result_error': terminal_result.get('is_error') if terminal_result else None,
+              'elapsed_seconds': time.monotonic() - started,
+              'scope': 'One external Grok CLI. Exposed assistant text/thinking/tool requests are observed after CLI emission, not before model generation or necessarily before tool dispatch. MCP gates tool argv and result delivery separately. Only MCP commands are Linux-contained; hidden provider reasoning is unavailable. Killing the CLI cannot cancel remote inference.'}
+    (evidence / 'launcher.json').write_text(json.dumps(result, indent=2) + '\n')
+    print(json.dumps(result))
+    return 77 if stopped else process.returncode or int(not terminal_result or bool(terminal_result.get('is_error')))
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
